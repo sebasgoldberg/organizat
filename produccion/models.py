@@ -14,7 +14,8 @@ class Maquina(models.Model):
 
 class Tarea(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
-  tiempo = models.CharField(max_length=100, verbose_name=_(u'Tiempo'),
+  tiempo = models.DecimalField(
+    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo (min)'), 
     help_text=_(u'Tiempo necesario para realizar la tarea por unidad de producto.'))
   class Meta:
     ordering = ['descripcion']
@@ -71,7 +72,7 @@ class TiempoRealizacionTarea(models.Model):
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), editable=False)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), editable=False)
   tiempo = models.DecimalField(
-    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo'), 
+    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo (min)'), 
     help_text=_(u'Tiempo para realizar la tarea en la máquina y producto indicados, por unidad de producto.'))
   activa = models.BooleanField(default=True, verbose_name=(u'Activa'),
     help_text=_(u'Indica si la tarea se puede realizar en la máquina para el producto dado.'))
@@ -137,6 +138,9 @@ class DependenciaTareaProducto(models.Model):
 
 class Pedido(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'))
+  fecha_entrega = models.DateField(
+    verbose_name=_(u'Fecha de entrega'), null=True, blank=True,
+    help_text=_(u'Sea cuidadoso con colocar una fecha muy temprana, ya que sino al planificar, muy probablemente no se pueda respetar.'))
 
   def __unicode__(self):
     return u'#%s - %s' % (self.id, self.descripcion)
