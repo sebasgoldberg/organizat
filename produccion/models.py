@@ -92,10 +92,10 @@ class DependenciaTareaProducto(models.Model):
   """
   producto = models.ForeignKey(Producto, verbose_name=_(u'Tarea en máquina'))
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'La tarea'), 
-    related_name='mis_dependencias')
+    related_name='mis_dependencias', on_delete=models.PROTECT)
   tarea_anterior = models.ForeignKey(Tarea, verbose_name=_(u'Depende de la tarea'),
     help_text=_(u'Esta tarea debe realizarse antes'),
-    related_name='dependientes_de_mi')
+    related_name='dependientes_de_mi', on_delete=models.PROTECT)
 
   class Meta:
     ordering = ['producto__descripcion','tarea__descripcion','tarea_anterior__descripcion']
@@ -157,7 +157,7 @@ class ItemPedido(models.Model):
     - No se puede repetir el producto en 2 items distintos de un mismo pedido.
   """
   pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'))
-  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'))
+  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
   cantidad = models.DecimalField(
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad'))
 
@@ -195,7 +195,6 @@ post_save.connect(agregar_combinaciones_tiempos,
 post_save.connect(agregar_combinaciones_tiempos, 
   sender=TareaProducto)
 
-
 def eliminar_combinaciones_tiempos_tarea_maquina(sender, instance, **kwargs):
   """
   Se eliminan todas las combinaciones asociadas al par (tarea,maquina)
@@ -205,6 +204,8 @@ def eliminar_combinaciones_tiempos_tarea_maquina(sender, instance, **kwargs):
   maquina = instance.maquina
   TiempoRealizacionTarea.objects.filter(tarea=tarea, maquina=maquina).delete()
 
+#@todo Verificar si este requisito en realidad ya no se cumple con
+# on_delete = models.CASCADE (comportamiento por defecto)
 post_delete.connect(eliminar_combinaciones_tiempos_tarea_maquina, 
   sender=TareaMaquina)
 
@@ -218,5 +219,7 @@ def eliminar_combinaciones_tiempos_tarea_producto(sender, instance, **kwargs):
   producto = instance.producto
   TiempoRealizacionTarea.objects.filter(tarea=tarea, producto=producto).delete()
 
+#@todo Verificar si este requisito en realidad ya no se cumple con
+# on_delete = models.CASCADE (comportamiento por defecto)
 post_delete.connect(eliminar_combinaciones_tiempos_tarea_producto, 
   sender=TareaProducto)

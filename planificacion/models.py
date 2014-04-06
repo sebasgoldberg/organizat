@@ -34,7 +34,7 @@ class Cronograma(models.Model):
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
-  pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'))
+  pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
 
   class Meta:
     ordering = ['pedido__descripcion']
@@ -44,7 +44,7 @@ class PedidoCronograma(models.Model):
 
 class MaquinaCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
-  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'))
+  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
 
   class Meta:
     ordering = ['maquina__descripcion']
@@ -54,12 +54,12 @@ class MaquinaCronograma(models.Model):
 
 class IntervaloCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
-  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'))
+  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
   secuencia = models.IntegerField(verbose_name=ugettext_lazy(u'Secuencia'),
     help_text=_('Secuencia de aparición en el cronograma'))
-  tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'))
-  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'))
-  pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'))
+  tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
+  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
+  pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
   cantidad_tarea = models.DecimalField( editable=False,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea'), 
     help_text=_(u'Cantidad de tarea producida luego de finalizar el intervalo.'))
