@@ -12,6 +12,9 @@ class Maquina(models.Model):
     verbose_name = _(u"Maquina")
     verbose_name_plural = _(u"Maquinas")
 
+  def __unicode__(self):
+    return u'#%s - %s' % (self.id, self.descripcion)
+
 class Tarea(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
   tiempo = models.DecimalField(
@@ -21,6 +24,9 @@ class Tarea(models.Model):
     ordering = ['descripcion']
     verbose_name = _(u"Tarea")
     verbose_name_plural = _(u"Tareas")
+
+  def __unicode__(self):
+    return self.descripcion
 
 class TareaMaquina(models.Model):
   """
@@ -48,13 +54,23 @@ class Producto(models.Model):
     verbose_name = _(u"Producto")
     verbose_name_plural = _(u"Productos")
 
+  def __unicode__(self):
+    return self.descripcion
+
+class ProductoProxyDependenciasTareas(Producto):
+  class Meta:
+    proxy = True
+    ordering = ['descripcion']
+    verbose_name = _(u"Dependencia de tarea en producto")
+    verbose_name_plural = _(u"Dependencias de tareas en productos")
+
 class TareaProducto(models.Model):
   """
   Tareas por las que se compone un producto
   """
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'))
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'))
-  
+
   class Meta:
     ordering = ['producto__descripcion', 'tarea__descripcion',]
     verbose_name = _(u"Tarea a realizar en producto")
@@ -97,16 +113,29 @@ class DependenciaTareaProducto(models.Model):
   """
   producto = models.ForeignKey(Producto, verbose_name=_(u'Tarea en máquina'))
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'La tarea'), 
-    related_name='mis_dependencias', on_delete=models.PROTECT)
+    related_name='mis_dependencias')
   tarea_anterior = models.ForeignKey(Tarea, verbose_name=_(u'Depende de la tarea'),
     help_text=_(u'Esta tarea debe realizarse antes'),
-    related_name='dependientes_de_mi', on_delete=models.PROTECT)
+    related_name='dependientes_de_mi')
+
+  # campos para consistencia
+  tareaproducto = models.ForeignKey(TareaProducto, editable=False,
+    related_name='mis_dependencias')
+  tarea_anteriorproducto = models.ForeignKey(TareaProducto, editable=False,
+    related_name='dependientes_de_mi')
 
   class Meta:
     ordering = ['producto__descripcion','tarea__descripcion','tarea_anterior__descripcion']
     verbose_name = _(u"Dependencia de tareas en producto")
     verbose_name_plural = _(u"Dependencias de tareas en productos")
     unique_together = (('producto', 'tarea', 'tarea_anterior'),)
+
+  def get_tarea_producto(self, tarea):
+    try:
+      return TareaProducto.objects.get(tarea=tarea, producto=self.producto)
+    except TareaProducto.DoesNotExist:
+      raise ValidationError(_(u'La tarea %s no forma parte de la producción del producto %s')%(
+        tarea.descripcion,self.producto.descripcion))
 
   def clean(self):
     if self.tarea and self.tarea_anterior:
@@ -115,9 +144,12 @@ class DependenciaTareaProducto(models.Model):
         raise ValidationError(_(u'Las tareas seleccionadas deben diferir'))
 
       if self.producto:
-        self.validar_dependencia_circular(self.tarea_anterior, 
+        self.validar_dependencia_circular([self.tarea_anterior.id], 
           self.tarea, self.tarea_anterior.descripcion)
-    
+
+        self.tareaproducto = self.get_tarea_producto(tarea=self.tarea)
+        self.tarea_anteriorproducto = self.get_tarea_producto(tarea=self.tarea_anterior)
+
     self.validar_tarea_corresponde_producto(self.tarea)
     self.validar_tarea_corresponde_producto(self.tarea_anterior)
 
@@ -129,15 +161,16 @@ class DependenciaTareaProducto(models.Model):
         raise ValidationError(_(u'La tarea %s no forma parte del proceso de producción del producto %s.') % (
           tarea.descripcion, self.producto.descripcion))
 
-  def validar_dependencia_circular(self, tarea_inicial, tarea_anterior, camino):
+  def validar_dependencia_circular(self, visitadas, tarea_anterior, camino):
     dependencias = DependenciaTareaProducto.objects.filter(
       producto=self.producto, tarea_anterior=tarea_anterior)
     for dependencia in dependencias:
       nuevo_camino = '%s -> %s' % (camino, dependencia.tarea_anterior.descripcion)
-      if tarea_inicial.id == dependencia.tarea.id:
+      if dependencia.tarea.id in visitadas:
         nuevo_camino = '%s -> %s' % (nuevo_camino, dependencia.tarea.descripcion)
         raise ValidationError(_(u'Dependencia circular detectada: %s') % nuevo_camino)
-      self.validar_dependencia_circular(tarea_inicial,
+      visitadas.append(tarea_anterior.id)
+      self.validar_dependencia_circular(visitadas,
         dependencia.tarea, nuevo_camino)
 
 

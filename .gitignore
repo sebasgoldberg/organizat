@@ -8,3 +8,4 @@ ambiente.py
 django.mo
 /log/*.log
 /static/*
+db.sqlite3

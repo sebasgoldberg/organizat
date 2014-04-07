@@ -3,6 +3,7 @@ from django.db import models
 from produccion import Pedido, Maquina
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
+from planificacion.strategy import ESTRATEGIAS, CLASES_ESTRATEGIAS
 
 class Cronograma(models.Model):
   """
@@ -16,6 +17,7 @@ class Cronograma(models.Model):
     help_text=_(u'Tiempo por cada intervalo que compone el cronograma.'))
   fecha_inicio = models.DateField(
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True)
+  estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS)
 
   class Meta:
     ordering = ['-id']
@@ -29,7 +31,7 @@ class Cronograma(models.Model):
     cronograma con la planificación correspondiente para llevar a cabo la
     producción.
     """
-    planificador = settings.PLANIFICADOR_STRATEGY_CLASS(self)
+    planificador = CLASES_ESTRATEGIAS[self.estrategia]()
     planificador.planificar()
 
 class PedidoCronograma(models.Model):
@@ -67,8 +69,23 @@ class IntervaloCronograma(models.Model):
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Producto'), 
     help_text=_(u'Cantidad de producto producido luego de finalizar el intervalo.'))
 
+  # atributos exclusivos para asegurar la consistencia de la información
+  tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
+  tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.PROTECT)
+  itempedido = models.ForeignKey(ItemPedido, editable=False, on_delete=models.PROTECT)
+  pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False)
+  maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
+
   class Meta:
     ordering = ['-cronograma__id','maquina__descripcion','secuencia']
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
+
+  def clean(self):
+    self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
+    self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
+    self.itempedido = ItemPedido.objects.get(pedido=self.pedido,producto=self.producto)
+    self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.pedido,cronograma=self.cronograma)
+    self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
+        

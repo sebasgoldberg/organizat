@@ -1,6 +1,14 @@
 # coding=utf-8
 from planificacion.models import Cronograma
 from pulp import *
+from django.utils.translation import ugettext
+from django.utils.translation import ugettext_lazy as _
+
+ESTRATEGIAS=(
+  (1,_('Programación lineal mixta')),)
+
+CLASES_ESTRATEGIAS={
+  1: PlanificadorModeloLineal, }
 
 class PlanificadorStrategy:
 
