@@ -50,8 +50,20 @@ class TiempoRealizacionTareaAdmin(admin.ModelAdmin):
   list_editable=['tiempo', 'activa']
   list_per_page = 40
 
+class ItemPedidoInline(admin.TabularInline):
+  model=ItemPedido
+  extra = 1
+
+class PedidoAdmin(admin.ModelAdmin):
+  inlines=[ItemPedidoInline]
+  list_display=['id','descripcion', 'fecha_entrega']
+  list_display_links = ('id', 'descripcion')
+  search_fields=['descripcion']
+  list_per_page = 40
+
 admin.site.register(Maquina,MaquinaAdmin)
 admin.site.register(Tarea,TareaAdmin)
 admin.site.register(Producto,ProductoAdmin)
 admin.site.register(ProductoProxyDependenciasTareas,ProductoProxyDependenciasTareasAdmin)
 admin.site.register(TiempoRealizacionTarea,TiempoRealizacionTareaAdmin)
+admin.site.register(Pedido,PedidoAdmin)

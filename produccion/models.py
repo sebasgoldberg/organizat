@@ -28,6 +28,13 @@ class Tarea(models.Model):
   def __unicode__(self):
     return self.descripcion
 
+  def get_maquinas(self):
+    return [ x.maquina for x in self.tareamaquina_set.all() ]
+
+  def get_tiempo(self,maquina,producto):
+    return TiempoRealizacionTarea.objects.get(tarea=self,
+          maquina=maquina, producto=producto).tiempo
+
 class TareaMaquina(models.Model):
   """
   Tareas que puede realizar una máquina.
@@ -56,6 +63,9 @@ class Producto(models.Model):
 
   def __unicode__(self):
     return self.descripcion
+
+  def get_tareas(self):
+    return [ x.tarea for x in self.tareaproducto_set.all() ]
 
 class ProductoProxyDependenciasTareas(Producto):
   class Meta:

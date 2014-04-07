@@ -1,9 +1,18 @@
 # coding=utf-8
 from django.db import models
-from produccion import Pedido, Maquina
+from produccion.models import *
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
-from planificacion.strategy import ESTRATEGIAS, CLASES_ESTRATEGIAS
+from planificacion.strategy import *
+
+ESTRATEGIAS=(
+  (0,_(u'Hago lo que puedo')),
+  (1,_(u'Programación lineal mixta')),)
+
+CLASES_ESTRATEGIAS={
+  0: PlanificadorHagoLoQuePuedo,
+  1: PlanificadorModeloLineal, }
+
 
 class Cronograma(models.Model):
   """
@@ -31,8 +40,33 @@ class Cronograma(models.Model):
     cronograma con la planificación correspondiente para llevar a cabo la
     producción.
     """
-    planificador = CLASES_ESTRATEGIAS[self.estrategia]()
+    planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
     planificador.planificar()
+
+  def __unicode__(self):
+    return self.descripcion
+
+  def get_pedidos(self):
+    return [ p.pedido for p in self.pedidocronograma_set.all() ]
+
+  def get_maquinas(self):
+    return [ x.maquina for x in self.maquinacronograma_set.all() ]
+
+  def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
+    intervalo = None
+    try:
+      intervalo = self.intervalocronograma_set.filter(maquina=maquina).last()
+    except IntervaloCronograma.DoesNotExist:
+      pass
+    if intervalo:
+      secuencia = intervalo.secuencia + 1
+    else:
+      secuencia = 1
+    intervalo=IntervaloCronograma(cronograma=self,maquina=maquina,secuencia=secuencia,
+      tarea=tarea,producto=producto,pedido=pedido,cantidad_tarea=cantidad_tarea)
+    intervalo.clean()
+    intervalo.save()
+
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
@@ -44,6 +78,9 @@ class PedidoCronograma(models.Model):
     verbose_name_plural = _(u"Pedidos cronograma")
     unique_together = (('cronograma', 'pedido'),)
 
+  def __unicode__(self):
+    return self.pedido
+
 class MaquinaCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
@@ -54,18 +91,21 @@ class MaquinaCronograma(models.Model):
     verbose_name_plural = _(u"Maquina cronograma")
     unique_together = (('cronograma', 'maquina'),)
 
+  def __unicode__(self):
+    return self.maquina
+
 class IntervaloCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
-  secuencia = models.IntegerField(verbose_name=ugettext_lazy(u'Secuencia'),
-    help_text=_('Secuencia de aparición en el cronograma'))
+  secuencia = models.IntegerField(verbose_name=_(u'Secuencia'),
+    help_text=_(u'Secuencia de aparición en el cronograma'))
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
   pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
-  cantidad_tarea = models.DecimalField( editable=False,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea'), 
+  cantidad_tarea = models.DecimalField( editable=False, default=0,
+    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea'),
     help_text=_(u'Cantidad de tarea producida luego de finalizar el intervalo.'))
-  cantidad_producto = models.DecimalField( editable=False,
+  cantidad_producto = models.DecimalField( editable=False, default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Producto'), 
     help_text=_(u'Cantidad de producto producido luego de finalizar el intervalo.'))
 
