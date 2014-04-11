@@ -131,8 +131,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
               tarea.id, producto.id, pedido.id)
           self.modelo += self.cantidad_tareas_producidas[tarea.id][producto.id][pedido.id] -\
             tarea.get_cantidad_producir(producto, pedido) >= 0,\
-            "La cantidad producida de la tarea %s, producto %s, pedido %s debe ser \
-            mayor o igual que la cantidad a producir del producto %s del pedido %s." % (
+            "La cantidad producida de la tarea %s, producto %s, pedido %s debe ser mayor o igual que la cantidad a producir del producto %s del pedido %s." % (
             tarea.id,producto.id,pedido.id,producto.id,pedido.id)
 
   def def_cant_tarea_hasta_instante(self):
@@ -253,6 +252,8 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     self.definir_variables()
 
     self.definir_restricciones()
+
+    self.modelo.writeLP("/tmp/djprod.lp")
 
   def is_modelo_resuelto(self):
     return (self.modelo and self.modelo.status == LpStatusOptimal)
