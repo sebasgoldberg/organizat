@@ -52,6 +52,10 @@ class Cronograma(models.Model):
   def get_maquinas(self):
     return [ x.maquina for x in self.maquinacronograma_set.all() ]
 
+  def get_maquinas_tarea_producto(self, tarea, producto):
+    return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
+      maquina__in=self.get_maquinas(), tarea=tarea,producto=producto) ]
+
   def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
     intervalo = None
     try:
@@ -67,6 +71,11 @@ class Cronograma(models.Model):
     intervalo.clean()
     intervalo.save()
 
+  def add_maquina(self, maquina):
+    return self.maquinacronograma_set.create(maquina=maquina)
+
+  def add_pedido(self, pedido):
+    return self.pedidocronograma_set.create(pedido=pedido)
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))

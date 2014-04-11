@@ -4,6 +4,9 @@ from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
 
+class TareaAnteriorNoExiste(Exception):
+  pass
+
 class Maquina(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
 
@@ -14,6 +17,9 @@ class Maquina(models.Model):
 
   def __unicode__(self):
     return u'#%s - %s' % (self.id, self.descripcion)
+
+  def get_tareas(self):
+    return [ x.tarea for x in self.tareamaquina_set.all() ]
 
 class Tarea(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
@@ -31,9 +37,29 @@ class Tarea(models.Model):
   def get_maquinas(self):
     return [ x.maquina for x in self.tareamaquina_set.all() ]
 
+  def get_maquinas_producto(self, producto):
+    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(producto=producto) ]
+
   def get_tiempo(self,maquina,producto):
     return TiempoRealizacionTarea.objects.get(tarea=self,
-          maquina=maquina, producto=producto).tiempo
+      maquina=maquina, producto=producto).tiempo
+  
+  def get_tiempo_maximo(self, producto):
+    tiempo_tarea_por_producto = self.tiemporealizaciontarea_set.filter(producto=producto, activa=True)
+    if tiempo_tarea_por_producto.count() == 0:
+      raise TiempoTareaNoEncontrado(_u('No se ha encontrado tiempo para la tarea %s, producto %s') %\
+        (self.id, producto.id))
+    return tiempo_tarea_por_producto.aggregate(models.Max('tiempo'))['tiempo__max']
+
+  def get_cantidad_producir(self, producto, pedido):
+    item = pedido.get_item_producto(producto)
+    return item.cantidad
+
+  def get_anterior(self, producto):
+    try:
+      return DependenciaTareaProducto.objects.get(tarea=self,producto=producto)
+    except DependenciaTareaProducto.DoesNotExist:
+      raise TareaAnteriorNoExiste
 
 class TareaMaquina(models.Model):
   """
@@ -66,6 +92,9 @@ class Producto(models.Model):
 
   def get_tareas(self):
     return [ x.tarea for x in self.tareaproducto_set.all() ]
+
+  def get_tareas_maquina(self, maquina):
+    return [ t.tarea for t in self.tiemporealizaciontarea_set.filter(maquina=maquina) ]
 
 class ProductoProxyDependenciasTareas(Producto):
   class Meta:
@@ -197,6 +226,23 @@ class Pedido(models.Model):
     ordering = ['-id']
     verbose_name = _(u"Pedido")
     verbose_name_plural = _(u"Pedidos")
+
+  def add_item(self, producto, cantidad):
+    return self.itempedido_set.create(producto=producto,cantidad=cantidad)
+
+  def get_items(self):
+    return self.itempedido_set.all()
+
+  def get_productos(self):
+    return [ i.producto for i in self.itempedido_set.all() ]
+
+  def get_productos_maquina_tarea(self, maquina, tarea):
+    productos_pedido = [ i.producto for i in self.itempedido_set.all() ]
+    return [ t.producto for t in TiempoRealizacionTarea.objects.filter(
+      producto__in=productos_pedido, maquina=maquina, tarea=tarea) ]
+
+  def get_item_producto(self, producto):
+    return self.itempedido_set.get(producto=producto)
 
 class ItemPedido(models.Model):
   """
