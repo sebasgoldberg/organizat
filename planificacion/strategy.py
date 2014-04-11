@@ -67,8 +67,8 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
   def get_incremento_instante(self):
     return self.cronograma.intervalo_tiempo
 
-  def get_infinito(self):
-    return self.get_max_instante() * self.get_incremento_instante()
+  def get_tiempo_infinito(self):
+    return ( self.get_max_instante() + 1 ) * self.get_incremento_instante()
 
   def get_instantes(self):
     return range(1,self.get_max_instante()+1)
@@ -79,12 +79,12 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
       tiempo_maquina = self.tiempos_maquinas[maquina.id]
       is_maximo_tiempo_maquina = self.is_maximo_tiempo_maquina[maquina.id]
       self.modelo += tiempo_maquina + \
-        (1-is_maximo_tiempo_maquina)*self.get_infinito() - \
+        (1-is_maximo_tiempo_maquina)*self.get_tiempo_infinito() - \
         self.tiempo_maquina_maximo >= 0, "Cota superior tiempo maquina %s al tiempo de maquina maximo" % maquina.id
       self.modelo += tiempo_maquina - \
-        is_maximo_tiempo_maquina*self.get_infinito() - \
+        is_maximo_tiempo_maquina*self.get_tiempo_infinito() - \
         self.tiempo_maquina_maximo <= 0, "Cota inferior tiempo maquina %s al tiempo de maquina maximo" % maquina.id
-    self.modelo += lpSum(self.is_maximo_tiempo_maquina.values()) == 1, "Existirá un solo máximo" 
+    self.modelo += lpSum(self.is_maximo_tiempo_maquina.values()) == 1, "Existira un solo maximo" 
 
   def def_tiempo_insumido_maquinas(self):
 
@@ -93,11 +93,11 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     for maquina in self.cronograma.get_maquinas():
       self.modelo += lpSum([
         Y_MTPD[instante][maquina.id][tarea.id][producto.id][pedido.id] * \
-          tarea.get_tiempo(maquina,producto)
+          self.get_incremento_instante()
             for pedido in self.cronograma.get_pedidos()
               for producto in pedido.get_productos()
                 for tarea in producto.get_tareas_maquina(maquina)
-                  for instante in self.get_instantes() ]) + \
+                  for instante in self.get_instantes() ]) - \
         self.tiempos_maquinas[maquina.id] == 0, "Tiempo de la maquina %s" % maquina.id
 
   def def_una_tarea_por_maquina_por_instante(self):
@@ -126,14 +126,14 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
             tarea.get_tiempo(maquina,producto)
             for maquina in tarea.get_maquinas_producto(producto)
               for instante in self.get_instantes()
-            ]) + self.cantidad_tareas_producidas[tarea.id][producto.id][pedido.id]\
+            ]) - self.cantidad_tareas_producidas[tarea.id][producto.id][pedido.id]\
             == 0, "Cantidad producida de tarea %s, para producto %s, pedido %s." % (
-              tarea.descripcion, producto.descripcion, pedido.descripcion)
+              tarea.id, producto.id, pedido.id)
           self.modelo += self.cantidad_tareas_producidas[tarea.id][producto.id][pedido.id] -\
             tarea.get_cantidad_producir(producto, pedido) >= 0,\
             "La cantidad producida de la tarea %s, producto %s, pedido %s debe ser \
             mayor o igual que la cantidad a producir del producto %s del pedido %s." % (
-            tarea.descripcion,producto.descripcion,pedido.descripcion,producto.descripcion,pedido.descripcion)
+            tarea.id,producto.id,pedido.id,producto.id,pedido.id)
 
   def def_cant_tarea_hasta_instante(self):
 
@@ -153,7 +153,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
                   tarea.get_tiempo(maquina,producto)
                   for maquina in self.cronograma.get_maquinas_tarea_producto(tarea,producto)]) == 0,\
                     "Cantidad de tarea %s para el producto %s del pedido %s en hasta el instante %s." %\
-                    (tarea.descripcion, producto.descripcion, pedido.descripcion, instante)
+                    (tarea.id, producto.id, pedido.id, instante)
             else:
               # En el resto de los instantes es simplemente la suma de cantidad de tarea 
               # realizada en cada máquina, mas la tarea realizada hasta el instante anterior.
@@ -161,10 +161,12 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
                 self.cantidad_tarea_en_instante[tarea.id][producto.id][pedido.id][instante] -\
                 self.cantidad_tarea_en_instante[tarea.id][producto.id][pedido.id][instante-1] -\
                 lpSum([\
-                  Y_MTPD[instante][maquina.id][tarea.id][producto.id][pedido.id]
+                  Y_MTPD[instante][maquina.id][tarea.id][producto.id][pedido.id] *\
+                  self.get_incremento_instante() /\
+                  tarea.get_tiempo(maquina,producto)
                   for maquina in self.cronograma.get_maquinas_tarea_producto(tarea,producto)]) == 0,\
                     "Cantidad de tarea %s para el producto %s del pedido %s en hasta el instante %s." %\
-                    (tarea.descripcion, producto.descripcion, pedido.descripcion, instante)
+                    (tarea.id, producto.id, pedido.id, instante)
     
 
   def def_secuencia_tareas(self):
@@ -224,10 +226,10 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
 
   def definir_funcional(self):
 
-    self.tiempo_maquina_maximo = LpVariable("Tiempo de maquina máximo",0)
+    self.tiempo_maquina_maximo = LpVariable("T_MAX_MAQ",0)
 
     # Creamos la función objetivo
-    self.modelo += self.tiempo_maquina_maximo, "Tiempo total de producción"
+    self.modelo += self.tiempo_maquina_maximo, "Tiempo total de produccion"
 
   def definir_restricciones(self):
 
@@ -244,7 +246,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     @todo Ver: https://pythonhosted.org/PuLP/CaseStudies/a_sudoku_problem.html
     """
     # Creamos el modelo e indicamos que se trata de un problema de búsqueda de mínimo
-    self.modelo = LpProblem(self.cronograma.descripcion,LpMinimize)
+    self.modelo = LpProblem('Planificar cronograma %s' % self.cronograma.id,LpMinimize)
 
     self.definir_funcional()
 
@@ -270,7 +272,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     self.cota_instante_superior =\
       ceil( tiempo_secuencial_total / self.get_incremento_instante() )
 
-  def resolver_modelo(self):
+  def resolver_modelo_busqueda_binaria(self):
     
     self.calcular_cotas_instante()
 
@@ -289,6 +291,26 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
 
       self.cota_instante_inferior = self.max_instante + 1
 
+  def resolver_modelo_busqueda_secuencial(self):
+    
+    self.calcular_cotas_instante()
+
+    self.max_instante = self.cota_instante_inferior
+
+    while (self.max_instante <= self.cota_instante_superior):
+
+      self.definir_modelo()
+
+      self.modelo.solve()
+
+      if self.is_modelo_resuelto():
+        # @todo: Ver si es necesario seguir buscando de forma de decrementar
+        # la cota superior.
+        break
+
+      self.max_instante += 1
+
+
   def completar_cronograma(self):
     
     for instante in self.get_instantes():
@@ -303,7 +325,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
 
   def planificar(self):
     
-    self.resolver_modelo()
+    self.resolver_modelo_busqueda_secuencial()
 
     if not self.is_modelo_resuelto():
       raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
