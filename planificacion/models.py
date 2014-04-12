@@ -83,6 +83,13 @@ class Cronograma(models.Model):
   def add_pedido(self, pedido):
     return self.pedidocronograma_set.create(pedido=pedido)
 
+  def get_intervalo(self, instante, maquina, tarea, pedido, producto):
+    try:
+      return self.intervalocronograma_set.get(
+        secuencia=instante, maquina=maquina, tarea=tarea, pedido=pedido, producto=producto)
+    except IntervaloCronograma.DoesNotExist:
+      return None
+
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
