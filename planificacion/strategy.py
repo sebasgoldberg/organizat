@@ -172,15 +172,12 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     for pedido in self.cronograma.get_pedidos():
       for producto in pedido.get_productos():
         for tarea in producto.get_tareas():
-          try:
-            tarea_anterior = tarea.get_anterior(producto) 
+          for tarea_anterior in tarea.get_anteriores(producto):
             for instante in self.get_instantes():
               self.modelo +=\
                 self.cantidad_tarea_en_instante[tarea_anterior.id][producto.id][pedido.id][instante] -\
                 self.cantidad_tarea_en_instante[tarea.id][producto.id][pedido.id][instante] >\
                 0, "La tarea %s debe ser anterior a la tarea %s." % (tarea_anterior.id, tarea.id)
-          except TareaAnteriorNoExiste:
-            pass
 
   def definir_variables(self):
 
@@ -319,10 +316,11 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
         # Se obtienen solo las tareas que pertencen a la máquina iterada
         for tarea in maquina.get_tareas():
           for pedido in self.cronograma.get_pedidos():
-            for producto in pedido.get_productos(maquina,tarea):
-              if is_instante_maquina_tarea_producto_pedido[
+            for producto in pedido.get_productos_maquina_tarea(maquina,tarea):
+              if self.is_instante_maquina_tarea_producto_pedido[
                 instante][maquina.id][tarea.id][producto.id][pedido.id].value() == 1:
-                self.cronograma.add_intervalo(instante,maquina,tarea,pedido,producto)
+                self.cronograma.add_intervalo(instante,maquina,tarea,pedido,producto,
+                  self.cantidad_tarea_en_instante[tarea.id][producto.id][pedido.id][instante].value())
 
   def planificar(self):
     

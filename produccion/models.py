@@ -55,11 +55,8 @@ class Tarea(models.Model):
     item = pedido.get_item_producto(producto)
     return item.cantidad
 
-  def get_anterior(self, producto):
-    try:
-      return DependenciaTareaProducto.objects.get(tarea=self,producto=producto)
-    except DependenciaTareaProducto.DoesNotExist:
-      raise TareaAnteriorNoExiste
+  def get_anteriores(self, producto):
+    return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea=self,producto=producto) ]
 
 class TareaMaquina(models.Model):
   """

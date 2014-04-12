@@ -70,8 +70,8 @@ class TiempoRealizacionTareaTestCase(TestCase):
     cronograma.add_maquina(M3)
 
     cronograma.add_pedido(D1)
-    cronograma.add_pedido(D2)
-    cronograma.add_pedido(D3)
+    #cronograma.add_pedido(D2)
+    #cronograma.add_pedido(D3)
 
   def test_planificar(self):
     

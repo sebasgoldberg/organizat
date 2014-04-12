@@ -56,6 +56,12 @@ class Cronograma(models.Model):
     return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
       maquina__in=self.get_maquinas(), tarea=tarea,producto=producto) ]
 
+  def add_intervalo(self,secuencia,maquina,tarea,pedido,producto,cantidad_tarea):
+    intervalo=IntervaloCronograma(cronograma=self,maquina=maquina,secuencia=secuencia,
+      tarea=tarea,producto=producto,pedido=pedido,cantidad_tarea=cantidad_tarea)
+    intervalo.clean()
+    intervalo.save()
+
   def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
     intervalo = None
     try:
