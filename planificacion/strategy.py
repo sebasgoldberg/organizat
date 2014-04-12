@@ -40,7 +40,7 @@ class PlanificadorHagoLoQuePuedo(PlanificadorStrategy):
         for tarea in producto.get_tareas():
           for maquina in tarea.get_maquinas():
             if maquina in maquinas_cronograma:
-              cantidad_intervalos = int(ceil( tarea.get_tiempo(maquina,producto) * cantidad_a_producir / self.get_incremento_instante() ))
+              cantidad_intervalos = int(ceil( tarea.get_tiempo(maquina,producto) * cantidad_a_producir / self.cronograma.intervalo_tiempo ))
               cantidad_tarea = cantidad_a_producir / cantidad_intervalos
               acumulado_tarea = 0
               for i in range(1,cantidad_intervalos+1):
