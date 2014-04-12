@@ -3,7 +3,8 @@ from django.db import models
 from produccion.models import *
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
-from planificacion.strategy import *
+from planificacion.strategy.hago_lo_que_puedo import *
+from planificacion.strategy.lineal import *
 
 ESTRATEGIAS=(
   (0,_(u'Hago lo que puedo')),

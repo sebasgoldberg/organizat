@@ -3,7 +3,7 @@ from pulp import *
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from math import ceil
-from produccion.models import TareaAnteriorNoExiste
+from planificacion.strategy.base import PlanificadorStrategy
 
 def add_keys_to_dict(dictionary,keys):
   if len(keys) == 0:
@@ -11,43 +11,7 @@ def add_keys_to_dict(dictionary,keys):
   if not dictionary.has_key(keys[0]):
     dictionary[keys[0]] = {}
   add_keys_to_dict(dictionary[keys[0]],keys[1:])
-
-class PlanificadorStrategy:
-
-  cronograma = None
-
-  def __init__(self, cronograma):
-    self.cronograma = cronograma
-  
-  def planificar(self):
-    raise Exception(_(u'Método no implementado'))
     
-class PlanificadorHagoLoQuePuedo(PlanificadorStrategy):
-
-  def planificar(self):
-    """
-    La idea es:
-    1) Tomar la cantidad de horas a realizar en cada tarea.
-    2) Obtener las maquinas posibles para la tarea y cronograma dados.
-    3) crear tantos intervalos como sean necesarios.
-    """
-    maquinas_cronograma = self.cronograma.get_maquinas()
-
-    for pedido in self.cronograma.get_pedidos():
-      for item_pedido in pedido.itempedido_set.all():
-        producto = item_pedido.producto
-        cantidad_a_producir = item_pedido.cantidad
-        for tarea in producto.get_tareas():
-          for maquina in tarea.get_maquinas():
-            if maquina in maquinas_cronograma:
-              cantidad_intervalos = int(ceil( tarea.get_tiempo(maquina,producto) * cantidad_a_producir / self.cronograma.intervalo_tiempo ))
-              cantidad_tarea = cantidad_a_producir / cantidad_intervalos
-              acumulado_tarea = 0
-              for i in range(1,cantidad_intervalos+1):
-                acumulado_tarea += cantidad_tarea
-                self.cronograma.add_intervalo_al_final(maquina, tarea, producto, pedido, acumulado_tarea)
-              break
-
 PRIMER_INSTANTE = 1
 
 class PlanificadorModeloLineal(PlanificadorStrategy):
@@ -235,7 +199,6 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
     self.def_cumplir_cantidad_producir()
     self.def_cant_tarea_hasta_instante()
     self.def_secuencia_tareas()
-
 
   def definir_modelo(self):
     """
