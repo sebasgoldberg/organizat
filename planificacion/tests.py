@@ -61,7 +61,7 @@ class TiempoRealizacionTareaTestCase(TestCase):
 
     D3.add_item(P1,300)
 
-    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=1)
+    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2)
     cronograma.clean()
     cronograma.save()
 
@@ -70,8 +70,8 @@ class TiempoRealizacionTareaTestCase(TestCase):
     cronograma.add_maquina(M3)
 
     cronograma.add_pedido(D1)
-    #cronograma.add_pedido(D2)
-    #cronograma.add_pedido(D3)
+    cronograma.add_pedido(D2)
+    cronograma.add_pedido(D3)
 
   def test_planificar(self):
     

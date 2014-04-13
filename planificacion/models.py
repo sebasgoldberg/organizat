@@ -5,15 +5,17 @@ from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from planificacion.strategy.hago_lo_que_puedo import *
 from planificacion.strategy.lineal import *
+from planificacion.strategy.lineal_continuo import *
 
 ESTRATEGIAS=(
   (0,_(u'Hago lo que puedo')),
-  (1,_(u'Programación lineal mixta')),)
+  (1,_(u'Programación lineal mixta')),
+  (2,_(u'Programación lineal continua (sin dependencias)')),)
 
 CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
-  1: PlanificadorModeloLineal, }
-
+  1: PlanificadorModeloLineal,
+  2: PlanificadorLinealContinuo, }
 
 class Cronograma(models.Model):
   """
@@ -131,6 +133,8 @@ class IntervaloCronograma(models.Model):
   cantidad_producto = models.DecimalField( editable=False, default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Producto'), 
     help_text=_(u'Cantidad de producto producido luego de finalizar el intervalo.'))
+  tiempo_intervalo = models.DecimalField(
+    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo del intervalo (min)'))
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)

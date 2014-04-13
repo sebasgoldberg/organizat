@@ -4,14 +4,8 @@ from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from math import ceil
 from planificacion.strategy.base import PlanificadorStrategy
+from planificacion.strategy.utils import add_keys_to_dict
 
-def add_keys_to_dict(dictionary,keys):
-  if len(keys) == 0:
-    return
-  if not dictionary.has_key(keys[0]):
-    dictionary[keys[0]] = {}
-  add_keys_to_dict(dictionary[keys[0]],keys[1:])
-    
 PRIMER_INSTANTE = 1
 
 class PlanificadorModeloLineal(PlanificadorStrategy):
