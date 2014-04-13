@@ -128,7 +128,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             if tiempo > 0:
               instante+=1
               self.cronograma.add_intervalo(instante,maquina,tarea,pedido,producto,
-                tiempo/float(tarea.get_tiempo(maquina,producto)))
+                tiempo/float(tarea.get_tiempo(maquina,producto)),tiempo_intervalo=ceil(tiempo))
 
   def planificar(self):
     

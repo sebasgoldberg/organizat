@@ -93,6 +93,12 @@ class Producto(models.Model):
   def get_tareas_maquina(self, maquina):
     return [ t.tarea for t in self.tiemporealizaciontarea_set.filter(maquina=maquina) ]
 
+  def add_dependencia_tareas(self, tarea_anterior, tarea):
+    d=DependenciaTareaProducto(producto=self,tarea_anterior=tarea_anterior,tarea=tarea)
+    d.clean()
+    d.save()
+    return d
+
 class ProductoProxyDependenciasTareas(Producto):
   class Meta:
     proxy = True

@@ -17,7 +17,7 @@ class CronogramaAdmin(admin.ModelAdmin):
   list_per_page = 40
 
 class IntervaloCronogramaAdmin(admin.ModelAdmin):
-  list_display=['cronograma', 'maquina', 'secuencia', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'cantidad_producto']
+  list_display=['cronograma', 'maquina', 'secuencia', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'cantidad_producto', 'tiempo_intervalo']
   list_display_links = ('cronograma', 'maquina', 'secuencia')
   list_filter=['cronograma', 'maquina', 'tarea', 'pedido', 'producto']
   list_per_page = 40
