@@ -6,6 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from planificacion.strategy.hago_lo_que_puedo import *
 from planificacion.strategy.lineal import *
 from planificacion.strategy.lineal_continuo import *
+from planificacion.dependencias import GerenciadorDependencias
 import datetime
 
 ESTRATEGIAS=(
@@ -184,56 +185,9 @@ class IntervaloCronograma(models.Model):
   def get_fecha_hasta(self):
     return self.get_fecha_desde() + datetime.timedelta(minutes=self.tiempo_intervalo)
 
-  def get_intervalos_mismo_producto_pedido(self):
-    intervalos = [ i for i in IntervaloCronograma.objects.filter(
-      cronograma=self.cronograma,
-      producto=self.producto,
-      pedido=self.pedido) ]
-    if self.id is None:
-      intervalos.append(self)
-    return intervalos
-
-  def get_particion_ordenada_temporal(self,intervalos,tareas):
-    particion = []
-    ids_tareas = [ t.id for t in tareas ]
-    for intervalo in intervalos:
-      if intervalo.tarea.id not in ids_tareas:
-        continue
-      particion.append(intervalo.get_fecha_desde())
-      particion.append(intervalo.get_fecha_hasta())
-    particion.sort()
-    return particion
-
-  def get_intervalos_anteriores(self, intervalos, tarea, fecha):
-    result = []
-    for intervalo in intervalos:
-      if intervalo.tarea.id == tarea.id and\
-        intervalo.get_fecha_desde() <= fecha:
-        result.append(intervalo)
-    return result
-
-  def get_cantidad_tarea_hasta(self, intervalos, tarea, fecha):
-    cantidad_tarea = 0
-    for intervalo in self.get_intervalos_anteriores(intervalos, tarea, fecha):
-      if intervalo.get_fecha_hasta() <= fecha:
-        tiempo = intervalo.tiempo_intervalo * 60
-      else:
-        tiempo = (fecha - intervalo.fecha_desde).seconds 
-      cantidad_tarea += tiempo / (intervalo.get_tiempo_tarea() * 60)
-    return cantidad_tarea
-
   def validar_dependencias(self):
-    intervalos=self.get_intervalos_mismo_producto_pedido()
-    for tarea_anterior in self.tarea.get_anteriores(self.producto):
-      particion_temporal = self.get_particion_ordenada_temporal(
-        intervalos, [tarea_anterior,self.tarea])
-      for t in particion_temporal:
-        cantidad_tarea = self.get_cantidad_tarea_hasta(intervalos, self.tarea, t)
-        cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
-        if cantidad_tarea > cantidad_tarea_anterior:
-            raise ValidationError(
-              "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
-              (cantidad_tarea, self.tarea.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
+    gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
+    gerenciador_dependencias.verificar_agregar_instante(self)
 
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)

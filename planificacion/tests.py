@@ -261,7 +261,7 @@ class TareaDependienteTestCase(TestCase):
     self.assertEqual(I2.get_fecha_desde(),I1.get_fecha_hasta())
 
     # Se verifica que la obtención de los intervalos sea correcta:
-    intervalos = I2.get_intervalos_mismo_producto_pedido()
+    intervalos = GerenciadorDependencias.crear_desde_instante(I2).get_intervalos([T1,T2],instante_agregado=I2)
     self.assertEqual(len(intervalos),2)
 
     try:
