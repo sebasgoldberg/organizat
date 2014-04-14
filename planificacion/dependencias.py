@@ -52,6 +52,7 @@ class GerenciadorDependencias:
     for intervalo in intervalos:
       particion.append(intervalo.get_fecha_desde())
       particion.append(intervalo.get_fecha_hasta())
+    particion = list(set(particion))
     particion.sort()
     return particion
 
@@ -73,14 +74,14 @@ class GerenciadorDependencias:
       cantidad_tarea += tiempo / (intervalo.get_tiempo_tarea() * 60)
     return cantidad_tarea
 
-  def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instantes_borrado=None):
-    intervalos=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instantes_borrado)
+  def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None):
+    intervalos=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instante_borrado)
     particion_temporal = self.get_particion_ordenada_temporal(intervalos)
     for t in particion_temporal:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
       if cantidad_tarea_posterior > cantidad_tarea_anterior:
-          raise ValidationError(
-            "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
-            (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
+        raise ValidationError(
+          "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
+          (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
 

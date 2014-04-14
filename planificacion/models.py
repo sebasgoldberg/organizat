@@ -185,9 +185,12 @@ class IntervaloCronograma(models.Model):
   def get_fecha_hasta(self):
     return self.get_fecha_desde() + datetime.timedelta(minutes=self.tiempo_intervalo)
 
-  def validar_dependencias(self):
+  def validar_dependencias_guardado(self):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
-    gerenciador_dependencias.verificar_agregar_instante(self)
+    if self.id:
+      gerenciador_dependencias.verificar_modificar_instante(self)
+    else:
+      gerenciador_dependencias.verificar_agregar_instante(self)
 
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
@@ -196,5 +199,16 @@ class IntervaloCronograma(models.Model):
     self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.pedido,cronograma=self.cronograma)
     self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
     self.calcular_fecha_desde()
-    self.validar_dependencias()
-        
+
+  def save(self, *args, **kwargs):
+    self.validar_dependencias_guardado()
+    super(IntervaloCronograma, self).save(*args, **kwargs) 
+
+def validar_dependencias_borrado(sender, instance, **kwargs):
+  gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(instance)
+  gerenciador_dependencias.verificar_eliminar_instante(instance)
+
+from django.db.models.signals import pre_delete
+
+pre_delete.connect(validar_dependencias_borrado, 
+  sender=IntervaloCronograma)

@@ -58,6 +58,9 @@ class Tarea(models.Model):
   def get_anteriores(self, producto):
     return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea=self,producto=producto) ]
 
+  def get_posteriores(self, producto):
+    return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea_anterior=self,producto=producto) ]
+
 class TareaMaquina(models.Model):
   """
   Tareas que puede realizar una máquina.

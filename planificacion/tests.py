@@ -269,6 +269,7 @@ class TareaDependienteTestCase(TestCase):
       # => En 75 ya no se puede seguir produciendo T2
       # Por lo tanto debe ocurrir un error.
       I2.clean()
+      I2.save()
       self.fail("No aplico la validacion de cantidad de tarea anterior necesaria para tarea agregada.")
     except ValidationError:
       pass
@@ -281,6 +282,7 @@ class TareaDependienteTestCase(TestCase):
       # => En 50 ya no se puede seguir produciendo T2
       # Por lo tanto debe ocurrir un error.
       I2.clean()
+      I2.save()
       self.fail("No aplico la validacion de cantidad de tarea anterior necesaria para tarea agregada.")
     except ValidationError:
       pass
@@ -298,3 +300,57 @@ class TareaDependienteTestCase(TestCase):
     # como I1:M1:T1:5:[0;25] y I3:M1:T1:5:[25;50] y I2:M2:T2:10:[0;100] y T1 -> T2 => 
     # Vemos que no hay problemas de dependencia
     I2.clean()
+    I2.save()
+
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,0,0,0)),I1.get_fecha_desde())
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,0,25,0)),I1.get_fecha_hasta())
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,0,0,0)),I2.get_fecha_desde())
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,1,40,0)),I2.get_fecha_hasta())
+
+    # Se verifica que la obtención de los intervalos sea correcta:
+    gd = GerenciadorDependencias.crear_desde_instante(I3)
+    intervalos = gd.get_intervalos([T1,T2],instante_borrado=I3)
+    self.assertEqual(len(intervalos),2)
+
+    # Se verifica que no se hata recuperado el intervalo I3
+    for intervalo in intervalos:
+      self.assertNotEqual(intervalo.id,I3.id)
+
+    # Se verifica que se obtengan la particion que corresponde: {0, 25, 100}
+    particion_temporal = gd.get_particion_ordenada_temporal(intervalos)
+    self.assertEqual(len(particion_temporal),3)
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,0,0,0)),particion_temporal[0])
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,0,25,0)),particion_temporal[1])
+    self.assertEqual(utc.localize(datetime.datetime(2014,1,1,1,40,0)),particion_temporal[2])
+
+    cantidad_tarea_posterior = gd.get_cantidad_tarea_hasta(intervalos, T2, particion_temporal[0])
+    self.assertEqual(cantidad_tarea_posterior,0)
+    cantidad_tarea_anterior = gd.get_cantidad_tarea_hasta(intervalos, T1, particion_temporal[0])
+    self.assertEqual(cantidad_tarea_anterior,0)
+
+    # Acá es donde la cantidad de la tarea posterior supera a la cantidad de la tarea anterior
+    cantidad_tarea_posterior = gd.get_cantidad_tarea_hasta(intervalos, T2, particion_temporal[1])
+    self.assertEqual(cantidad_tarea_posterior,2.5)
+    cantidad_tarea_anterior = gd.get_cantidad_tarea_hasta(intervalos, T1, particion_temporal[1])
+    self.assertEqual(cantidad_tarea_anterior,5)
+
+    cantidad_tarea_posterior = gd.get_cantidad_tarea_hasta(intervalos, T2, particion_temporal[2])
+    self.assertEqual(cantidad_tarea_posterior,10)
+    cantidad_tarea_anterior = gd.get_cantidad_tarea_hasta(intervalos, T1, particion_temporal[2])
+    self.assertEqual(cantidad_tarea_anterior,5)
+
+    # Si queremos quitar I3 deberíamos obtener un error, ya que se dejaría de cumplir
+    # la dependencia T1 -> T2
+    try:
+      gd.validar_dependencias(T1,T2,instante_borrado=I3)
+      self.fail("Debería ser inválido quitar el instante I3.")
+    except ValidationError:
+      pass
+
+    # Si queremos quitar I3 deberíamos obtener un error, ya que se dejaría de cumplir
+    # la dependencia T1 -> T2
+    try:
+      I3.delete()
+      self.fail("No deberia dejar borrar un intervalo que hace que no se cumpla una dependencia.")
+    except ValidationError:
+      pass
