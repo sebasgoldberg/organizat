@@ -59,7 +59,24 @@ class Tarea(models.Model):
     return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea=self,producto=producto) ]
 
   def get_posteriores(self, producto):
-    return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea_anterior=self,producto=producto) ]
+    return [ d.tarea for d in DependenciaTareaProducto.objects.filter(tarea_anterior=self,producto=producto) ]
+
+  def get_secuencias_dependencias(self, producto):
+    """
+    Devuelve una lista de listas.
+    Cada lista contiene una secuencia de dependencias.
+    """
+    tareas_posteriores = self.get_posteriores(producto)
+    if len(tareas_posteriores) == 0:
+      return [[self]]
+
+    result = []
+    for tarea_posterior in tareas_posteriores:
+      secuencias_dependencias = tarea_posterior.get_secuencias_dependencias(producto)
+      for secuencia_dependencias in secuencias_dependencias:
+        result.append([self]+secuencia_dependencias)
+
+    return result
 
 class TareaMaquina(models.Model):
   """
@@ -96,11 +113,65 @@ class Producto(models.Model):
   def get_tareas_maquina(self, maquina):
     return [ t.tarea for t in self.tiemporealizaciontarea_set.filter(maquina=maquina) ]
 
+  def get_maquinas_tarea(self, tarea):
+    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(tarea=tarea) ]
+
   def add_dependencia_tareas(self, tarea_anterior, tarea):
     d=DependenciaTareaProducto(producto=self,tarea_anterior=tarea_anterior,tarea=tarea)
     d.clean()
     d.save()
     return d
+
+  def get_tareas_primer_grado_dependencia(self):
+    
+    tareas_anteriores = [d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(producto=self)]
+    primer_grado = []
+    for tarea in tareas_anteriores:
+      try:
+        DependenciaTareaProducto.objects.get(producto=self,tarea=tarea)
+      except DependenciaTareaProducto.DoesNotExist:
+        primer_grado.append(tarea)
+
+    return primer_grado
+
+  def get_tareas_ordenadas_por_dependencia(self):
+
+    primer_grado = self.get_tareas_primer_grado_dependencia()
+
+    grados_tareas = {}
+    for tarea_primer_grado in primer_grado:
+      for secuencia_dependencia in tarea_primer_grado.get_secuencias_dependencias(self):
+        grado = 0
+        for tarea in secuencia_dependencia:
+          grado+=1
+          if not grados_tareas.has_key(tarea.id):
+            grados_tareas[tarea.id]={}
+            grados_tareas[tarea.id]['tarea'] = tarea
+            grados_tareas[tarea.id]['grado'] = grado
+          elif grados_tareas[tarea.id]['grado'] < grado:
+            grados_tareas[tarea.id]['grado'] = grado
+
+    tareas_por_grado = {}
+    for grado_tarea in grados_tareas.itervalues():
+      if not tareas_por_grado.has_key(grado_tarea['grado']):
+        tareas_por_grado[grado_tarea['grado']] = []
+      tareas_por_grado[grado_tarea['grado']].append(grado_tarea['tarea'])
+
+    tareas_ordenadas_por_grado_dependencia=[]
+    # Se recorre diccionario en forma ordenada
+    for i in range(1,len(tareas_por_grado)+1):
+      tareas_ordenadas_por_grado_dependencia += tareas_por_grado[i]
+
+    ids_tareas_dependientes = [ t.id for t in tareas_ordenadas_por_grado_dependencia]
+    tareas_independientes = []
+    # Se obtienen las tareas independientes:
+    for tarea in self.get_tareas():
+      if tarea.id not in ids_tareas_dependientes:
+        tareas_independientes.append(tarea)
+
+    return tareas_ordenadas_por_grado_dependencia +\
+      tareas_independientes
+
 
 class ProductoProxyDependenciasTareas(Producto):
   class Meta:

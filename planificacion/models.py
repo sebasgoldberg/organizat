@@ -19,6 +19,15 @@ CLASES_ESTRATEGIAS={
   1: PlanificadorModeloLineal,
   2: PlanificadorLinealContinuo, }
 
+class Hueco:
+  
+  fecha_desde=None
+  tiempo=None
+
+  def __init__(self, fecha_desde, tiempo):
+    self.fecha_desde = fecha_desde
+    self.tiempo = tiempo
+
 class Cronograma(models.Model):
   """
   Validar:
@@ -45,6 +54,7 @@ class Cronograma(models.Model):
     cronograma con la planificación correspondiente para llevar a cabo la
     producción.
     """
+    IntervaloCronograma.objects.filter(cronograma=self).delete()
     planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
     planificador.planificar()
 
@@ -69,6 +79,36 @@ class Cronograma(models.Model):
       tiempo_intervalo=tiempo_intervalo)
     intervalo.clean()
     intervalo.save()
+
+  def get_huecos(self, maquina):
+    huecos=[]
+    intervalos = self.intervalocronograma_set.filter(maquina=maquina).order_by('fecha_desde')
+    intervalo_anterior = None
+    for intervalo in intervalos:
+      if intervalo.fecha_desde == self.fecha_inicio:
+        intervalo_anterior = intervalo
+        continue
+      if intervalo_anterior is None:
+        hueco = Hueco(fecha_desde=self.fecha_inicio,
+          tiempo=intervalo.fecha_desde-self.fecha_inicio)
+        huecos.append(hueco)
+        intervalo_anterior = intervalo
+        continue
+      if intervalo_anterior.get_fecha_hasta() <> intervalo.get_fecha_desde():
+        hueco = Hueco(fecha_desde=intervalo_anterior.get_fecha_hasta(),
+          tiempo=intervalo.fecha_desde-intervalo_anterior.get_fecha_hasta())
+        huecos.append(hueco)
+        intervalo_anterior = intervalo
+    return huecos
+
+  def get_ultima_fecha(self, maquina):
+    from django.db.models import Max
+    ultima_fecha = self.intervalocronograma_set.filter(
+      maquina=maquina).aggregate(Max('fecha_desde'))['fecha_desde__max']
+    if not ultima_fecha:
+      return self.fecha_inicio
+    return self.intervalocronograma_set.filter(
+      maquina=maquina).get(fecha_desde=ultima_fecha).get_fecha_hasta()
 
   def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
     intervalo = None
@@ -124,12 +164,15 @@ class MaquinaCronograma(models.Model):
   def __unicode__(self):
     return self.maquina
 
+class SolapamientoIntervalo(ValidationError):
+  pass
+
 class IntervaloCronograma(models.Model):
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
   secuencia = models.IntegerField(verbose_name=_(u'Secuencia'),
-    help_text=_(u'Secuencia de aparición en el cronograma'))
+    help_text=_(u'Secuencia de aparición en el cronograma'), null=True, blank=True)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
   pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
@@ -156,6 +199,10 @@ class IntervaloCronograma(models.Model):
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
+
+  def __unicode__(self):
+    return '%s - %s - %s' % (self.maquina.descripcion, self.get_fecha_desde(),
+      self.get_fecha_hasta())
 
   def get_tiempo_tarea(self):
     return self.tarea.get_tiempo(self.maquina,self.producto)
@@ -185,12 +232,36 @@ class IntervaloCronograma(models.Model):
   def get_fecha_hasta(self):
     return self.get_fecha_desde() + datetime.timedelta(minutes=self.tiempo_intervalo)
 
+  def calcular_cantidad_tarea(self):
+    if self.cantidad_tarea:
+      return
+    self.cantidad_tarea = self.tiempo_intervalo / float(self.tarea.get_tiempo(self.maquina,self.producto))
+
+  def validar_solapamiento(self):
+    intervalos_maquina = IntervaloCronograma.objects.filter(
+      cronograma=self.cronograma,maquina=self.maquina)
+    for intervalo in intervalos_maquina:
+      if ( intervalo.get_fecha_desde() <= self.get_fecha_desde() and
+        intervalo.get_fecha_hasta() > self.get_fecha_desde() ) or\
+        ( intervalo.get_fecha_desde() < self.get_fecha_hasta() and
+        intervalo.get_fecha_hasta() >= self.get_fecha_hasta() ) or\
+        ( self.get_fecha_desde() <= intervalo.get_fecha_desde() and
+        self.get_fecha_hasta() >= intervalo.get_fecha_hasta() ):
+        raise SolapamientoIntervalo(
+          _(u'Ha ocurrido solapamiento entre el intervalo %s y el intervalo %s:') %
+          (self, intervalo))
+
   def validar_dependencias_guardado(self):
+    self.validar_solapamiento()
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     if self.id:
       gerenciador_dependencias.verificar_modificar_instante(self)
     else:
       gerenciador_dependencias.verificar_agregar_instante(self)
+
+  def validar_dependencias_borrado(self):
+    gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
+    gerenciador_dependencias.verificar_eliminar_instante(self)
 
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
@@ -199,6 +270,11 @@ class IntervaloCronograma(models.Model):
     self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.pedido,cronograma=self.cronograma)
     self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
     self.calcular_fecha_desde()
+    self.calcular_cantidad_tarea()
+
+  def delete(self, *args, **kwargs):
+    self.validar_dependencias_borrado()
+    super(IntervaloCronograma, self).delete(*args, **kwargs) 
 
   def save(self, *args, **kwargs):
     self.validar_dependencias_guardado()
@@ -210,5 +286,5 @@ def validar_dependencias_borrado(sender, instance, **kwargs):
 
 from django.db.models.signals import pre_delete
 
-pre_delete.connect(validar_dependencias_borrado, 
-  sender=IntervaloCronograma)
+#pre_delete.connect(validar_dependencias_borrado, 
+  #sender=IntervaloCronograma)

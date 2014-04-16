@@ -4,6 +4,7 @@ from produccion.models import *
 from planificacion.models import * 
 import datetime
 import pytz
+from django.db.transaction import rollback
 
 utc=pytz.UTC
 
@@ -242,6 +243,11 @@ class TareaDependienteTestCase(TestCase):
     T2 = Tarea.objects.get(descripcion='T2')
     P1 = Producto.objects.get(descripcion='P1')
     D1 = Pedido.objects.get(descripcion='D1')
+
+    # Se verifica la obtención de tareas ordenadas por grado de dependencia
+    tareas_ordenadas_por_grado_dependencia=P1.get_tareas_ordenadas_por_dependencia()
+    self.assertEqual(tareas_ordenadas_por_grado_dependencia[0].id,T1.id)
+    self.assertEqual(tareas_ordenadas_por_grado_dependencia[1].id,T2.id)
     
     # Se agrega una tarea T1 entre [0;25] como resultado da una cantidad de 5
     I1=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=1,
@@ -342,7 +348,20 @@ class TareaDependienteTestCase(TestCase):
     # Si queremos quitar I3 deberíamos obtener un error, ya que se dejaría de cumplir
     # la dependencia T1 -> T2
     try:
-      gd.validar_dependencias(T1,T2,instante_borrado=I3)
+      gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(I3)
+      gerenciador_dependencias.validar_dependencias(T1,T2,instante_borrado=I3)
+      self.fail("Debería ser inválido quitar el instante I3.")
+    except ValidationError:
+      pass
+
+    # Se verifica que efectivamente T2 está dentro de las tareas posteriores a T1
+    self.assertIn(T2.id,[t.id for t in T1.get_posteriores(P1)])
+
+    # Si queremos quitar I3 deberíamos obtener un error, ya que se dejaría de cumplir
+    # la dependencia T1 -> T2
+    try:
+      gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(I3)
+      gerenciador_dependencias.verificar_eliminar_instante(I3)
       self.fail("Debería ser inválido quitar el instante I3.")
     except ValidationError:
       pass
@@ -354,3 +373,99 @@ class TareaDependienteTestCase(TestCase):
       self.fail("No deberia dejar borrar un intervalo que hace que no se cumpla una dependencia.")
     except ValidationError:
       pass
+
+    I3.fecha_desde = I2.get_fecha_hasta()
+    try:
+      I3.clean()
+      I3.save()
+      self.fail("Debería ser inválido mover el instante I3 después del instante I2.")
+    except ValidationError:
+      pass
+
+    # Se planifica I2 en la máquina M2 en la fecha de finalización de I1
+    I4=IntervaloCronograma(cronograma=cronograma,maquina=M2,secuencia=2,
+      tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
+      tiempo_intervalo=100)
+    I4.clean()
+    self.assertEqual(I4.get_fecha_desde(),I2.get_fecha_hasta())
+
+    try:
+      # como I1:M1:T1:5:[0;25] y I2:M2:T2:10:[0;100] y T1 -> T2 => 
+      # => En 50 ya no se puede seguir produciendo T2
+      # Por lo tanto debe ocurrir un error.
+      I4.save()
+      self.fail("No aplico la validacion de cantidad de tarea anterior necesaria para tarea agregada.")
+    except ValidationError:
+      pass
+
+class PlanificadorLinealContinuoTestCase(TestCase):
+  
+  def setUp(self):
+
+    M1=Maquina.objects.create(descripcion='M1')
+    M2=Maquina.objects.create(descripcion='M2')
+
+    T1=Tarea.objects.create(descripcion='T1', tiempo=5)
+    T2=Tarea.objects.create(descripcion='T2', tiempo=10)
+
+    TareaMaquina.objects.create(tarea=T1,maquina=M1)
+    TareaMaquina.objects.create(tarea=T2,maquina=M2)
+
+    P1=Producto.objects.create(descripcion='P1')
+
+    TareaProducto.objects.create(tarea=T1,producto=P1)
+    TareaProducto.objects.create(tarea=T2,producto=P1)
+
+    D1=Pedido.objects.create(descripcion='D1')
+
+    D1.add_item(P1,100)
+
+    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
+      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),)
+
+    cronograma.clean()
+    cronograma.save()
+
+    cronograma.add_maquina(M1)
+    cronograma.add_maquina(M2)
+
+    cronograma.add_pedido(D1)
+
+    P1.add_dependencia_tareas(tarea_anterior=T2,tarea=T1)
+
+  def test_completar_cronograma(self):
+ 
+    cronograma = Cronograma.objects.get(descripcion='CRON1')
+    D1 = Pedido.objects.get(descripcion='D1')
+    P1 = Producto.objects.get(descripcion='P1')
+    T1 = Tarea.objects.get(descripcion='T1')
+    T2 = Tarea.objects.get(descripcion='T2')
+
+    #T2.get_secuencias_dependencias()
+
+    # Se verifica que T2 sea la tarea con primer grado de dependencia.
+    tareas = P1.get_tareas_primer_grado_dependencia()
+    self.assertEqual(len(tareas),1)
+    self.assertEqual(T2.id,tareas[0].id)
+
+    # Se verifica el correcto funcionamiento de la obtención de tareas
+    # ordenadas por dependencia.
+    tareas=P1.get_tareas_ordenadas_por_dependencia()
+    self.assertEqual(len(tareas),2)
+    self.assertEqual(T2.id,tareas[0].id)
+    self.assertEqual(T1.id,tareas[1].id)
+
+    # Se verifica que no existan tareas anteriores para la tarea T2,
+    # en el producto P1
+    self.assertEqual(len(T2.get_anteriores(P1)),0)
+
+    cronograma.planificar()
+
+    # Se verifica que se haya planificado la cantidad 
+    # que corresponde de cada tarea.
+    for item in D1.get_items():
+      for tarea in item.producto.get_tareas():
+        cantidad_tarea = IntervaloCronograma.objects.filter(
+          tarea=tarea,pedido=D1,producto=item.producto).aggregate(
+          models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
+        self.assertEqual(item.cantidad, cantidad_tarea)

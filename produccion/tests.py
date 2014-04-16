@@ -4,6 +4,7 @@ from produccion.models import *
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
+from django.db import IntegrityError
 
 class TiempoRealizacionTareaTestCase(TestCase):
 
@@ -191,14 +192,14 @@ class DependenciaTareaProductoTestCase(TestCase):
     P1T1T4=DependenciaTareaProducto(producto=P1, tarea_anterior=T1, tarea=T4)
     P1T1T4.clean()
     P1T1T4.save()
-    P1T3T4=DependenciaTareaProducto.objects.create(producto=P1, tarea_anterior=T3, tarea=T4)
+    P1T3T4=DependenciaTareaProducto(producto=P1, tarea_anterior=T3, tarea=T4)
     P1T3T4.clean()
     P1T3T4.save()
-    P1T4T2=DependenciaTareaProducto.objects.create(producto=P1, tarea_anterior=T4, tarea=T2)
+    P1T4T2=DependenciaTareaProducto(producto=P1, tarea_anterior=T4, tarea=T2)
     P1T4T2.clean()
     P1T4T2.save()
 
-    P2T2T1=DependenciaTareaProducto.objects.create(producto=P2, tarea_anterior=T2, tarea=T1)
+    P2T2T1=DependenciaTareaProducto(producto=P2, tarea_anterior=T2, tarea=T1)
     P2T2T1.clean()
     P2T2T1.save()
 

@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from math import ceil
 from planificacion.strategy.base import PlanificadorStrategy
 from planificacion.strategy.utils import add_keys_to_dict
+from planificacion.dependencias import GerenciadorDependencias
 
 C_100_ANYOS_EN_MINUTOS = 52560000
 
@@ -117,18 +118,16 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     return (self.modelo and self.modelo.status == LpStatusOptimal)
 
   def completar_cronograma(self):
-    for maquina in self.cronograma.get_maquinas():
-      # Se obtienen solo las tareas que pertencen a la máquina iterada
-      instante = 0
-      for tarea in maquina.get_tareas():
-        for pedido in self.cronograma.get_pedidos():
-          for producto in pedido.get_productos_maquina_tarea(maquina,tarea):
+    for pedido in self.cronograma.get_pedidos():
+      for producto in pedido.get_productos():
+        gerenciador_dependencias = GerenciadorDependencias(self.cronograma, producto, pedido)
+        for tarea in producto.get_tareas_ordenadas_por_dependencia():
+          for maquina in producto.get_maquinas_tarea(tarea):
             tiempo = self.tiempo_maquina_tarea_pedido_producto[
               maquina.id][tarea.id][producto.id][pedido.id].value()
             if tiempo > 0:
-              instante+=1
-              self.cronograma.add_intervalo(instante,maquina,tarea,pedido,producto,
-                tiempo/float(tarea.get_tiempo(maquina,producto)),tiempo_intervalo=ceil(tiempo))
+              gerenciador_dependencias.add_intervalos_to_cronograma(
+                maquina=maquina, tarea=tarea, tiempo=tiempo)
 
   def planificar(self):
     
@@ -145,4 +144,3 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       print v.name, "=", v.varValue
 
     print "Tiempo de produccion = ", value(self.modelo.objective)
-
