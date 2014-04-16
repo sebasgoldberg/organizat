@@ -1,0 +1,382 @@
+[
+{
+  "pk": 1, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "descripcion": "Crono pedidos B y C", 
+    "estrategia": 2, 
+    "fecha_inicio": "2014-04-16T00:00:00Z", 
+    "intervalo_tiempo": "240"
+  }
+},
+{
+  "pk": 3, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 1
+  }
+},
+{
+  "pk": 4, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 2
+  }
+},
+{
+  "pk": 5, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 3
+  }
+},
+{
+  "pk": 1, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 2
+  }
+},
+{
+  "pk": 3, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 3
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "M1"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "M2"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "M3"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "T1", 
+    "tiempo": "5"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "T2", 
+    "tiempo": "6"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "T3", 
+    "tiempo": "7"
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "T4", 
+    "tiempo": "8"
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "T5", 
+    "tiempo": "9"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 1, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 2, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 3, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 2, 
+    "maquina": 2
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 4, 
+    "maquina": 2
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 4, 
+    "maquina": 3
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 5, 
+    "maquina": 3
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 5, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.producto", 
+  "fields": {
+    "descripcion": "PA"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.producto", 
+  "fields": {
+    "descripcion": "PB"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.producto", 
+  "fields": {
+    "descripcion": "PC"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 2
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 5
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 4
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 1
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 2
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 3, 
+    "tarea": 1
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 3, 
+    "tarea": 4
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 3, 
+    "tarea": 5
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 2, 
+    "tarea": 1, 
+    "tarea_anterior": 2, 
+    "tareaproducto": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 3, 
+    "tarea": 2, 
+    "tarea_anterior": 5, 
+    "tareaproducto": 2
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 4, 
+    "tarea": 5, 
+    "tarea_anterior": 4, 
+    "tareaproducto": 3
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 4, 
+    "tarea": 1, 
+    "tarea_anterior": 4, 
+    "tareaproducto": 1
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.pedido", 
+  "fields": {
+    "descripcion": "Ped A", 
+    "fecha_entrega": "2014-04-27"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.pedido", 
+  "fields": {
+    "descripcion": "Ped B", 
+    "fecha_entrega": "2014-04-25"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.pedido", 
+  "fields": {
+    "descripcion": "Ped C", 
+    "fecha_entrega": "2014-04-30"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 1, 
+    "pedido": 1, 
+    "cantidad": "100"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 2, 
+    "pedido": 2, 
+    "cantidad": "100"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 3, 
+    "pedido": 2, 
+    "cantidad": "200"
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 2, 
+    "pedido": 3, 
+    "cantidad": "180"
+  }
+}
+]

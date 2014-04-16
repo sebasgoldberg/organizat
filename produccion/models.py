@@ -21,6 +21,12 @@ class Maquina(models.Model):
   def get_tareas(self):
     return [ x.tarea for x in self.tareamaquina_set.all() ]
 
+  def add_tarea(self,tarea):
+    tm=TareaMaquina(tarea=tarea,maquina=self)
+    tm.clean()
+    tm.save()
+    return tm
+
 class Tarea(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
   tiempo = models.DecimalField(

@@ -118,7 +118,6 @@ class GerenciadorDependencias:
     return intervalo
 
   def crear_intervalo_al_final(self, maquina, tarea, tiempo):
-    print "Se agrega intervalo al final: %s, %s, %s." % (maquina.descripcion, tarea.descripcion, tiempo)
     tareas = tarea.get_anteriores(self.producto)
     tareas.append(tarea)
     intervalos=self.get_intervalos(tareas)

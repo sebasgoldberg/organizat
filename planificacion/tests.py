@@ -8,6 +8,20 @@ from django.db.transaction import rollback
 
 utc=pytz.UTC
 
+class PlanificadorTestCase(TestCase):
+
+  def verificar_cantidad_planificada(self, cronograma):
+
+    # Se verifica que se haya planificado la cantidad 
+    # que corresponde de cada tarea.
+    for pedido in cronograma.get_pedidos():
+      for item in pedido.get_items():
+        for tarea in item.producto.get_tareas():
+          cantidad_tarea = IntervaloCronograma.objects.filter(
+            tarea=tarea,pedido=pedido,producto=item.producto).aggregate(
+            models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
+          self.assertEqual(item.cantidad, cantidad_tarea)
+
 class TiempoRealizacionTareaTestCase(TestCase):
 
   def setUp(self):
@@ -398,7 +412,7 @@ class TareaDependienteTestCase(TestCase):
     except ValidationError:
       pass
 
-class PlanificadorLinealContinuoTestCase(TestCase):
+class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
   
   def setUp(self):
 
@@ -461,11 +475,66 @@ class PlanificadorLinealContinuoTestCase(TestCase):
 
     cronograma.planificar()
 
-    # Se verifica que se haya planificado la cantidad 
-    # que corresponde de cada tarea.
-    for item in D1.get_items():
-      for tarea in item.producto.get_tareas():
-        cantidad_tarea = IntervaloCronograma.objects.filter(
-          tarea=tarea,pedido=D1,producto=item.producto).aggregate(
-          models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
-        self.assertEqual(item.cantidad, cantidad_tarea)
+    self.verificar_cantidad_planificada(cronograma)
+
+class HuecoInexplicableTestCase(PlanificadorTestCase):
+  
+  fixtures = [ 'planificacion/test/fixtures/hueco_inexplicable.json' ]
+
+  def test_no_existe_hueco_inexplicable(self):
+    
+    # Se recupera el primero, porque hay un solo cronograma definido.
+    cronograma = Cronograma.objects.first()
+
+    cronograma.planificar()
+
+    self.verificar_cantidad_planificada(cronograma)
+
+    M3 = Maquina.objects.get(descripcion='M3')
+    huecos = cronograma.get_huecos(M3)
+
+    if len(huecos) == 0:
+      return
+
+    self.assertEqual(len(huecos),1)
+
+    hueco = huecos[0]
+
+    self.assertLess(hueco.fecha_desde,hueco.get_fecha_hasta())
+
+    # Se verifica el correcto funcionamiento de la obtención de huecos.
+    for maquina in Maquina.objects.all():
+      huecos = cronograma.get_huecos(maquina)
+      intervalo_anterior = None
+      intervalos = IntervaloCronograma.objects.filter(maquina=maquina).order_by('fecha_desde')
+      for intervalo in intervalos:
+        if not intervalo_anterior:
+          intervalo_anterior = intervalo
+          if intervalo.fecha_desde > intervalo.cronograma.fecha_inicio:
+            fecha_desde = intervalo.cronograma.fecha_inicio
+            fecha_hasta = intervalo.fecha_desde
+          else:
+            continue
+        else:
+          if intervalo.fecha_desde > intervalo_anterior.get_fecha_hasta():
+            fecha_desde = intervalo_anterior.get_fecha_hasta()
+            fecha_hasta = intervalo.fecha_desde
+            intervalo_anterior = intervalo
+          else:
+            intervalo_anterior = intervalo
+            continue
+        hueco_encontrado = False
+        for hueco in huecos:
+          if hueco.fecha_desde == fecha_desde and\
+            hueco.get_fecha_hasta() == fecha_hasta:
+            hueco_encontrado = True
+            break
+        self.assertTrue(hueco_encontrado,"Huecos: %s;\n Intervalos: %s;\n desde: %s;\n hasta: %s" % ([h.__unicode__() for h in huecos], [i for i in intervalos], fecha_desde, fecha_hasta) )
+
+    # Se obtiene el intervalo posterior al hueco.
+    intervalo = IntervaloCronograma.objects.get(maquina=M3, fecha_desde=hueco.get_fecha_hasta()) 
+
+    intervalo.fecha_desde = hueco.fecha_desde
+    intervalo.clean()
+    intervalo.save()
+    self.fail('Se pudo tapar el hueco moviendo el intervalo, pero esto debería haber sido planificado desde un principio.')

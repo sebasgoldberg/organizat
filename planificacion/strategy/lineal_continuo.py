@@ -139,8 +139,3 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
 
     self.completar_cronograma()
-
-    for v in self.modelo.variables():
-      print v.name, "=", v.varValue
-
-    print "Tiempo de produccion = ", value(self.modelo.objective)

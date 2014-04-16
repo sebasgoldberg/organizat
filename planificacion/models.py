@@ -19,7 +19,7 @@ CLASES_ESTRATEGIAS={
   1: PlanificadorModeloLineal,
   2: PlanificadorLinealContinuo, }
 
-class Hueco:
+class Hueco(object):
   
   fecha_desde=None
   tiempo=None
@@ -27,6 +27,12 @@ class Hueco:
   def __init__(self, fecha_desde, tiempo):
     self.fecha_desde = fecha_desde
     self.tiempo = tiempo
+
+  def __unicode__(self):
+    return u'(%s,%s)' % (self.fecha_desde, self.get_fecha_hasta())
+
+  def get_fecha_hasta(self):
+    return self.fecha_desde + self.tiempo
 
 class Cronograma(models.Model):
   """
@@ -85,7 +91,7 @@ class Cronograma(models.Model):
     intervalos = self.intervalocronograma_set.filter(maquina=maquina).order_by('fecha_desde')
     intervalo_anterior = None
     for intervalo in intervalos:
-      if intervalo.fecha_desde == self.fecha_inicio:
+      if ( intervalo.fecha_desde - self.fecha_inicio ).seconds < 60:
         intervalo_anterior = intervalo
         continue
       if intervalo_anterior is None:
@@ -94,7 +100,7 @@ class Cronograma(models.Model):
         huecos.append(hueco)
         intervalo_anterior = intervalo
         continue
-      if intervalo_anterior.get_fecha_hasta() <> intervalo.get_fecha_desde():
+      if ( intervalo.get_fecha_desde() - intervalo_anterior.get_fecha_hasta() ).seconds > 60:
         hueco = Hueco(fecha_desde=intervalo_anterior.get_fecha_hasta(),
           tiempo=intervalo.fecha_desde-intervalo_anterior.get_fecha_hasta())
         huecos.append(hueco)
@@ -201,8 +207,8 @@ class IntervaloCronograma(models.Model):
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
 
   def __unicode__(self):
-    return '%s - %s - %s' % (self.maquina.descripcion, self.get_fecha_desde(),
-      self.get_fecha_hasta())
+    return '%s_%s_%s_%s_%s' % (self.id, self.maquina.descripcion, self.tarea.descripcion,
+      self.get_fecha_desde(), self.get_fecha_hasta())
 
   def get_tiempo_tarea(self):
     return self.tarea.get_tiempo(self.maquina,self.producto)
@@ -238,7 +244,11 @@ class IntervaloCronograma(models.Model):
     self.cantidad_tarea = self.tiempo_intervalo / float(self.tarea.get_tiempo(self.maquina,self.producto))
 
   def validar_solapamiento(self):
-    intervalos_maquina = IntervaloCronograma.objects.filter(
+    if self.id:
+      intervalos_maquina = IntervaloCronograma.objects.exclude(pk=self.id)
+    else:
+      intervalos_maquina = IntervaloCronograma.objects
+    intervalos_maquina = intervalos_maquina.filter(
       cronograma=self.cronograma,maquina=self.maquina)
     for intervalo in intervalos_maquina:
       if ( intervalo.get_fecha_desde() <= self.get_fecha_desde() and
@@ -248,7 +258,7 @@ class IntervaloCronograma(models.Model):
         ( self.get_fecha_desde() <= intervalo.get_fecha_desde() and
         self.get_fecha_hasta() >= intervalo.get_fecha_hasta() ):
         raise SolapamientoIntervalo(
-          _(u'Ha ocurrido solapamiento entre el intervalo %s y el intervalo %s:') %
+          _(u'Ha ocurrido solapamiento entre el intervalo que está siendo validado %s y el intervalo %s:') %
           (self, intervalo))
 
   def validar_dependencias_guardado(self):
