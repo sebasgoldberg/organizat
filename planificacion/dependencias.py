@@ -63,12 +63,12 @@ class GerenciadorDependencias:
       intervalos.append(instante_agregado)
     return intervalos
 
-  def get_particion_ordenada_temporal(self,intervalos):
+  def get_particion_ordenada_temporal(self, intervalos, tiempos_a_incluir=[]):
     particion = []
     for intervalo in intervalos:
       particion.append(intervalo.get_fecha_desde())
       particion.append(intervalo.get_fecha_hasta())
-    particion = list(set(particion))
+    particion = list(set(particion)) + tiempos_a_incluir
     particion.sort()
     return particion
 
@@ -121,8 +121,8 @@ class GerenciadorDependencias:
     tareas = tarea.get_anteriores(self.producto)
     tareas.append(tarea)
     intervalos=self.get_intervalos(tareas)
-    particion_temporal = self.get_particion_ordenada_temporal(intervalos)
     ultima_fecha_maquina = self.cronograma.get_ultima_fecha(maquina)
+    particion_temporal = self.get_particion_ordenada_temporal(intervalos, [ultima_fecha_maquina])
     if len(particion_temporal) == 0:
       particion_temporal.append(self.cronograma.fecha_inicio)
     intervalo =\
@@ -134,7 +134,7 @@ class GerenciadorDependencias:
           intervalo.fecha_desde = t
           intervalo.clean()
           intervalo.save()
-          return
+          return intervalo
         except ValidationError:
           pass
     
@@ -143,7 +143,7 @@ class GerenciadorDependencias:
     intervalo.fecha_desde = ultima_fecha_maquina
     intervalo.clean()
     intervalo.save()
-    return
+    return intervalo
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
     huecos = self.cronograma.get_huecos(maquina)

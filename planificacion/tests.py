@@ -490,18 +490,6 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
 
     self.verificar_cantidad_planificada(cronograma)
 
-    M3 = Maquina.objects.get(descripcion='M3')
-    huecos = cronograma.get_huecos(M3)
-
-    if len(huecos) == 0:
-      return
-
-    self.assertEqual(len(huecos),1)
-
-    hueco = huecos[0]
-
-    self.assertLess(hueco.fecha_desde,hueco.get_fecha_hasta())
-
     # Se verifica el correcto funcionamiento de la obtención de huecos.
     for maquina in Maquina.objects.all():
       huecos = cronograma.get_huecos(maquina)
@@ -529,7 +517,20 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
             hueco.get_fecha_hasta() == fecha_hasta:
             hueco_encontrado = True
             break
-        self.assertTrue(hueco_encontrado,"Huecos: %s;\n Intervalos: %s;\n desde: %s;\n hasta: %s" % ([h.__unicode__() for h in huecos], [i for i in intervalos], fecha_desde, fecha_hasta) )
+        self.assertTrue(hueco_encontrado,"Huecos: %s;\n Intervalos: %s;\n desde: %s;\n hasta: %s" % (
+          [h.__unicode__() for h in huecos], [i for i in intervalos], fecha_desde, fecha_hasta) )
+
+    M3 = Maquina.objects.get(descripcion='M3')
+    huecos = cronograma.get_huecos(M3)
+
+    if len(huecos) == 0:
+      return
+
+    self.assertEqual(len(huecos),1)
+
+    hueco = huecos[0]
+
+    self.assertLess(hueco.fecha_desde,hueco.get_fecha_hasta())
 
     # Se obtiene el intervalo posterior al hueco.
     intervalo = IntervaloCronograma.objects.get(maquina=M3, fecha_desde=hueco.get_fecha_hasta()) 
@@ -537,4 +538,12 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
     intervalo.fecha_desde = hueco.fecha_desde
     intervalo.clean()
     intervalo.save()
-    self.fail('Se pudo tapar el hueco moviendo el intervalo, pero esto debería haber sido planificado desde un principio.')
+
+    # Se borra el intervalo y se agrega al final.
+    intervalo.delete()
+    intervalo.id = None
+    gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(intervalo)
+    nuevo_intervalo = gerenciador_dependencias.crear_intervalo_al_final(
+      intervalo.maquina, intervalo.tarea, intervalo.tiempo_intervalo)
+    self.assertEqual(nuevo_intervalo.fecha_desde, hueco.fecha_desde)
+    #self.fail('Se pudo tapar el hueco moviendo el intervalo, pero esto debería haber sido planificado desde un principio.')

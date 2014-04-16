@@ -91,20 +91,24 @@ class Cronograma(models.Model):
     intervalos = self.intervalocronograma_set.filter(maquina=maquina).order_by('fecha_desde')
     intervalo_anterior = None
     for intervalo in intervalos:
-      if ( intervalo.fecha_desde - self.fecha_inicio ).seconds < 60:
+      if not intervalo_anterior:
         intervalo_anterior = intervalo
-        continue
-      if intervalo_anterior is None:
-        hueco = Hueco(fecha_desde=self.fecha_inicio,
-          tiempo=intervalo.fecha_desde-self.fecha_inicio)
-        huecos.append(hueco)
-        intervalo_anterior = intervalo
-        continue
-      if ( intervalo.get_fecha_desde() - intervalo_anterior.get_fecha_hasta() ).seconds > 60:
-        hueco = Hueco(fecha_desde=intervalo_anterior.get_fecha_hasta(),
-          tiempo=intervalo.fecha_desde-intervalo_anterior.get_fecha_hasta())
-        huecos.append(hueco)
-        intervalo_anterior = intervalo
+        if intervalo.fecha_desde > intervalo.cronograma.fecha_inicio:
+          fecha_desde = intervalo.cronograma.fecha_inicio
+          fecha_hasta = intervalo.fecha_desde
+        else:
+          continue
+      else:
+        if intervalo.fecha_desde > intervalo_anterior.get_fecha_hasta():
+          fecha_desde = intervalo_anterior.get_fecha_hasta()
+          fecha_hasta = intervalo.fecha_desde
+          intervalo_anterior = intervalo
+        else:
+          intervalo_anterior = intervalo
+          continue
+      hueco = Hueco(fecha_desde=fecha_desde,
+        tiempo=fecha_hasta-fecha_desde)
+      huecos.append(hueco)
     return huecos
 
   def get_ultima_fecha(self, maquina):
