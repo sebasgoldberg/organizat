@@ -92,7 +92,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             self.tiempo_maquina_tarea_pedido_producto[
               maquina.id][tarea.id][producto.id][pedido.id] = LpVariable(
                 "T_M%s_T%s_P%s_D%s" % \
-                (maquina.id, tarea.id, pedido.id, producto.id),0)
+                (maquina.id, tarea.id, pedido.id, producto.id),self.cronograma.tiempo_minimo_intervalo)
 
   def definir_funcional(self):
 
@@ -134,6 +134,15 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     self.definir_modelo()
 
     self.modelo.solve()
+
+    if not self.is_modelo_resuelto():
+      # @todo Agregar la posibilidad de mostrar el mensaje en caso que exista request
+      #messages.warning(request, _(u'No se ha podido resolver el modelo. Se anula tiempo mínimo del cronograma y se intenta nuevamente.'))
+      self.cronograma.tiempo_minimo_intervalo = 0
+      self.cronograma.clean()
+      self.cronograma.save()
+      self.definir_modelo()
+      self.modelo.solve()
 
     if not self.is_modelo_resuelto():
       raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))

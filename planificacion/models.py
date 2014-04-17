@@ -47,6 +47,9 @@ class Cronograma(models.Model):
   fecha_inicio = models.DateTimeField(
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=datetime.datetime.now())
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS)
+  tiempo_minimo_intervalo = models.DecimalField(default=120,
+    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
+    help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. No puede haber intervalos con tiempos menores a este.'))
 
   class Meta:
     ordering = ['-id']
@@ -277,6 +280,11 @@ class IntervaloCronograma(models.Model):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     gerenciador_dependencias.verificar_eliminar_instante(self)
 
+  def validar_tiempo_minimo(self):
+    if self.tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
+      raise ValidationError(_(u'El tiempo del intervalo %s debe ser mayor al tiempo mínimo %s.') % (
+        self.tiempo_intervalo, self.cronograma.tiempo_minimo_intervalo))
+
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
@@ -285,13 +293,14 @@ class IntervaloCronograma(models.Model):
     self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()
+    self.validar_dependencias_guardado()
+    self.validar_tiempo_minimo()
 
   def delete(self, *args, **kwargs):
     self.validar_dependencias_borrado()
     super(IntervaloCronograma, self).delete(*args, **kwargs) 
 
   def save(self, *args, **kwargs):
-    self.validar_dependencias_guardado()
     super(IntervaloCronograma, self).save(*args, **kwargs) 
 
 def validar_dependencias_borrado(sender, instance, **kwargs):

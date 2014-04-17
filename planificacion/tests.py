@@ -162,7 +162,7 @@ class IntervaloCronogramaTestCase(TestCase):
     D3.add_item(P1,300)
 
     cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
-      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),)
+      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),tiempo_minimo_intervalo=0)
 
     cronograma.clean()
     cronograma.save()
@@ -236,7 +236,7 @@ class TareaDependienteTestCase(TestCase):
     D1.add_item(P1,100)
 
     cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
-      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),)
+      fecha_inicio=datetime.datetime(2014,1,1,0,0,0), tiempo_minimo_intervalo=0)
 
     cronograma.clean()
     cronograma.save()
@@ -400,17 +400,16 @@ class TareaDependienteTestCase(TestCase):
     I4=IntervaloCronograma(cronograma=cronograma,maquina=M2,secuencia=2,
       tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
       tiempo_intervalo=100)
-    I4.clean()
-    self.assertEqual(I4.get_fecha_desde(),I2.get_fecha_hasta())
 
     try:
       # como I1:M1:T1:5:[0;25] y I2:M2:T2:10:[0;100] y T1 -> T2 => 
       # => En 50 ya no se puede seguir produciendo T2
       # Por lo tanto debe ocurrir un error.
+      I4.clean()
       I4.save()
       self.fail("No aplico la validacion de cantidad de tarea anterior necesaria para tarea agregada.")
     except ValidationError:
-      pass
+      self.assertEqual(I4.get_fecha_desde(),I2.get_fecha_hasta())
 
 class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
   
@@ -547,3 +546,57 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
       intervalo.maquina, intervalo.tarea, intervalo.tiempo_intervalo)
     self.assertEqual(nuevo_intervalo.fecha_desde, hueco.fecha_desde)
     #self.fail('Se pudo tapar el hueco moviendo el intervalo, pero esto debería haber sido planificado desde un principio.')
+
+class TiempoMinimoDeBloqueTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/hueco_inexplicable.json' ]
+
+  def setUp(self):
+
+    # Se recupera el primero, porque hay un solo cronograma definido.
+    cronograma = Cronograma.objects.first()
+
+    cronograma.planificar()
+
+  def test_tiempo_minimo_bloque(self):
+
+    cronograma = Cronograma.objects.first()
+
+    for intervalo in cronograma.intervalocronograma_set.all():
+      self.assertLessEqual(intervalo.cronograma.tiempo_minimo_intervalo,intervalo.tiempo_intervalo,
+        u'El intervalo %s tiene un tiempo %s menor al tiempo mínimo %s.' % (
+          intervalo, intervalo.tiempo_intervalo, intervalo.cronograma.tiempo_minimo_intervalo))
+
+class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/hueco_inexplicable.json' ]
+
+  def setUp(self):
+
+    pedido=Pedido(descripcion='D4')
+    pedido.clean()
+    pedido.save()
+
+    P1 = Producto.objects.first()
+
+    pedido.add_item(P1,1)
+
+    cronograma = Cronograma.objects.first()
+    cronograma.add_pedido(pedido)
+
+
+  def test_tiempo_menor_al_tiempo_minimo(self):
+
+    cronograma = Cronograma.objects.first()
+
+    tiempo_minimo_intervalo = cronograma.tiempo_minimo_intervalo
+
+    cronograma.planificar()
+
+    # Tomamos cualquier intervalo del pedido D4
+    intervalo = IntervaloCronograma.objects.filter(pedido__descripcion='D4').first()
+
+    # Verificamos que el intervalo tiene una duración menor a la del tiempo mínimo
+    self.assertLess(intervalo.tiempo_intervalo,tiempo_minimo_intervalo)
+
+    self.assertEqual(cronograma.tiempo_minimo_intervalo,0)
