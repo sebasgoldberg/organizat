@@ -17,7 +17,7 @@ class PlanificadorTestCase(TestCase):
     for pedido in cronograma.get_pedidos():
       for item in pedido.get_items():
         for tarea in item.producto.get_tareas():
-          cantidad_tarea = IntervaloCronograma.objects.filter(
+          cantidad_tarea = cronograma.intervalocronograma_set.filter(
             tarea=tarea,pedido=pedido,producto=item.producto).aggregate(
             models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
           self.assertEqual(item.cantidad, cantidad_tarea)

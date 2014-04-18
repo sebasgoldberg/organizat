@@ -244,7 +244,7 @@ class IntervaloCronograma(models.Model):
     try:
       fecha_desde_anterior = IntervaloCronograma.objects.filter(maquina=self.maquina, 
         fecha_desde__lt=self.fecha_desde).aggregate(models.Max('fecha_desde'))['fecha_desde__max']
-      return IntervaloCronograma.objects.get(maquina=self.maquina, 
+      return self.cronograma.intervalocronograma_set.get(maquina=self.maquina, 
         fecha_desde=fecha_desde_anterior)
     except IntervaloCronograma.DoesNotExist:
       pass
