@@ -600,3 +600,34 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
     self.assertLess(intervalo.tiempo_intervalo,tiempo_minimo_intervalo)
 
     self.assertEqual(cronograma.tiempo_minimo_intervalo,0)
+
+class PlanificarSinHuecosEvitables(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/hueco_inexplicable.json' ]
+
+  def setUp(self):
+
+    cronograma = Cronograma.objects.first()
+
+    cronograma.tiempo_minimo_intervalo = 0
+    cronograma.clean()
+    cronograma.save()
+    cronograma.planificar()
+
+  def test_planificar_sin_huecos_evitables(self):
+
+    cronograma = Cronograma.objects.first()
+
+    cronograma.planificar()
+
+    for intervalo in cronograma.get_intervalos():
+      try:
+        fecha_inicial = intervalo.fecha_desde
+        intervalo.mover(-1)
+        intervalo.clean()
+        intervalo.save()
+        fecha_final = intervalo.fecha_desde
+        self.fail(u'Intervalo movido de %s a %s. No se debería poder adelantar una tarea. Debería ser planificada correctamente.' % (
+          fecha_inicial, fecha_final))
+      except ValidationError:
+        pass

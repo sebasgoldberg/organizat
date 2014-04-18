@@ -5,8 +5,9 @@ from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from planificacion.strategy.hago_lo_que_puedo import *
 from planificacion.strategy.lineal import *
-from planificacion.strategy.lineal_continuo import *
+from planificacion.strategy import lineal_continuo 
 from planificacion.dependencias import GerenciadorDependencias
+from django.core.exceptions import ValidationError
 import datetime
 
 ESTRATEGIAS=(
@@ -17,16 +18,21 @@ ESTRATEGIAS=(
 CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
   1: PlanificadorModeloLineal,
-  2: PlanificadorLinealContinuo, }
+  2: lineal_continuo.PlanificadorLinealContinuo, }
 
 class Hueco(object):
   
   fecha_desde=None
   tiempo=None
 
-  def __init__(self, fecha_desde, tiempo):
+  def __init__(self, fecha_desde, tiempo=None, fecha_hasta=None):
+    if tiempo and fecha_hasta or not (tiempo or fecha_hasta):
+      raise Exception(_('Debe informa el tiempo del hueco o la fecha hasta'))
     self.fecha_desde = fecha_desde
-    self.tiempo = tiempo
+    if tiempo:
+      self.tiempo = tiempo
+    else:
+      self.tiempo = fecha_hasta - fecha_desde
 
   def __unicode__(self):
     return u'(%s,%s)' % (self.fecha_desde, self.get_fecha_hasta())
@@ -50,6 +56,8 @@ class Cronograma(models.Model):
   tiempo_minimo_intervalo = models.DecimalField(default=120,
     max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. No puede haber intervalos con tiempos menores a este.'))
+  optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
+    help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
 
   class Meta:
     ordering = ['-id']
@@ -69,6 +77,12 @@ class Cronograma(models.Model):
 
   def __unicode__(self):
     return self.descripcion
+
+  def get_intervalos(self):
+    return self.intervalocronograma_set.all()
+
+  def get_intervalos_maquina(self, maquina):
+    return self.intervalocronograma_set.filter(maquina=maquina)
 
   def get_pedidos(self):
     return [ p.pedido for p in self.pedidocronograma_set.all() ]
@@ -180,6 +194,12 @@ class MaquinaCronograma(models.Model):
 class SolapamientoIntervalo(ValidationError):
   pass
 
+class IntervaloAnteriorNoExiste(Exception):
+  pass
+
+class HuecoAdyacenteAnteriorNoExiste(Exception):
+  pass
+
 class IntervaloCronograma(models.Model):
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
@@ -217,11 +237,42 @@ class IntervaloCronograma(models.Model):
     return '%s_%s_%s_%s_%s' % (self.id, self.maquina.descripcion, self.tarea.descripcion,
       self.get_fecha_desde(), self.get_fecha_hasta())
 
+  def get_intervalo_anterior(self):
+
+    try:
+      fecha_desde_anterior = IntervaloCronograma.objects.filter(maquina=self.maquina, 
+        fecha_desde__lt=self.fecha_desde).aggregate(models.Max('fecha_desde'))['fecha_desde__max']
+      return IntervaloCronograma.objects.get(maquina=self.maquina, 
+        fecha_desde=fecha_desde_anterior)
+    except IntervaloCronograma.DoesNotExist:
+      pass
+
+    raise IntervaloAnteriorNoExiste()
+
+  def get_hueco_adyacente_anterior(self):
+
+    if self.fecha_desde == self.cronograma.fecha_inicio:
+      raise HuecoAdyacenteAnteriorNoExiste()
+
+    try:
+      intervalo_anterior = self.get_intervalo_anterior()
+    except IntervaloAnteriorNoExiste:
+      return Hueco(self.cronograma.fecha_inicio, fecha_hasta=self.fecha_desde)
+
+    if intervalo_anterior.get_fecha_hasta() == self.get_fecha_desde():
+      raise HuecoAdyacenteAnteriorNoExiste()
+      
+    return Hueco(intervalo_anterior.get_fecha_hasta(), fecha_hasta=self.fecha_desde)
+      
+
+  def mover(self, minutos):
+    self.fecha_desde += datetime.timedelta(minutes=minutos)
+
   def get_tiempo_tarea(self):
     return self.tarea.get_tiempo(self.maquina,self.producto)
 
   def get_intervalos_maquina(self):
-    return self.cronograma.intervalocronograma_set.filter(maquina=self.maquina)
+    return self.cronograma.get_intervalos_maquina(self.maquina)
 
   def get_intervalos_anteriores_maquina(self):
     """
@@ -285,6 +336,11 @@ class IntervaloCronograma(models.Model):
       raise ValidationError(_(u'El tiempo del intervalo %s debe ser mayor al tiempo mínimo %s.') % (
         self.tiempo_intervalo, self.cronograma.tiempo_minimo_intervalo))
 
+  def validar_fecha_inicio_cronograma(self):
+    if self.fecha_desde < self.cronograma.fecha_inicio:
+      raise ValidationError(_('Fecha desde %s anterior a la fecha de inicio del cronograma %s') % (
+        self.fecha_desde, self.cronograma.fecha_inicio))
+
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
@@ -295,6 +351,7 @@ class IntervaloCronograma(models.Model):
     self.calcular_cantidad_tarea()
     self.validar_dependencias_guardado()
     self.validar_tiempo_minimo()
+    self.validar_fecha_inicio_cronograma()
 
   def delete(self, *args, **kwargs):
     self.validar_dependencias_borrado()

@@ -86,7 +86,7 @@ class GerenciadorDependencias:
       if intervalo.get_fecha_hasta() <= fecha:
         tiempo = intervalo.tiempo_intervalo * 60
       else:
-        tiempo = (fecha - intervalo.fecha_desde).seconds 
+        tiempo = (fecha - intervalo.fecha_desde).total_seconds()
       cantidad_tarea += tiempo / float(intervalo.get_tiempo_tarea() * 60)
     return cantidad_tarea
 
@@ -149,7 +149,7 @@ class GerenciadorDependencias:
     huecos = self.cronograma.get_huecos(maquina)
     for hueco in huecos:
       try:
-        tiempo_intervalo = min(tiempo, hueco.tiempo.seconds / 60)
+        tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
         intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
         tiempo -= tiempo_intervalo
       except ValidationError:

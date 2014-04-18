@@ -6,6 +6,9 @@ from math import ceil
 from planificacion.strategy.base import PlanificadorStrategy
 from planificacion.strategy.utils import add_keys_to_dict
 from planificacion.dependencias import GerenciadorDependencias
+import planificacion.models 
+from django.core.exceptions import ValidationError
+import datetime
 
 C_100_ANYOS_EN_MINUTOS = 52560000
 
@@ -129,6 +132,55 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
               gerenciador_dependencias.add_intervalos_to_cronograma(
                 maquina=maquina, tarea=tarea, tiempo=tiempo)
 
+  def optimizar_intervalo(self, intervalo):
+
+    fecha_desde_inicial = intervalo.fecha_desde
+    fecha_desde_final = intervalo.fecha_desde
+
+    try:
+      hueco = intervalo.get_hueco_adyacente_anterior()
+      cota_inferior = 0
+      cota_superior = ( hueco.tiempo.total_seconds() / 60 ) - 1
+      fecha_desde = hueco.fecha_desde
+
+      while (cota_inferior <= cota_superior):
+
+        incremento_temporal = int((cota_inferior + cota_superior) / 2)
+
+        try:
+          intervalo.fecha_desde = fecha_desde +\
+            datetime.timedelta(minutes=incremento_temporal)
+          intervalo.clean()
+          intervalo.save()
+          cota_superior = incremento_temporal - 1
+          fecha_desde_final = intervalo.fecha_desde
+        except ValidationError:
+          cota_inferior = incremento_temporal + 1
+ 
+    except planificacion.models.HuecoAdyacenteAnteriorNoExiste:
+      pass
+
+    return fecha_desde_inicial > fecha_desde_final
+
+  def optimizar_cronograma_maquina(self, maquina):
+    cronograma_optimizado = False
+    for intervalo in self.cronograma.get_intervalos_maquina(maquina).order_by('fecha_desde'):
+      intervalo_optimizado = self.optimizar_intervalo(intervalo)
+      if intervalo_optimizado:
+        cronograma_optimizado = True
+    return cronograma_optimizado
+
+  def optimizar_cronograma(self):
+
+    optimizacion_realizada = True
+
+    while (optimizacion_realizada):
+      optimizacion_realizada = False
+      for maquina in self.cronograma.get_maquinas():
+        optimizacion_realizada_maquina = self.optimizar_cronograma_maquina(maquina)
+        if optimizacion_realizada_maquina:
+          optimizacion_realizada = True
+
   def planificar(self):
     
     self.definir_modelo()
@@ -148,3 +200,6 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
 
     self.completar_cronograma()
+
+    if self.cronograma.optimizar_planificacion:
+      self.optimizar_cronograma()
