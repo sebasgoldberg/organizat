@@ -215,7 +215,8 @@ class IntervaloCronograma(models.Model):
   cantidad_producto = models.DecimalField( editable=False, default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Producto'), 
     help_text=_(u'Cantidad de producto producido luego de finalizar el intervalo.'))
-  tiempo_intervalo = models.IntegerField(
+  tiempo_intervalo = models.DecimalField(
+    max_digits=7, decimal_places=2,
     verbose_name=_(u'Tiempo del intervalo (min)'))
   fecha_desde = models.DateTimeField(
     verbose_name=_(u'Fecha desde'), null=False, blank=False)
@@ -288,13 +289,13 @@ class IntervaloCronograma(models.Model):
       tiempo_anterior = 0
     else:
       tiempo_anterior = intervalos.aggregate(models.Sum('tiempo_intervalo'))['tiempo_intervalo__sum']
-    self.fecha_desde = self.cronograma.fecha_inicio + datetime.timedelta(minutes=tiempo_anterior)
+    self.fecha_desde = self.cronograma.fecha_inicio + datetime.timedelta(seconds=int(tiempo_anterior*60))
 
   def get_fecha_desde(self):
     return self.fecha_desde
 
   def get_fecha_hasta(self):
-    return self.get_fecha_desde() + datetime.timedelta(minutes=self.tiempo_intervalo)
+    return self.get_fecha_desde() + datetime.timedelta(seconds=int(self.tiempo_intervalo*60))
 
   def calcular_cantidad_tarea(self):
     if self.cantidad_tarea:

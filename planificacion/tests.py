@@ -631,3 +631,22 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
           fecha_inicial, fecha_final))
       except ValidationError:
         pass
+
+class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/hueco_inexplicable.json' ]
+
+  def setUp(self):
+
+    cronograma = Cronograma.objects.first()
+
+    cronograma.tiempo_minimo_intervalo = 60
+    cronograma.clean()
+    cronograma.save()
+    cronograma.planificar()
+
+  def test_cantidad_planificada(self):
+    
+    cronograma = Cronograma.objects.first()
+
+    self.verificar_cantidad_planificada(cronograma)

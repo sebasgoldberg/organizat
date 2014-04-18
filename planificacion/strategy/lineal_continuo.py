@@ -140,7 +140,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     try:
       hueco = intervalo.get_hueco_adyacente_anterior()
       cota_inferior = 0
-      cota_superior = ( hueco.tiempo.total_seconds() / 60 ) - 1
+      cota_superior = hueco.tiempo.total_seconds() - 1
       fecha_desde = hueco.fecha_desde
 
       while (cota_inferior <= cota_superior):
@@ -149,7 +149,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
         try:
           intervalo.fecha_desde = fecha_desde +\
-            datetime.timedelta(minutes=incremento_temporal)
+            datetime.timedelta(seconds=int(incremento_temporal))
           intervalo.clean()
           intervalo.save()
           cota_superior = incremento_temporal - 1

@@ -87,7 +87,7 @@ class GerenciadorDependencias:
         tiempo = intervalo.tiempo_intervalo * 60
       else:
         tiempo = (fecha - intervalo.fecha_desde).total_seconds()
-      cantidad_tarea += tiempo / float(intervalo.get_tiempo_tarea() * 60)
+      cantidad_tarea += float(tiempo) / float(intervalo.get_tiempo_tarea() * 60)
     return cantidad_tarea
 
   def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None, instante_modificado=None):
@@ -147,15 +147,24 @@ class GerenciadorDependencias:
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
     huecos = self.cronograma.get_huecos(maquina)
+    tiempo_asignado = 0
+    tiempo_a_asignar = tiempo
     for hueco in huecos:
       try:
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
         intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
         tiempo -= tiempo_intervalo
+        tiempo_asignado += intervalo.tiempo_intervalo
       except ValidationError:
         pass
       if tiempo <= 0:
         return
 
-    self.crear_intervalo_al_final(maquina, tarea, tiempo)
+    intervalo = self.crear_intervalo_al_final(maquina, tarea, tiempo)
+
+    tiempo_asignado += intervalo.tiempo_intervalo
+
+    if tiempo_asignado <> tiempo_a_asignar:
+      raise Exception(_(u'El tiempo total de los intervalos creados %s no coincide con el tiempo a asignar a la planificación %s.') % (
+        tiempo_asignado, tiempo_a_asignar))
 
