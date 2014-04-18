@@ -2,6 +2,7 @@
 from django.utils.translation import ugettext as _
 import planificacion.models
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 class GerenciadorDependencias:
 
@@ -103,7 +104,8 @@ class GerenciadorDependencias:
     for t in particion_temporal:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
-      if cantidad_tarea_posterior > cantidad_tarea_anterior:
+      # @todo Hacer configurable la tolerancia a la diferencia de cantidad.
+      if ( cantidad_tarea_posterior - cantidad_tarea_anterior ) > 0.001:
         raise ValidationError(
           "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
           (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
@@ -140,7 +142,7 @@ class GerenciadorDependencias:
     
     # En caso de no haber podido crear significa que toda la partición
     # temporal se encuentra antes que la ultima fecha de la máquina
-    intervalo.fecha_desde = ultima_fecha_maquina
+    intervalo.fecha_desde = particion_temporal[-1]
     intervalo.clean()
     intervalo.save()
     return intervalo
@@ -152,8 +154,15 @@ class GerenciadorDependencias:
     for hueco in huecos:
       try:
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
+        tiempo_restante = tiempo - tiempo_intervalo
+        # Esto es necesario para verificar si el intervalo final 
+        if tiempo_restante < self.cronograma.tiempo_minimo_intervalo:
+          tiempo_intervalo = Decimal(tiempo) - Decimal(self.cronograma.tiempo_minimo_intervalo)
+          tiempo_restante = self.cronograma.tiempo_minimo_intervalo
+          if tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
+            continue
         intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
-        tiempo -= tiempo_intervalo
+        tiempo = tiempo_restante
         tiempo_asignado += intervalo.tiempo_intervalo
       except ValidationError:
         pass

@@ -650,3 +650,8 @@ class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
     cronograma = Cronograma.objects.first()
 
     self.verificar_cantidad_planificada(cronograma)
+
+    # Se verifica que se respete el tiempo mínimo
+    for i in cronograma.intervalocronograma_set.all():
+      self.assertLessEqual(cronograma.tiempo_minimo_intervalo,
+        i.tiempo_intervalo)

@@ -9,6 +9,7 @@ from planificacion.strategy import lineal_continuo
 from planificacion.dependencias import GerenciadorDependencias
 from django.core.exceptions import ValidationError
 import datetime
+from decimal import Decimal
 
 ESTRATEGIAS=(
   (0,_(u'Hago lo que puedo')),
@@ -300,7 +301,7 @@ class IntervaloCronograma(models.Model):
   def calcular_cantidad_tarea(self):
     if self.cantidad_tarea:
       return
-    self.cantidad_tarea = self.tiempo_intervalo / float(self.tarea.get_tiempo(self.maquina,self.producto))
+    self.cantidad_tarea = Decimal(self.tiempo_intervalo) / Decimal(self.tarea.get_tiempo(self.maquina,self.producto))
 
   def validar_solapamiento(self):
     if self.id:
