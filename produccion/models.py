@@ -61,6 +61,9 @@ class Tarea(models.Model):
     item = pedido.get_item_producto(producto)
     return item.cantidad
 
+  def has_tareas_anteriores(self, producto):
+    return len(DependenciaTareaProducto.objects.filter(producto=producto,tarea=self)) > 0
+
   def get_anteriores(self, producto):
     return [ d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(tarea=self,producto=producto) ]
 
@@ -133,9 +136,7 @@ class Producto(models.Model):
     tareas_anteriores = [d.tarea_anterior for d in DependenciaTareaProducto.objects.filter(producto=self)]
     primer_grado = []
     for tarea in tareas_anteriores:
-      try:
-        DependenciaTareaProducto.objects.get(producto=self,tarea=tarea)
-      except DependenciaTareaProducto.DoesNotExist:
+      if not tarea.has_tareas_anteriores(producto=self):
         primer_grado.append(tarea)
 
     return primer_grado

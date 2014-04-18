@@ -15,6 +15,9 @@ class GerenciadorDependencias:
     self.producto = producto
     self.pedido = pedido
 
+  def get_tolerancia(self):
+    return 0.001
+
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:
       raise Exception(_(u'El instante %s ya se encuentra persistido.') % instante.id )
@@ -105,7 +108,7 @@ class GerenciadorDependencias:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
       # @todo Hacer configurable la tolerancia a la diferencia de cantidad.
-      if ( cantidad_tarea_posterior - cantidad_tarea_anterior ) > 0.001:
+      if ( cantidad_tarea_posterior - cantidad_tarea_anterior ) > self.get_tolerancia():
         raise ValidationError(
           "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
           (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
@@ -163,7 +166,7 @@ class GerenciadorDependencias:
             continue
         intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
         tiempo = tiempo_restante
-        tiempo_asignado += intervalo.tiempo_intervalo
+        tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
       except ValidationError:
         pass
       if tiempo <= 0:
@@ -171,9 +174,9 @@ class GerenciadorDependencias:
 
     intervalo = self.crear_intervalo_al_final(maquina, tarea, tiempo)
 
-    tiempo_asignado += intervalo.tiempo_intervalo
+    tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
 
-    if tiempo_asignado <> tiempo_a_asignar:
+    if abs(Decimal(tiempo_asignado) - Decimal(tiempo_a_asignar)) > self.get_tolerancia():
       raise Exception(_(u'El tiempo total de los intervalos creados %s no coincide con el tiempo a asignar a la planificación %s.') % (
         tiempo_asignado, tiempo_a_asignar))
 

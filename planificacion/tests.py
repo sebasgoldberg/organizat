@@ -655,3 +655,43 @@ class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
     for i in cronograma.intervalocronograma_set.all():
       self.assertLessEqual(cronograma.tiempo_minimo_intervalo,
         i.tiempo_intervalo)
+
+class MasDeUnaDependenciaError(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/mas_de_una_dependencia.json' ]
+
+  def setUp(self):
+
+    cronograma = Cronograma.objects.first()
+
+    cronograma.clean()
+    cronograma.save()
+    cronograma.planificar()
+
+  def test_cantidad_planificada(self):
+    
+    cronograma = Cronograma.objects.first()
+
+    self.verificar_cantidad_planificada(cronograma)
+
+
+class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/mas_de_una_dependencia.json' ]
+
+  def setUp(self):
+
+    cronograma = Cronograma.objects.first()
+
+    cronograma.tiempo_minimo_intervalo = 120
+    cronograma.clean()
+    cronograma.save()
+    cronograma.planificar()
+
+  def test_cantidad_planificada(self):
+    
+    cronograma = Cronograma.objects.first()
+
+    self.verificar_cantidad_planificada(cronograma)
+
+
