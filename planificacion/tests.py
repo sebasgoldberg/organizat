@@ -694,4 +694,22 @@ class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
 
     self.verificar_cantidad_planificada(cronograma)
 
+class DosCronogramasTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/dos_cronogramas.json' ]
+
+  def setUp(self):
+
+    cronograma = Cronograma.objects.get(descripcion='Otro crono')
+
+    cronograma.clean()
+    cronograma.save()
+    cronograma.planificar()
+
+  def test_cantidad_planificada(self):
+    
+    cronograma = Cronograma.objects.get(descripcion='Otro crono')
+
+    self.verificar_cantidad_planificada(cronograma)
+
 
