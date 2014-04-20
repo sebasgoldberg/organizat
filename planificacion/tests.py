@@ -22,6 +22,14 @@ class PlanificadorTestCase(TestCase):
             models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
           self.assertEqual(item.cantidad, cantidad_tarea)
 
+  def test_fecha_hasta(self):
+    for intervalo in IntervaloCronograma.objects.all():
+      if not intervalo.fecha_hasta:
+        intervalo.clean()
+        intervalo.save()
+      self.assertLessEqual(abs((intervalo.fecha_hasta - intervalo.get_fecha_hasta()).total_seconds()),1)
+
+
 class TiempoRealizacionTareaTestCase(TestCase):
 
   def setUp(self):

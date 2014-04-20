@@ -221,6 +221,8 @@ class IntervaloCronograma(models.Model):
     verbose_name=_(u'Tiempo del intervalo (min)'))
   fecha_desde = models.DateTimeField(
     verbose_name=_(u'Fecha desde'), null=False, blank=False)
+  fecha_hasta = models.DateTimeField(
+    verbose_name=_(u'Fecha hasta'), null=True, blank=False)
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
@@ -230,7 +232,7 @@ class IntervaloCronograma(models.Model):
   maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
 
   class Meta:
-    ordering = ['-cronograma__id','maquina__descripcion','secuencia']
+    ordering = ['-cronograma__id','maquina__descripcion','fecha_desde']
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
@@ -292,6 +294,9 @@ class IntervaloCronograma(models.Model):
       tiempo_anterior = intervalos.aggregate(models.Sum('tiempo_intervalo'))['tiempo_intervalo__sum']
     self.fecha_desde = self.cronograma.fecha_inicio + datetime.timedelta(seconds=int(tiempo_anterior*60))
 
+  def calcular_fecha_hasta(self):
+    self.fecha_hasta = self.get_fecha_hasta()
+
   def get_fecha_desde(self):
     return self.fecha_desde
 
@@ -351,6 +356,7 @@ class IntervaloCronograma(models.Model):
     self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()
+    self.calcular_fecha_hasta()
     self.validar_dependencias_guardado()
     self.validar_tiempo_minimo()
     self.validar_fecha_inicio_cronograma()
