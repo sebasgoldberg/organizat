@@ -1,6 +1,28 @@
 [
 {
   "pk": 1, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "fecha_inicio": "2014-04-16T00:00:00Z", 
+    "optimizar_planificacion": true, 
+    "descripcion": "Crono pedidos B y C", 
+    "estrategia": 2, 
+    "tiempo_minimo_intervalo": "0"
+  }
+},
+{
+  "pk": 2, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "fecha_inicio": "2014-04-16T00:00:00Z", 
+    "optimizar_planificacion": true, 
+    "descripcion": "Otro crono", 
+    "estrategia": 2, 
+    "tiempo_minimo_intervalo": "0"
+  }
+},
+{
+  "pk": 1, 
   "model": "produccion.maquina", 
   "fields": {
     "descripcion": "M1"
@@ -368,30 +390,6 @@
     "producto": 2, 
     "pedido": 3, 
     "cantidad": "180"
-  }
-},
-{
-  "pk": 1, 
-  "model": "planificacion.cronograma", 
-  "fields": {
-    "intervalo_tiempo": "240", 
-    "fecha_inicio": "2014-04-16T00:00:00Z", 
-    "optimizar_planificacion": true, 
-    "descripcion": "Crono pedidos B y C", 
-    "estrategia": 2, 
-    "tiempo_minimo_intervalo": "0"
-  }
-},
-{
-  "pk": 2, 
-  "model": "planificacion.cronograma", 
-  "fields": {
-    "intervalo_tiempo": "0", 
-    "fecha_inicio": "2014-04-16T00:00:00Z", 
-    "optimizar_planificacion": true, 
-    "descripcion": "Otro crono", 
-    "estrategia": 2, 
-    "tiempo_minimo_intervalo": "0"
   }
 },
 {

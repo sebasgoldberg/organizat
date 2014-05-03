@@ -90,7 +90,7 @@ class TiempoRealizacionTareaTestCase(TestCase):
 
     D3.add_item(P1,300)
 
-    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2)
+    cronograma = Cronograma(descripcion='CRON1', estrategia=2)
     cronograma.clean()
     cronograma.save()
 
@@ -169,7 +169,7 @@ class IntervaloCronogramaTestCase(TestCase):
 
     D3.add_item(P1,300)
 
-    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
+    cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
       fecha_inicio=datetime.datetime(2014,1,1,0,0,0),tiempo_minimo_intervalo=0)
 
     cronograma.clean()
@@ -243,7 +243,7 @@ class TareaDependienteTestCase(TestCase):
 
     D1.add_item(P1,100)
 
-    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
+    cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
       fecha_inicio=datetime.datetime(2014,1,1,0,0,0), tiempo_minimo_intervalo=0)
 
     cronograma.clean()
@@ -441,7 +441,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
 
     D1.add_item(P1,100)
 
-    cronograma = Cronograma(descripcion='CRON1', intervalo_tiempo=240, estrategia=2, 
+    cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
       fecha_inicio=datetime.datetime(2014,1,1,0,0,0),)
 
     cronograma.clean()
@@ -491,7 +491,7 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
   def test_no_existe_hueco_inexplicable(self):
     
     # Se recupera el primero, porque hay un solo cronograma definido.
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.planificar()
 
@@ -562,13 +562,13 @@ class TiempoMinimoDeBloqueTestCase(PlanificadorTestCase):
   def setUp(self):
 
     # Se recupera el primero, porque hay un solo cronograma definido.
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.planificar()
 
   def test_tiempo_minimo_bloque(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     for intervalo in cronograma.intervalocronograma_set.all():
       self.assertLessEqual(intervalo.cronograma.tiempo_minimo_intervalo,intervalo.tiempo_intervalo,
@@ -589,13 +589,13 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
     pedido.add_item(P1,1)
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
     cronograma.add_pedido(pedido)
 
 
   def test_tiempo_menor_al_tiempo_minimo(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     tiempo_minimo_intervalo = cronograma.tiempo_minimo_intervalo
 
@@ -615,7 +615,7 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
 
   def setUp(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.tiempo_minimo_intervalo = 0
     cronograma.clean()
@@ -624,7 +624,7 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
 
   def test_planificar_sin_huecos_evitables(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.planificar()
 
@@ -646,7 +646,7 @@ class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
 
   def setUp(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.tiempo_minimo_intervalo = 60
     cronograma.clean()
@@ -655,7 +655,7 @@ class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
 
   def test_cantidad_planificada(self):
     
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     self.verificar_cantidad_planificada(cronograma)
 
@@ -670,7 +670,7 @@ class MasDeUnaDependenciaError(PlanificadorTestCase):
 
   def setUp(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.clean()
     cronograma.save()
@@ -678,7 +678,7 @@ class MasDeUnaDependenciaError(PlanificadorTestCase):
 
   def test_cantidad_planificada(self):
     
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     self.verificar_cantidad_planificada(cronograma)
 
@@ -689,7 +689,7 @@ class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
 
   def setUp(self):
 
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     cronograma.tiempo_minimo_intervalo = 120
     cronograma.clean()
@@ -698,7 +698,7 @@ class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
 
   def test_cantidad_planificada(self):
     
-    cronograma = Cronograma.objects.first()
+    cronograma = Cronograma.objects.get(pk=1)
 
     self.verificar_cantidad_planificada(cronograma)
 
@@ -720,4 +720,45 @@ class DosCronogramasTestCase(PlanificadorTestCase):
 
     self.verificar_cantidad_planificada(cronograma)
 
+
+class CronogramaMaquinaTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/test/fixtures/dos_cronogramas.json' ]
+
+  def get_cronogramas(self):
+    return Cronograma.objects.filter(descripcion__in=['Crono pedidos B y C','Otro crono'])
+
+  def setUp(self):
+    
+    for cronograma in self.get_cronogramas():
+      cronograma.planificar()
+
+  def test_no_permitir_multiples_cronogramas(self):
+
+    self.assertEqual(CronogramaActivo.objects.count(),1)
+
+    self.assertEqual(CronogramaActivo.get_instance().pedidocronograma_set.count(),0)
+    
+    self.assertEqual(CronogramaActivo.get_instance().intervalocronograma_set.count(),0)
+
+    cronogramas = self.get_cronogramas()
+
+    crono1 = cronogramas[0]
+    crono2 = cronogramas[1]
+
+    crono1.distribuir()
+
+    try:
+      crono1.distribuir()
+      self.fail(u'No debería permitir distribuir un cronograma que referencia a pedidos ya distribuidos.')
+    except PedidoYaDistribuido:
+      pass
+
+    try:
+      crono2.distribuir()
+      self.fail(u'No debería permitir distribuir un cronograma que referencia a pedidos ya distribuidos.')
+    except PedidoYaDistribuido:
+      pass
+
+    self.verificar_cantidad_planificada(CronogramaActivo.get_instance())
 

@@ -41,6 +41,9 @@ class Hueco(object):
   def get_fecha_hasta(self):
     return self.fecha_desde + self.tiempo
 
+class PedidoYaDistribuido(ValidationError):
+  pass
+
 class Cronograma(models.Model):
   """
   Validar:
@@ -48,12 +51,9 @@ class Cronograma(models.Model):
   de IntervaloCronograma.
   """
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
-  intervalo_tiempo = models.DecimalField(
-    max_digits=7, decimal_places=2, verbose_name=_(u'Intervalo de Tiempo (min)'), 
-    help_text=_(u'Tiempo por cada intervalo que compone el cronograma.'))
   fecha_inicio = models.DateTimeField(
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=datetime.datetime.now())
-  estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS)
+  estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
   tiempo_minimo_intervalo = models.DecimalField(default=120,
     max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. No puede haber intervalos con tiempos menores a este.'))
@@ -64,6 +64,51 @@ class Cronograma(models.Model):
     ordering = ['-id']
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
+
+  def test_distribuir(self):
+    pedidos_ya_distribuidos =\
+      [ p.pedido.descripcion for p in CronogramaActivo.get_instance().pedidocronograma_set.filter(
+        pedido__in=self.get_pedidos()) ]
+    if len(pedidos_ya_distribuidos)>0:
+      raise PedidoYaDistribuido(_(u'Los siguientes pedidos ya han sido distribuidos: %s ') %
+        pedidos_ya_distribuidos)
+
+  def has_maquina(self, maquina):
+    try:
+      self.maquinacronograma_set.get(cronograma=self,maquina=maquina)
+      return True
+    except MaquinaCronograma.DoesNotExist:
+      pass
+    return False
+
+  def distribuir(self):
+
+    self.test_distribuir()
+
+    cronograma_activo = CronogramaActivo.get_instance()
+
+    for pedido in self.get_pedidos():
+      cronograma_activo.add_pedido(pedido)
+
+    for maquina in self.get_maquinas():
+      if not cronograma_activo.has_maquina(maquina):
+        cronograma_activo.add_maquina(maquina)
+
+    intervalos = [ i for i in self.intervalocronograma_set.all().order_by('fecha_desde') ]
+    ids_intervalos_copiados = []
+    while len(intervalos) > len(ids_intervalos_copiados):
+      for intervalo in intervalos:
+        if intervalo.id in ids_intervalos_copiados:
+          continue
+        id_intervalo = intervalo.id
+        intervalo.id = None
+        intervalo.cronograma = cronograma_activo
+        try:
+          intervalo.clean()
+          intervalo.save()
+          ids_intervalos_copiados.append(id_intervalo)
+        except ValidationError:
+          pass
 
   def planificar(self):
     """
@@ -327,7 +372,6 @@ class IntervaloCronograma(models.Model):
           (self, intervalo))
 
   def validar_dependencias_guardado(self):
-    self.validar_solapamiento()
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     if self.id:
       gerenciador_dependencias.verificar_modificar_instante(self)
@@ -357,6 +401,7 @@ class IntervaloCronograma(models.Model):
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()
     self.calcular_fecha_hasta()
+    self.validar_solapamiento()
     self.validar_dependencias_guardado()
     self.validar_tiempo_minimo()
     self.validar_fecha_inicio_cronograma()
@@ -376,3 +421,30 @@ from django.db.models.signals import pre_delete
 
 #pre_delete.connect(validar_dependencias_borrado, 
   #sender=IntervaloCronograma)
+
+class CronogramaActivo(Cronograma):
+
+  instance = None
+
+  def planificar(self):
+    raise CronogramaActivoNoPlanificable()
+
+  @staticmethod
+  def get_instance():
+    try:
+      instance = CronogramaActivo.objects.first()
+    except CronogramaActivo.DoesNotExists:
+      pass
+    if not instance:
+      instance = CronogramaActivo(fecha_inicio=datetime.datetime(1,1,1))
+      instance.clean()
+      instance.save()
+    return instance
+
+def add_maquina_to_cronograma_activo(sender, instance, created, **kwargs):
+  if not created:
+    return
+  CronogramaActivo.get_instance().add_maquina(instance)
+
+post_save.connect(add_maquina_to_cronograma_activo, 
+  sender=Maquina)

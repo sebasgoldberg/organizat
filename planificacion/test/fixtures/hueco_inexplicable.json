@@ -5,8 +5,7 @@
   "fields": {
     "descripcion": "Crono pedidos B y C", 
     "estrategia": 2, 
-    "fecha_inicio": "2014-04-16T00:00:00Z", 
-    "intervalo_tiempo": "240"
+    "fecha_inicio": "2014-04-16T00:00:00Z"
   }
 },
 {

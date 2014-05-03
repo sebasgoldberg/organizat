@@ -11,7 +11,7 @@ class MaquinaCronogramaInline(admin.TabularInline):
 
 class CronogramaAdmin(admin.ModelAdmin):
   inlines=[PedidoCronogramaInline,MaquinaCronogramaInline]
-  list_display=['id','descripcion', 'intervalo_tiempo', 'fecha_inicio', 'estrategia']
+  list_display=['id','descripcion', 'fecha_inicio', 'estrategia']
   list_display_links = ('id', 'descripcion')
   search_fields=['descripcion']
   list_per_page = 40
