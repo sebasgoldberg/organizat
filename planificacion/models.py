@@ -63,6 +63,23 @@ class Cronograma(models.Model):
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
 
+  def get_ids_maquinas_cuello_botella(self):
+    maquinas_y_tiempos = self.intervalocronograma_set.values(
+      'maquina').annotate(tiempo_intervalo=models.Sum(
+        'tiempo_intervalo')).order_by( '-tiempo_intervalo')
+    tiempo_cuello_botella = None
+    resultado=[]
+    for x in maquinas_y_tiempos:
+      if len(resultado) == 0:
+        tiempo_cuello_botella = x['tiempo_intervalo']
+      if x['tiempo_intervalo']<tiempo_cuello_botella:
+        break
+      resultado.append(x['maquina'])
+    return resultado
+
+  def is_maquina_cuello_botella(self, maquina):
+    return maquina.id in self.get_ids_maquinas_cuello_botella()
+
   def test_distribuir(self):
     pedidos_ya_distribuidos =\
       [ p.pedido.descripcion for p in CronogramaActivo.get_instance().pedidocronograma_set.filter(
@@ -283,6 +300,10 @@ class IntervaloCronograma(models.Model):
   def __unicode__(self):
     return '%s_%s_%s_%s_%s' % (self.id, self.maquina.descripcion, self.tarea.descripcion,
       self.get_fecha_desde(), self.get_fecha_hasta())
+
+  def in_maquina_cuello_botella(self):
+    return self.cronograma.is_maquina_cuello_botella(self.maquina)
+  in_maquina_cuello_botella.short_description = _(u'Cuello Botella Posible')
 
   def get_intervalo_anterior(self):
 

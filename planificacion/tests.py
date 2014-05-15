@@ -846,4 +846,3 @@ class CargaAutomaticaDeMaquinasEnCronograma(TestCase):
     for pedido in self.cronograma.get_pedidos():
       for maquina in pedido.get_maquinas_posibles_produccion():
         self.assertIn(maquina,maquinas_cronograma)
-
