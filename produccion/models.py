@@ -16,7 +16,7 @@ class Maquina(models.Model):
     verbose_name_plural = _(u"Maquinas")
 
   def __unicode__(self):
-    return u'#%s - %s' % (self.id, self.descripcion)
+    return self.descripcion
 
   def get_tareas(self):
     return [ x.tarea for x in self.tareamaquina_set.all() ]
@@ -44,11 +44,11 @@ class Tarea(models.Model):
     return [ x.maquina for x in self.tareamaquina_set.all() ]
 
   def get_maquinas_producto(self, producto):
-    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(producto=producto) ]
+    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(producto=producto, activa=True) ]
 
   def get_tiempo(self,maquina,producto):
     return TiempoRealizacionTarea.objects.get(tarea=self,
-      maquina=maquina, producto=producto).tiempo
+      maquina=maquina, producto=producto, activa=True).tiempo
   
   def get_tiempo_maximo(self, producto):
     tiempo_tarea_por_producto = self.tiemporealizaciontarea_set.filter(producto=producto, activa=True)
@@ -260,6 +260,10 @@ class DependenciaTareaProducto(models.Model):
       raise ValidationError(_(u'La tarea %s no forma parte de la producción del producto %s')%(
         tarea.descripcion,self.producto.descripcion))
 
+  def save(self, *args, **kwargs):
+    self.clean()
+    super(DependenciaTareaProducto, self).save(*args, **kwargs) 
+
   def clean(self):
     if self.tarea and self.tarea_anterior:
 
@@ -296,12 +300,8 @@ class DependenciaTareaProducto(models.Model):
       self.validar_dependencia_circular(visitadas,
         dependencia.tarea, nuevo_camino)
 
-
 class Pedido(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'))
-  fecha_entrega = models.DateField(
-    verbose_name=_(u'Fecha de entrega'), null=True, blank=True,
-    help_text=_(u'Sea cuidadoso con colocar una fecha muy temprana, ya que sino al planificar, muy probablemente no se pueda respetar.'))
 
   def __unicode__(self):
     return u'#%s - %s' % (self.id, self.descripcion)
@@ -310,6 +310,13 @@ class Pedido(models.Model):
     ordering = ['-id']
     verbose_name = _(u"Pedido")
     verbose_name_plural = _(u"Pedidos")
+
+  def get_maquinas_posibles_produccion(self):
+    maquinas = set()
+    for producto in self.get_productos():
+      for tarea in producto.get_tareas():
+        maquinas = maquinas | set(tarea.get_maquinas())
+    return maquinas
 
   def add_item(self, producto, cantidad):
     return self.itempedido_set.create(producto=producto,cantidad=cantidad)

@@ -1,63 +1,6 @@
 [
 {
   "pk": 1, 
-  "model": "planificacion.cronograma", 
-  "fields": {
-    "descripcion": "Crono pedidos B y C", 
-    "estrategia": 2, 
-    "fecha_inicio": "2014-04-16T00:00:00Z"
-  }
-},
-{
-  "pk": 3, 
-  "model": "planificacion.pedidocronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "pedido": 1
-  }
-},
-{
-  "pk": 4, 
-  "model": "planificacion.pedidocronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "pedido": 2
-  }
-},
-{
-  "pk": 5, 
-  "model": "planificacion.pedidocronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "pedido": 3
-  }
-},
-{
-  "pk": 1, 
-  "model": "planificacion.maquinacronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "maquina": 1
-  }
-},
-{
-  "pk": 2, 
-  "model": "planificacion.maquinacronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "maquina": 2
-  }
-},
-{
-  "pk": 3, 
-  "model": "planificacion.maquinacronograma", 
-  "fields": {
-    "cronograma": 1, 
-    "maquina": 3
-  }
-},
-{
-  "pk": 1, 
   "model": "produccion.maquina", 
   "fields": {
     "descripcion": "M1"
@@ -322,24 +265,21 @@
   "pk": 1, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped A", 
-    "fecha_entrega": "2014-04-27"
+    "descripcion": "Ped A"
   }
 },
 {
   "pk": 2, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped B", 
-    "fecha_entrega": "2014-04-25"
+    "descripcion": "Ped B"
   }
 },
 {
   "pk": 3, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped C", 
-    "fecha_entrega": "2014-04-30"
+    "descripcion": "Ped C"
   }
 },
 {
@@ -376,6 +316,63 @@
     "producto": 2, 
     "pedido": 3, 
     "cantidad": "180"
+  }
+},
+{
+  "pk": 1, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "descripcion": "Crono pedidos B y C", 
+    "estrategia": 2, 
+    "fecha_inicio": "2014-04-16T00:00:00Z"
+  }
+},
+{
+  "pk": 3, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 1
+  }
+},
+{
+  "pk": 4, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 2
+  }
+},
+{
+  "pk": 5, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 3
+  }
+},
+{
+  "pk": 1, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 2
+  }
+},
+{
+  "pk": 3, 
+  "model": "planificacion.maquinacronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "maquina": 3
   }
 }
 ]

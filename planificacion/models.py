@@ -12,9 +12,7 @@ import datetime
 from decimal import Decimal
 
 ESTRATEGIAS=(
-  (0,_(u'Hago lo que puedo')),
-  (1,_(u'Programación lineal mixta')),
-  (2,_(u'Programación lineal continua (sin dependencias)')),)
+  (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
 
 CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
@@ -138,7 +136,7 @@ class Cronograma(models.Model):
 
   def get_maquinas_tarea_producto(self, tarea, producto):
     return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
-      maquina__in=self.get_maquinas(), tarea=tarea,producto=producto) ]
+      maquina__in=self.get_maquinas(), tarea=tarea,producto=producto, activa=True) ]
 
   def add_intervalo(self,secuencia,maquina,tarea,pedido,producto,cantidad_tarea,tiempo_intervalo=None):
     if tiempo_intervalo == None:
@@ -422,6 +420,7 @@ from django.db.models.signals import pre_delete
 #pre_delete.connect(validar_dependencias_borrado, 
   #sender=IntervaloCronograma)
 
+"""
 class CronogramaActivo(Cronograma):
 
   instance = None
@@ -448,3 +447,18 @@ def add_maquina_to_cronograma_activo(sender, instance, created, **kwargs):
 
 post_save.connect(add_maquina_to_cronograma_activo, 
   sender=Maquina)
+"""
+
+def add_maquinas_posibles_to_cronograma(sender, instance, created, **kwargs):
+  if not created:
+    return
+  if not instance.pedido:
+    return
+  if not instance.cronograma:
+    return
+  for maquina in instance.pedido.get_maquinas_posibles_produccion():
+    if not instance.cronograma.has_maquina(maquina):
+      instance.cronograma.add_maquina(maquina)
+
+post_save.connect(add_maquinas_posibles_to_cronograma, 
+  sender=PedidoCronograma)

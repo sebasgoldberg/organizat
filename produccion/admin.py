@@ -56,7 +56,7 @@ class ItemPedidoInline(admin.TabularInline):
 
 class PedidoAdmin(admin.ModelAdmin):
   inlines=[ItemPedidoInline]
-  list_display=['id','descripcion', 'fecha_entrega']
+  list_display=['id','descripcion']
   list_display_links = ('id', 'descripcion')
   search_fields=['descripcion']
   list_per_page = 40

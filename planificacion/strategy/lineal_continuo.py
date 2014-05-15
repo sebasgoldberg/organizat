@@ -65,7 +65,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
           self.modelo += lpSum([
             T_MTPD[maquina.id][tarea.id][producto.id][pedido.id] /\
             tarea.get_tiempo(maquina,producto)
-            for maquina in tarea.get_maquinas_producto(producto)
+            for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, producto)
             ]) - tarea.get_cantidad_producir(producto, pedido)\
             == 0, "La suma del tiempo de produccion en maquinas para tarea %s, para producto %s, pedido %s, debe corresponderse con la cantidad de tarea a producir" % (
               tarea.id, producto.id, pedido.id)
@@ -125,7 +125,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       for producto in pedido.get_productos():
         gerenciador_dependencias = GerenciadorDependencias(self.cronograma, producto, pedido)
         for tarea in producto.get_tareas_ordenadas_por_dependencia():
-          for maquina in producto.get_maquinas_tarea(tarea):
+          for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, producto):
             tiempo = self.tiempo_maquina_tarea_pedido_producto[
               maquina.id][tarea.id][producto.id][pedido.id].value()
             if tiempo > 0:

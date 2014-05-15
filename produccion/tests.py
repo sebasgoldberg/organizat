@@ -210,6 +210,7 @@ class DependenciaTareaProductoTestCase(TestCase):
     try:
       dependencia=DependenciaTareaProducto(producto=P1, tarea_anterior=T2, tarea=T1)
       dependencia.clean()
+      dependencia.save()
       self.fail(_(u'Falló la validación de referencia circular.'))
     except ValidationError as e:
       self.assertEqual('Dependencia circular detectada: T2 -> T1 -> T4 -> T2',e.message)

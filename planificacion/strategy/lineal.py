@@ -82,7 +82,7 @@ class PlanificadorModeloLineal(PlanificadorStrategy):
             Y_MTPD[instante][maquina.id][tarea.id][producto.id][pedido.id] *\
             self.get_incremento_instante() /\
             tarea.get_tiempo(maquina,producto)
-            for maquina in tarea.get_maquinas_producto(producto)
+            for maquina in self.cronograma.get_maquinas_tarea_producto(producto)
               for instante in self.get_instantes()
             ]) - self.cantidad_tareas_producidas[tarea.id][producto.id][pedido.id]\
             == 0, "Cantidad producida de tarea %s, para producto %s, pedido %s." % (

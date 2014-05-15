@@ -1,9 +1,18 @@
 from django.db import models
 
+ESTRATEGIAS=(
+  (0,_(u'Lunes')),
+  (1,_(u'Martes')),
+  (2,_(u'Miércoles')),
+  (3,_(u'Jueves')),
+  (4,_(u'Viernes')),
+  (5,_(u'Sábado')),
+  (6,_(u'Domingo')),)
+
 class IntervaloLaborable(models.Model):
   
-  dia_desde = None
-  dia_hasta = None
+  dia_desde = models.IntegerField(verbose_name=_(u'Día desde'), choices=DIAS_SEMANA, default=2)
+  dia_hasta = models.IntegerField(verbose_name=_(u'Día hasta'), choices=DIAS_SEMANA, default=2)
   hora_desde = None
   hora_hasta = None
 

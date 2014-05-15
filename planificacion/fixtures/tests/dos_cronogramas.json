@@ -336,24 +336,21 @@
   "pk": 1, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped A", 
-    "fecha_entrega": "2014-04-27"
+    "descripcion": "Ped A" 
   }
 },
 {
   "pk": 2, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped B", 
-    "fecha_entrega": "2014-04-25"
+    "descripcion": "Ped B" 
   }
 },
 {
   "pk": 3, 
   "model": "produccion.pedido", 
   "fields": {
-    "descripcion": "Ped C", 
-    "fecha_entrega": "2014-04-30"
+    "descripcion": "Ped C" 
   }
 },
 {
