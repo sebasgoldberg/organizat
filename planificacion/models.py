@@ -63,7 +63,7 @@ class Cronograma(models.Model):
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
 
-  def get_ids_maquinas_cuello_botella(self):
+  def get_ids_posibles_maquinas_cuello_botella(self):
     maquinas_y_tiempos = self.intervalocronograma_set.values(
       'maquina').annotate(tiempo_intervalo=models.Sum(
         'tiempo_intervalo')).order_by( '-tiempo_intervalo')
@@ -76,6 +76,19 @@ class Cronograma(models.Model):
         break
       resultado.append(x['maquina'])
     return resultado
+
+  def get_ids_maquinas_cuello_botella(self):
+    result = set()
+    posibles = self.get_ids_posibles_maquinas_cuello_botella()
+    tareas_maquinas_restantes = set()
+    for x in MaquinaCronograma.objects.exclude(
+      maquina__id__in=posibles):
+      tareas_maquinas_restantes = tareas_maquinas_restantes | set(x.maquina.get_tareas())
+    for maquina in Maquina.objects.filter(id__in=posibles):
+      if maquina.tareamaquina_set.filter(
+        tarea__in=tareas_maquinas_restantes).count() == 0:
+        result.add(maquina.id) 
+    return result
 
   def is_maquina_cuello_botella(self, maquina):
     return maquina.id in self.get_ids_maquinas_cuello_botella()
@@ -303,7 +316,7 @@ class IntervaloCronograma(models.Model):
 
   def in_maquina_cuello_botella(self):
     return self.cronograma.is_maquina_cuello_botella(self.maquina)
-  in_maquina_cuello_botella.short_description = _(u'Cuello Botella Posible')
+  in_maquina_cuello_botella.short_description = _(u'Cuello Botella')
 
   def get_intervalo_anterior(self):
 
