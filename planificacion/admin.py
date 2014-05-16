@@ -1,5 +1,6 @@
 from django.contrib import admin
 from planificacion.models import *
+from planificacion.filter import CuelloBotellaListFilter
 
 class PedidoCronogramaInline(admin.TabularInline):
   model=PedidoCronograma
@@ -17,10 +18,10 @@ class CronogramaAdmin(admin.ModelAdmin):
   list_per_page = 40
 
 class IntervaloCronogramaAdmin(admin.ModelAdmin):
-  list_display=['id', 'cronograma', 'maquina', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'tiempo_intervalo', 
+  list_display=['id', 'maquina', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'tiempo_intervalo', 
     'in_maquina_cuello_botella', 'fecha_desde', 'fecha_hasta']
-  list_display_links = ('id', 'cronograma', 'maquina')
-  list_filter=['cronograma', 'maquina', 'tarea', 'pedido', 'producto']
+  list_display_links = ('id',)
+  list_filter=['cronograma', 'maquina', 'tarea', 'pedido', 'producto', CuelloBotellaListFilter]
   list_per_page = 40
   date_hierarchy='fecha_desde'
 
