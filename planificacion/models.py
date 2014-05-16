@@ -305,7 +305,7 @@ class IntervaloCronograma(models.Model):
   maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
 
   class Meta:
-    ordering = ['-cronograma__id','maquina__descripcion','fecha_desde']
+    ordering = ['-cronograma__id', 'fecha_desde']
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
