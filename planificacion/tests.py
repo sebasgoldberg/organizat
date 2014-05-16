@@ -20,7 +20,9 @@ class PlanificadorTestCase(TestCase):
           cantidad_tarea = cronograma.intervalocronograma_set.filter(
             tarea=tarea,pedido=pedido,producto=item.producto).aggregate(
             models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
-          self.assertEqual(item.cantidad, cantidad_tarea)
+          self.assertEqual(item.cantidad, cantidad_tarea, 
+            'Intervalos involucrados: %s' % cronograma.intervalocronograma_set.filter(
+              tarea=tarea,pedido=pedido,producto=item.producto))
 
   def test_fecha_hasta(self):
     for intervalo in IntervaloCronograma.objects.all():
@@ -591,7 +593,9 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
     cronograma = Cronograma.objects.get(pk=1)
     cronograma.add_pedido(pedido)
-
+    cronograma.tiempo_minimo_intervalo = 120
+    cronograma.clean()
+    cronograma.save()
 
   def test_tiempo_menor_al_tiempo_minimo(self):
 
@@ -606,8 +610,6 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
     # Verificamos que el intervalo tiene una duración menor a la del tiempo mínimo
     self.assertLess(intervalo.tiempo_intervalo,tiempo_minimo_intervalo)
-
-    self.assertEqual(cronograma.tiempo_minimo_intervalo,0)
 
 class PlanificarSinHuecosEvitables(PlanificadorTestCase):
 
@@ -639,30 +641,6 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
           fecha_inicial, fecha_final))
       except ValidationError:
         pass
-
-class PlanificarTiempoMinimo60Error(PlanificadorTestCase):
-
-  fixtures = [ 'planificacion/fixtures/tests/hueco_inexplicable.json' ]
-
-  def setUp(self):
-
-    cronograma = Cronograma.objects.get(pk=1)
-
-    cronograma.tiempo_minimo_intervalo = 60
-    cronograma.clean()
-    cronograma.save()
-    cronograma.planificar()
-
-  def test_cantidad_planificada(self):
-    
-    cronograma = Cronograma.objects.get(pk=1)
-
-    self.verificar_cantidad_planificada(cronograma)
-
-    # Se verifica que se respete el tiempo mínimo
-    for i in cronograma.intervalocronograma_set.all():
-      self.assertLessEqual(cronograma.tiempo_minimo_intervalo,
-        i.tiempo_intervalo)
 
 class MasDeUnaDependenciaError(PlanificadorTestCase):
 

@@ -52,9 +52,9 @@ class Cronograma(models.Model):
   fecha_inicio = models.DateTimeField(
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=datetime.datetime.now())
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
-  tiempo_minimo_intervalo = models.DecimalField(default=120,
+  tiempo_minimo_intervalo = models.DecimalField(default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
-    help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. No puede haber intervalos con tiempos menores a este.'))
+    help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
 
@@ -416,11 +416,6 @@ class IntervaloCronograma(models.Model):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     gerenciador_dependencias.verificar_eliminar_instante(self)
 
-  def validar_tiempo_minimo(self):
-    if self.tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
-      raise ValidationError(_(u'El tiempo del intervalo %s debe ser mayor al tiempo mínimo %s.') % (
-        self.tiempo_intervalo, self.cronograma.tiempo_minimo_intervalo))
-
   def validar_fecha_inicio_cronograma(self):
     if self.fecha_desde < self.cronograma.fecha_inicio:
       raise ValidationError(_('Fecha desde %s anterior a la fecha de inicio del cronograma %s') % (
@@ -437,7 +432,6 @@ class IntervaloCronograma(models.Model):
     self.calcular_fecha_hasta()
     self.validar_solapamiento()
     self.validar_dependencias_guardado()
-    self.validar_tiempo_minimo()
     self.validar_fecha_inicio_cronograma()
 
   def delete(self, *args, **kwargs):
