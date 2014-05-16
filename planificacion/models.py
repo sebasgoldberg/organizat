@@ -311,7 +311,9 @@ class IntervaloCronograma(models.Model):
     unique_together = (('cronograma', 'maquina', 'secuencia'),)
 
   def __unicode__(self):
-    return '%s_%s_%s_%s_%s' % (self.id, self.maquina.descripcion, self.tarea.descripcion,
+    return '#%s(%s, %s, ped #%s, %s, cant: %s, %s, %s)' % (self.id,
+      self.maquina.descripcion, self.tarea.descripcion, self.pedido.id,
+      self.producto.descripcion, self.cantidad_tarea,
       self.get_fecha_desde(), self.get_fecha_hasta())
 
   def in_maquina_cuello_botella(self):

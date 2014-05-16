@@ -87,6 +87,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATICFILES_DIRS = (
+  '/var/www/static/',
+  )
+
 GRAPPELLI_ADMIN_TITLE = _('DjProd')
 
 SKIP_SOUTH_TESTS = True # To disable South's own unit tests

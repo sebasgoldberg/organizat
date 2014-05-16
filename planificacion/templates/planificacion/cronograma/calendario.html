@@ -1,0 +1,66 @@
+<head>
+  <link rel='stylesheet' type='text/css' href='/static/fullcalendar-1.6.4/fullcalendar/fullcalendar.css' />
+  <script type='text/javascript' src='/static/fullcalendar-1.6.4/lib/jquery.min.js'></script>
+  <script type='text/javascript' src='/static/fullcalendar-1.6.4/lib/jquery-ui.custom.min.js'></script>
+  <script type='text/javascript' src='/static/fullcalendar-1.6.4/fullcalendar/fullcalendar.js'></script>
+</head>
+<html>
+
+  <div id='calendar' style='clear:both;'></div>
+
+  <script type='text/javascript'>
+
+  function get_color_range(value){
+    return (value*24)%192;
+    }
+
+  function get_rgb_color(r,g,b,cuello_botella){
+    if (cuello_botella)
+      return 'rgb(255,0,0)';
+    return 'rgb('+get_color_range(r)+','+get_color_range(g)+','+get_color_range(b)+')'
+    }
+
+  $(document).ready(function() {
+
+    calendar = $('#calendar');
+    
+    calendar.fullCalendar({
+      header: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'month,agendaWeek,agendaDay'
+        },
+      defaultView: 'agendaDay',
+      editable: false,
+      allDaySlot: false,
+      slotEventOverlap: false,
+      slotMinutes: 10,
+      {%with fi=cronograma.fecha_inicio %}
+      firstHour: {{fi.hour}},
+      {% endwith %}
+      events: [
+        {%for intervalo in cronograma.intervalocronograma_set.all%}
+        {
+          id: {{intervalo.id}},
+          title: "{{intervalo}}",
+          {% with fd=intervalo.get_fecha_desde fh=intervalo.get_fecha_hasta %}
+          start: new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
+          end: new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
+          {% endwith %}
+          allDay: false,
+          color: get_rgb_color({{intervalo.maquina.id}},{{intervalo.pedido.id}},{{intervalo.producto.id}},{%if intervalo.in_maquina_cuello_botella%}true{% else %}false{% endif %})
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        ]
+      });
+
+    calendar.fullCalendar('gotoDate',
+      {%with fi=cronograma.fecha_inicio %}
+      new Date({{fi.year}}, {{fi.month}}-1, {{fi.day}})
+      {% endwith %}
+      );
+
+  });
+  </script>
+
+</html>

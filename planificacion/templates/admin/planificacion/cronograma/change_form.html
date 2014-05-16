@@ -3,6 +3,8 @@
 
 {% block object-tools-items %}
     <li><a href="/planificacion/planificar/{{object_id}}/" class="historylink">{% trans "Planificar" %}</a></li>
+    <li><a href="/admin/planificacion/intervalocronograma/?cronograma__id__exact={{object_id}}" class="historylink" target='_blank'>{% trans "Ver en reporte" %}</a></li>
+    <li><a href="/planificacion/calendario/cronograma/{{object_id}}/" class="historylink" target='_blank'>{% trans "Ver en calendario" %}</a></li>
     <li><a href="history/" class="historylink">{% trans "Historial" %}</a></li>
     {% if has_absolute_url %}<li><a href="../../../r/{{ content_type_id }}/{{ object_id }}/" class="viewsitelink">{% trans "Ver no site" %}</a></li>{% endif%}
 {% endblock %}
