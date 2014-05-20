@@ -12,6 +12,9 @@ import datetime
 
 C_100_ANYOS_EN_MINUTOS = 52560000
 
+class ModeloLinealNoResuelto(Exception):
+  pass
+
 class PlanificadorLinealContinuo(PlanificadorStrategy):
 
   modelo = None

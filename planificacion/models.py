@@ -10,6 +10,7 @@ from planificacion.dependencias import GerenciadorDependencias
 from django.core.exceptions import ValidationError
 import datetime
 from decimal import Decimal
+from django.db import transaction
 
 ESTRATEGIAS=(
   (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
@@ -138,6 +139,7 @@ class Cronograma(models.Model):
         except ValidationError:
           pass
 
+  @transaction.atomic
   def planificar(self):
     """
     Este es el core del producto. Acá es donde en función de la configuración 
