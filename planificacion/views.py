@@ -12,7 +12,7 @@ def planificar(request,id_cronograma):
     messages.error(request, e)
   return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
 
-def calendario_cronograma(request,id_cronograma):
+def calendario_cronograma(request, id_cronograma):
   cronograma = Cronograma.objects.get(id=id_cronograma)
   return render(request,
     'planificacion/cronograma/calendario.html',
