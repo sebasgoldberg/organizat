@@ -20,6 +20,18 @@ CLASES_ESTRATEGIAS={
   1: PlanificadorModeloLineal,
   2: lineal_continuo.PlanificadorLinealContinuo, }
 
+ESTADO_CRONOGRAMA_NO_PLANIFICADO=0
+ESTADO_CRONOGRAMA_VALIDO=1
+ESTADO_CRONOGRAMA_ACTIVO=2
+ESTADO_CRONOGRAMA_INVALIDO=3
+
+ESTADOS_CRONOGRAMAS=(
+  (ESTADO_CRONOGRAMA_NO_PLANIFICADO,_(u'No planificado')),
+  (ESTADO_CRONOGRAMA_VALIDO,_(u'Válido')),
+  (ESTADO_CRONOGRAMA_ACTIVO,_(u'Activo')),
+  (ESTADO_CRONOGRAMA_INVALIDO,_(u'Inválido')),
+  )
+
 class Hueco(object):
   
   fecha_desde=None
@@ -58,6 +70,7 @@ class Cronograma(models.Model):
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
+  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_CRONOGRAMAS, default=0)
 
   class Meta:
     ordering = ['-id']
@@ -150,6 +163,30 @@ class Cronograma(models.Model):
     IntervaloCronograma.objects.filter(cronograma=self).delete()
     planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
     planificador.planificar()
+    self.estado = ESTADO_CRONOGRAMA_VALIDO
+    self.save()
+
+  def is_valido(self):
+    return self.estado == ESTADO_CRONOGRAMA_VALIDO
+
+  def is_activo(self):
+    return self.estado == ESTADO_CRONOGRAMA_ACTIVO
+
+  @transaction.atomic
+  def activar(self):
+    if self.is_activo():
+      raise ValidationError(_(u'El cronograma ya se encuentra activo'))
+    if not self.is_valido():
+      self.planificar()
+    self.estado = ESTADO_CRONOGRAMA_ACTIVO
+    self.save()
+    Cronograma.invalidar_cronogramas_validos()
+
+  @staticmethod
+  def invalidar_cronogramas_validos():
+    for cronograma in Cronograma.objects.filter(estado=ESTADO_CRONOGRAMA_VALIDO):
+      cronograma.estado = ESTADO_CRONOGRAMA_INVALIDO
+      cronograma.save()
 
   def __unicode__(self):
     return self.descripcion
@@ -179,9 +216,19 @@ class Cronograma(models.Model):
     intervalo.clean()
     intervalo.save()
 
+  def get_intervalos_propios_y_activos(self, maquina):
+    intervalos_propios = IntervaloCronograma.objects.filter(
+      cronograma=self,
+      maquina=maquina)
+    intervalos_activos = IntervaloCronograma.objects.filter(
+      maquina=maquina,
+      cronograma__estado=ESTADO_CRONOGRAMA_ACTIVO, 
+      fecha_hasta__gte=self.fecha_inicio)
+    return intervalos_propios | intervalos_activos
+
   def get_huecos(self, maquina):
     huecos=[]
-    intervalos = self.intervalocronograma_set.filter(maquina=maquina).order_by('fecha_desde')
+    intervalos = self.get_intervalos_propios_y_activos(maquina).order_by('fecha_desde')
     intervalo_anterior = None
     for intervalo in intervalos:
       if not intervalo_anterior:
@@ -206,12 +253,12 @@ class Cronograma(models.Model):
 
   def get_ultima_fecha(self, maquina):
     from django.db.models import Max
-    ultima_fecha = self.intervalocronograma_set.filter(
-      maquina=maquina).aggregate(Max('fecha_desde'))['fecha_desde__max']
+    ultima_fecha = self.get_intervalos_propios_y_activos(
+      maquina).aggregate(Max('fecha_desde'))['fecha_desde__max']
     if not ultima_fecha:
       return self.fecha_inicio
-    return self.intervalocronograma_set.filter(
-      maquina=maquina).get(fecha_desde=ultima_fecha).get_fecha_hasta()
+    return self.get_intervalos_propios_y_activos(
+      maquina).get(fecha_desde=ultima_fecha).get_fecha_hasta()
 
   def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
     intervalo = None
@@ -390,12 +437,9 @@ class IntervaloCronograma(models.Model):
     self.cantidad_tarea = Decimal(self.tiempo_intervalo) / Decimal(self.tarea.get_tiempo(self.maquina,self.producto))
 
   def validar_solapamiento(self):
+    intervalos_maquina = self.cronograma.get_intervalos_propios_y_activos(self.maquina)
     if self.id:
-      intervalos_maquina = IntervaloCronograma.objects.exclude(pk=self.id)
-    else:
-      intervalos_maquina = IntervaloCronograma.objects
-    intervalos_maquina = intervalos_maquina.filter(
-      cronograma=self.cronograma,maquina=self.maquina)
+      intervalos_maquina = intervalos_maquina.exclude(pk=self.id)
     for intervalo in intervalos_maquina:
       if ( intervalo.get_fecha_desde() <= self.get_fecha_desde() and
         intervalo.get_fecha_hasta() > self.get_fecha_desde() ) or\

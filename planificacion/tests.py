@@ -824,3 +824,34 @@ class CargaAutomaticaDeMaquinasEnCronograma(TestCase):
     for pedido in self.cronograma.get_pedidos():
       for maquina in pedido.get_maquinas_posibles_produccion():
         self.assertIn(maquina,maquinas_cronograma)
+
+class ActivacionCronogramaTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/fixtures/tests/dos_cronogramas.json' ]
+
+  def setUp(self):
+
+    IntervaloCronograma.objects.all().delete()
+
+    self.c1 = Cronograma.objects.get(descripcion="Crono pedidos B y C")
+    self.c2 = Cronograma.objects.get(descripcion="Otro crono")
+
+    self.c1.fecha_inicio = self.c2.fecha_inicio
+    self.c1.save()
+    self.c2.save()
+
+    self.c1.activar()
+    self.c2.planificar()
+
+  def test_no_existe_solapamiento(self):
+    """
+    Se verifica que no existan solapamientos.
+    """
+    for maquina in Maquina.objects.all():
+      fecha_hasta_anterior = None
+      for intervalo in maquina.intervalocronograma_set.order_by('fecha_desde'):
+        if fecha_hasta_anterior is None:
+          fecha_hasta_anterior = intervalo.fecha_hasta
+        else:
+          self.assertLessEqual(fecha_hasta_anterior, intervalo.fecha_desde)
+
