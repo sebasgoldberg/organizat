@@ -4,7 +4,7 @@
   "model": "planificacion.cronograma", 
   "fields": {
     "fecha_inicio": "2014-04-16T00:00:00Z", 
-    "optimizar_planificacion": true, 
+    "optimizar_planificacion": false, 
     "descripcion": "Crono pedidos B y C", 
     "estrategia": 2, 
     "tiempo_minimo_intervalo": "0"
@@ -15,7 +15,7 @@
   "model": "planificacion.cronograma", 
   "fields": {
     "fecha_inicio": "2014-04-16T00:00:00Z", 
-    "optimizar_planificacion": true, 
+    "optimizar_planificacion": false, 
     "descripcion": "Otro crono", 
     "estrategia": 2, 
     "tiempo_minimo_intervalo": "0"

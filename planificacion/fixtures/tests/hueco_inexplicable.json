@@ -323,6 +323,7 @@
   "model": "planificacion.cronograma", 
   "fields": {
     "descripcion": "Crono pedidos B y C", 
+    "optimizar_planificacion": false, 
     "estrategia": 2, 
     "fecha_inicio": "2014-04-16T00:00:00Z"
   }

@@ -573,7 +573,7 @@
     "estrategia": 2, 
     "fecha_inicio": "2014-05-14T10:50:56Z", 
     "tiempo_minimo_intervalo": "0", 
-    "optimizar_planificacion": true
+    "optimizar_planificacion": false
   }
 },
 {
