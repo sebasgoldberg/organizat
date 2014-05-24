@@ -489,9 +489,7 @@
   "pk": 1, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T00:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 4, 
     "producto": 1, 
     "maquina": 2, 
@@ -510,9 +508,7 @@
   "pk": 2, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T00:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 3, 
     "producto": 1, 
     "maquina": 3, 
@@ -531,9 +527,7 @@
   "pk": 3, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T15:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 2, 
     "producto": 1, 
     "maquina": 1, 
@@ -552,9 +546,7 @@
   "pk": 4, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T13:20:00Z", 
-    "secuencia": null, 
     "tareaproducto": 2, 
     "producto": 1, 
     "maquina": 2, 
@@ -573,9 +565,7 @@
   "pk": 5, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T20:13:19Z", 
-    "secuencia": null, 
     "tareaproducto": 1, 
     "producto": 1, 
     "maquina": 1, 
@@ -594,9 +584,7 @@
   "pk": 6, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T00:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 5, 
     "producto": 2, 
     "maquina": 1, 
@@ -615,9 +603,7 @@
   "pk": 7, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T15:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 10, 
     "producto": 2, 
     "maquina": 3, 
@@ -636,9 +622,7 @@
   "pk": 8, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T18:06:40Z", 
-    "secuencia": null, 
     "tareaproducto": 11, 
     "producto": 2, 
     "maquina": 2, 
@@ -657,9 +641,7 @@
   "pk": 9, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T06:00:00Z", 
-    "secuencia": null, 
     "tareaproducto": 11, 
     "producto": 2, 
     "maquina": 3, 
@@ -678,9 +660,7 @@
   "pk": 10, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T04:53:20Z", 
-    "secuencia": null, 
     "tareaproducto": 6, 
     "producto": 2, 
     "maquina": 2, 
@@ -699,9 +679,7 @@
   "pk": 11, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-16T08:20:00Z", 
-    "secuencia": null, 
     "tareaproducto": 7, 
     "producto": 3, 
     "maquina": 1, 
@@ -720,9 +698,7 @@
   "pk": 12, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T04:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 7, 
     "producto": 3, 
     "maquina": 1, 
@@ -741,9 +717,7 @@
   "pk": 13, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T14:53:20Z", 
-    "secuencia": null, 
     "tareaproducto": 8, 
     "producto": 3, 
     "maquina": 2, 
@@ -762,9 +736,7 @@
   "pk": 14, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T14:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 9, 
     "producto": 3, 
     "maquina": 1, 
@@ -783,9 +755,7 @@
   "pk": 15, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-18T20:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 5, 
     "producto": 2, 
     "maquina": 1, 
@@ -804,9 +774,7 @@
   "pk": 16, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-17T08:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 10, 
     "producto": 2, 
     "maquina": 3, 
@@ -825,9 +793,7 @@
   "pk": 17, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-18T20:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 11, 
     "producto": 2, 
     "maquina": 3, 
@@ -846,9 +812,7 @@
   "pk": 18, 
   "model": "planificacion.intervalocronograma", 
   "fields": {
-    "cantidad_producto": "0", 
     "fecha_desde": "2014-04-19T02:33:19Z", 
-    "secuencia": null, 
     "tareaproducto": 6, 
     "producto": 2, 
     "maquina": 2, 

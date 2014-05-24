@@ -3,8 +3,7 @@ from django.db import models
 from produccion.models import *
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
-from planificacion.strategy.hago_lo_que_puedo import *
-from planificacion.strategy.lineal import *
+from planificacion.strategy.hago_lo_que_puedo import PlanificadorHagoLoQuePuedo
 from planificacion.strategy import lineal_continuo 
 from planificacion.dependencias import GerenciadorDependencias
 from django.core.exceptions import ValidationError
@@ -17,7 +16,6 @@ ESTRATEGIAS=(
 
 CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
-  1: PlanificadorModeloLineal,
   2: lineal_continuo.PlanificadorLinealContinuo, }
 
 ESTADO_CRONOGRAMA_NO_PLANIFICADO=0
@@ -207,15 +205,6 @@ class Cronograma(models.Model):
     return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
       maquina__in=self.get_maquinas(), tarea=tarea,producto=producto, activa=True) ]
 
-  def add_intervalo(self,secuencia,maquina,tarea,pedido,producto,cantidad_tarea,tiempo_intervalo=None):
-    if tiempo_intervalo == None:
-      tiempo_intervalo = self.intervalo_tiempo
-    intervalo=IntervaloCronograma(cronograma=self,maquina=maquina,secuencia=secuencia,
-      tarea=tarea,producto=producto,pedido=pedido,cantidad_tarea=cantidad_tarea,
-      tiempo_intervalo=tiempo_intervalo)
-    intervalo.clean()
-    intervalo.save()
-
   def get_intervalos_propios_y_activos(self, maquina):
     intervalos_propios = IntervaloCronograma.objects.filter(
       cronograma=self,
@@ -261,16 +250,7 @@ class Cronograma(models.Model):
       maquina).get(fecha_desde=ultima_fecha).get_fecha_hasta()
 
   def add_intervalo_al_final(self, maquina, tarea, producto, pedido, cantidad_tarea):
-    intervalo = None
-    try:
-      intervalo = self.intervalocronograma_set.filter(maquina=maquina).last()
-    except IntervaloCronograma.DoesNotExist:
-      pass
-    if intervalo:
-      secuencia = intervalo.secuencia + 1
-    else:
-      secuencia = 1
-    intervalo=IntervaloCronograma(cronograma=self,maquina=maquina,secuencia=secuencia,
+    intervalo=IntervaloCronograma(cronograma=self,maquina=maquina,
       tarea=tarea,producto=producto,pedido=pedido,cantidad_tarea=cantidad_tarea)
     intervalo.clean()
     intervalo.save()
@@ -280,13 +260,6 @@ class Cronograma(models.Model):
 
   def add_pedido(self, pedido):
     return self.pedidocronograma_set.create(pedido=pedido)
-
-  def get_intervalo(self, instante, maquina, tarea, pedido, producto):
-    try:
-      return self.intervalocronograma_set.get(
-        secuencia=instante, maquina=maquina, tarea=tarea, pedido=pedido, producto=producto)
-    except IntervaloCronograma.DoesNotExist:
-      return None
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
@@ -327,17 +300,15 @@ class IntervaloCronograma(models.Model):
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
-  secuencia = models.IntegerField(verbose_name=_(u'Secuencia'),
-    help_text=_(u'Secuencia de aparición en el cronograma'), null=True, blank=True)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
   pedido = models.ForeignKey(Pedido, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
   cantidad_tarea = models.DecimalField( editable=False, default=0,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea'),
-    help_text=_(u'Cantidad de tarea producida luego de finalizar el intervalo.'))
-  cantidad_producto = models.DecimalField( editable=False, default=0,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Producto'), 
-    help_text=_(u'Cantidad de producto producido luego de finalizar el intervalo.'))
+    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Planificada'),
+    help_text=_(u'Cantidad de tarea a producir en el intervalo.'))
+  cantidad_tarea_real = models.DecimalField( editable=False, default=0,
+    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Real'), 
+    help_text=_(u'Cantidad de tarea producida (real).'))
   tiempo_intervalo = models.DecimalField(
     max_digits=7, decimal_places=2,
     verbose_name=_(u'Tiempo del intervalo (min)'))
@@ -357,7 +328,7 @@ class IntervaloCronograma(models.Model):
     ordering = ['-cronograma__id', 'fecha_desde']
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
-    unique_together = (('cronograma', 'maquina', 'secuencia'),)
+    unique_together = (('cronograma', 'maquina', 'fecha_desde'),)
 
   def __unicode__(self):
     return '#%s(%s, %s, ped #%s, %s, cant: %s, %s, %s)' % (self.id,
@@ -406,21 +377,14 @@ class IntervaloCronograma(models.Model):
   def get_intervalos_maquina(self):
     return self.cronograma.get_intervalos_maquina(self.maquina)
 
-  def get_intervalos_anteriores_maquina(self):
-    """
-    Obtiene los intervalos anteriores en misma máquina y mismo crono
-    """
-    return self.get_intervalos_maquina().filter(secuencia__lt=self.secuencia)
-
   def calcular_fecha_desde(self):
     if self.fecha_desde:
       return
-    intervalos = self.get_intervalos_anteriores_maquina()
+    intervalos = self.get_intervalos_maquina()
     if len(intervalos) == 0:
-      tiempo_anterior = 0
+      self.fecha_desde = self.cronograma.fecha_inicio
     else:
-      tiempo_anterior = intervalos.aggregate(models.Sum('tiempo_intervalo'))['tiempo_intervalo__sum']
-    self.fecha_desde = self.cronograma.fecha_inicio + datetime.timedelta(seconds=int(tiempo_anterior*60))
+      self.fecha_desde = intervalos.order_by('fecha_desde').last().get_fecha_hasta()
 
   def calcular_fecha_hasta(self):
     self.fecha_hasta = self.get_fecha_hasta()
@@ -495,35 +459,6 @@ from django.db.models.signals import pre_delete
 
 #pre_delete.connect(validar_dependencias_borrado, 
   #sender=IntervaloCronograma)
-
-"""
-class CronogramaActivo(Cronograma):
-
-  instance = None
-
-  def planificar(self):
-    raise CronogramaActivoNoPlanificable()
-
-  @staticmethod
-  def get_instance():
-    try:
-      instance = CronogramaActivo.objects.first()
-    except CronogramaActivo.DoesNotExists:
-      pass
-    if not instance:
-      instance = CronogramaActivo(fecha_inicio=datetime.datetime(1,1,1))
-      instance.clean()
-      instance.save()
-    return instance
-
-def add_maquina_to_cronograma_activo(sender, instance, created, **kwargs):
-  if not created:
-    return
-  CronogramaActivo.get_instance().add_maquina(instance)
-
-post_save.connect(add_maquina_to_cronograma_activo, 
-  sender=Maquina)
-"""
 
 def add_maquinas_posibles_to_cronograma(sender, instance, created, **kwargs):
   if not created:

@@ -193,34 +193,27 @@ class IntervaloCronogramaTestCase(TestCase):
     P1 = Producto.objects.get(descripcion='P1')
     D1 = Pedido.objects.get(descripcion='D1')
     
-    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=1,
+    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
       tiempo_intervalo=100)
     intervalo.clean()
     intervalo.save()
 
-    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=2,
+    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
       tiempo_intervalo=100)
-
-    self.assertEqual(len(intervalo.get_intervalos_anteriores_maquina()),1)
-
-    intervalo.calcular_fecha_desde()
+    intervalo.clean()
 
     self.assertEqual(intervalo.fecha_desde,utc.localize(datetime.datetime(2014,1,1,1,40,0)))
 
-    intervalo.clean()
     intervalo.save()
 
-    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=2,
+    fecha_hasta = intervalo.get_fecha_hasta()
+    intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
-      tiempo_intervalo=100)
+      tiempo_intervalo=100, fecha_desde=fecha_hasta)
 
-    self.assertEqual(len(intervalo.get_intervalos_anteriores_maquina()),1)
-
-    intervalo.calcular_fecha_desde()
-
-    self.assertEqual(intervalo.fecha_desde,utc.localize(datetime.datetime(2014,1,1,1,40,0)))
+    self.assertEqual(intervalo.fecha_desde,fecha_hasta)
 
 
 class TareaDependienteTestCase(TestCase):
@@ -274,20 +267,19 @@ class TareaDependienteTestCase(TestCase):
     self.assertEqual(tareas_ordenadas_por_grado_dependencia[1].id,T2.id)
     
     # Se agrega una tarea T1 entre [0;25] como resultado da una cantidad de 5
-    I1=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=1,
+    I1=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=25/5,
-      tiempo_intervalo=25)
+      tiempo_intervalo=25, fecha_desde=cronograma.fecha_inicio)
     I1.clean()
     I1.save()
 
 
     # Se planifica I2 en la máquina M2 en la fecha de finalización de I1
-    I2=IntervaloCronograma(cronograma=cronograma,maquina=M2,secuencia=1,
+    I2=IntervaloCronograma(cronograma=cronograma,maquina=M2,
       tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
       tiempo_intervalo=100, fecha_desde=I1.get_fecha_hasta())
 
     # Se verifica que cuando se asigna la fecha desde, el cálculo no la modifica.
-    I2.calcular_fecha_desde()
     self.assertEqual(I2.get_fecha_desde(),I1.get_fecha_hasta())
 
     # Se verifica que la obtención de los intervalos sea correcta:
@@ -318,9 +310,9 @@ class TareaDependienteTestCase(TestCase):
       pass
 
     # Agregamos el intervalo I3:M1:T1:5:[25;50]
-    I3=IntervaloCronograma(cronograma=cronograma,maquina=M1,secuencia=2,
+    I3=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=25/5,
-      tiempo_intervalo=25)
+      tiempo_intervalo=25, fecha_desde=I1.get_fecha_hasta())
     I3.clean()
     I3.save()
     
@@ -406,10 +398,9 @@ class TareaDependienteTestCase(TestCase):
     except ValidationError:
       pass
 
-    # Se planifica I2 en la máquina M2 en la fecha de finalización de I1
-    I4=IntervaloCronograma(cronograma=cronograma,maquina=M2,secuencia=2,
+    I4=IntervaloCronograma(cronograma=cronograma,maquina=M2,
       tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
-      tiempo_intervalo=100)
+      tiempo_intervalo=100, fecha_desde=I2.get_fecha_hasta())
 
     try:
       # como I1:M1:T1:5:[0;25] y I2:M2:T2:10:[0;100] y T1 -> T2 => 
