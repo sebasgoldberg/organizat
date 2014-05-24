@@ -822,8 +822,6 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
 
   def setUp(self):
 
-    IntervaloCronograma.objects.all().delete()
-
     self.c1 = Cronograma.objects.get(descripcion="Crono pedidos B y C")
     self.c2 = Cronograma.objects.get(descripcion="Otro crono")
 
@@ -831,10 +829,37 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
     self.c1.save()
     self.c2.save()
 
+  def test_activo_c1_planifico_c2(self):
+    IntervaloCronograma.objects.all().delete()
     self.c1.activar()
     self.c2.planificar()
+    self.validar_no_existe_solapamiento()
 
-  def test_no_existe_solapamiento(self):
+  def test_activo_c2_planifico_c1(self):
+    IntervaloCronograma.objects.all().delete()
+    self.c2.activar()
+    self.c1.planificar()
+    self.validar_no_existe_solapamiento()
+
+  def test_activo_todo(self):
+    IntervaloCronograma.objects.all().delete()
+    self.c2.activar()
+    self.c1.activar()
+    self.validar_no_existe_solapamiento()
+
+  def test_planifico_luego_activo(self):
+    IntervaloCronograma.objects.all().delete()
+    self.c2.planificar()
+    self.c1.planificar()
+    self.c2.activar()
+
+    self.c1 = Cronograma.objects.get(descripcion="Crono pedidos B y C")
+    self.assertFalse(self.c1.is_valido())
+
+    self.c1.activar()
+    self.validar_no_existe_solapamiento()
+
+  def validar_no_existe_solapamiento(self):
     """
     Se verifica que no existan solapamientos.
     """
