@@ -5,6 +5,7 @@ from planificacion.models import *
 import datetime
 import pytz
 from django.db.transaction import rollback
+from django.utils.translation import ugettext as _
 
 utc=pytz.UTC
 
@@ -870,4 +871,61 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
           fecha_hasta_anterior = intervalo.fecha_hasta
         else:
           self.assertLessEqual(fecha_hasta_anterior, intervalo.fecha_desde)
+
+class CantidadTareaRealTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+
+  def test_validaciones_asignacion_cantidad_tarea_real(self):
+
+    IntervaloCronograma.objects.all().delete()
+
+    cronograma = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
+
+    algun_producto_del_cronograma = cronograma.get_pedidos()[0].get_items()[0].producto
+
+    tarea_primer_grado = algun_producto_del_cronograma.get_tareas_ordenadas_por_dependencia()[0]
+
+    tarea_dependiente = DependenciaTareaProducto.objects.filter(
+      producto=algun_producto_del_cronograma, tarea_anterior=tarea_primer_grado).first().tarea
+
+    cronograma.planificar()
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    intervalo_dependiente = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_dependiente).order_by('fecha_desde').first()
+
+    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
+    try:
+      intervalo_primer_grado.clean()
+      self.fail(_(u'La cantidad de tarea real solo puede ser asignada en intervalos pertenecientes a cronogramas activos.'))
+    except ValidationError:
+      pass
+
+    cronograma.activar()
+
+    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea + 1
+    try:
+      intervalo_primer_grado.clean()
+      self.fail(_(u'La cantidad de tarea real supera la cantidad de tarea planificada.'))
+    except ValidationError:
+      pass
+
+    intervalo_dependiente.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
+    try:
+      intervalo_dependiente.clean()
+      self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
+        intervalo_dependiente, intervalo_primer_grado))
+    except ValidationError:
+      pass
+
+    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
+    intervalo_primer_grado.clean()
+    intervalo_primer_grado.save()
+
+    intervalo_dependiente.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
+    intervalo_dependiente.clean()
+    intervalo_dependiente.save()
 
