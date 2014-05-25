@@ -43,6 +43,9 @@ class IntervaloFinalizadoConCantidadNula(ValidationError):
 class IntervaloCanceladoConCantidadNoNula(ValidationError):
   pass
 
+class IntervaloDistintoPlanificadoEnCronogramaInactivo(ValidationError):
+  pass
+
 ESTRATEGIAS=(
   (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
 
@@ -222,6 +225,12 @@ class Cronograma(models.Model):
   def is_activo(self):
     return self.estado == ESTADO_CRONOGRAMA_ACTIVO
 
+  def desactivar(self):
+    if self.is_activo():
+      self.estado = ESTADO_CRONOGRAMA_VALIDO
+    self.clean()
+    self.save()
+
   @transaction.atomic
   def activar(self):
     if self.is_activo():
@@ -236,6 +245,7 @@ class Cronograma(models.Model):
   def invalidar_cronogramas_validos():
     for cronograma in Cronograma.objects.filter(estado=ESTADO_CRONOGRAMA_VALIDO):
       cronograma.estado = ESTADO_CRONOGRAMA_INVALIDO
+      cronograma.clean()
       cronograma.save()
 
   def __unicode__(self):
@@ -312,6 +322,26 @@ class Cronograma(models.Model):
 
   def add_pedido(self, pedido):
     return self.pedidocronograma_set.create(pedido=pedido)
+
+  def validar_estado(self):
+    if not self.is_activo():
+
+      cantidad_con_tarea_real= self.intervalocronograma_set.filter(
+        cantidad_tarea_real__gt=0).count()
+      if cantidad_con_tarea_real > 0:
+        raise TareaRealEnCronogramaInactivo(
+          _(u'Imposible desactivar un cronograma con intervalos que presentan '+
+          u'cantidades de tarea real mayor a cero.'))
+
+      cantidad_no_planificados = self.intervalocronograma_set.exclude(
+        estado=ESTADO_INTERVALO_PLANIFICADO).count()
+      if cantidad_no_planificados > 0:
+        raise IntervaloDistintoPlanificadoEnCronogramaInactivo(
+          _(u'Imposible desactivar un cronograma con intervalos con estado '+
+          u'distinto de planificado.'))
+
+  def clean(self):
+    self.validar_estado()
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))

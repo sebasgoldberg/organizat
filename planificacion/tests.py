@@ -906,6 +906,10 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
 
     cronograma.activar()
 
+    cronograma.desactivar()
+
+    cronograma.activar()
+
     intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
       tarea=tarea_primer_grado).order_by('fecha_desde').first()
 
@@ -941,6 +945,12 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
       self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
         intervalo_dependiente, intervalo_primer_grado))
     except TareaRealNoRespetaDependencias:
+      pass
+
+    try:
+      cronograma.desactivar()
+      self.fail(_(u'No debería poder desactivarse un cronograma que tiene intervalos con cantidad de tarea real.'))
+    except TareaRealEnCronogramaInactivo:
       pass
 
 class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
@@ -982,6 +992,10 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
     cronograma.activar()
 
+    cronograma.desactivar()
+
+    cronograma.activar()
+
     intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
       tarea=tarea_primer_grado).order_by('fecha_desde').first()
 
@@ -1013,3 +1027,9 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
     self.assertEqual(intervalo_primer_grado.estado, ESTADO_INTERVALO_CANCELADO)
     self.assertEqual(intervalo_primer_grado.cantidad_tarea_real, 0)
+
+    try:
+      cronograma.desactivar()
+      self.fail(_(u'No debería poder desactivarse un cronograma que tiene intervalos con estado distinto de planificado.'))
+    except IntervaloDistintoPlanificadoEnCronogramaInactivo:
+      pass
