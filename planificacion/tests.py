@@ -105,7 +105,6 @@ class TiempoRealizacionTareaTestCase(TestCase):
     cronograma.add_pedido(D2)
     cronograma.add_pedido(D3)
 
-
   def test_planificar(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')

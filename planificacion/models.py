@@ -213,10 +213,13 @@ class Cronograma(models.Model):
     cronograma con la planificación correspondiente para llevar a cabo la
     producción.
     """
+    self.estado = ESTADO_CRONOGRAMA_NO_PLANIFICADO
+    self.clean()
     IntervaloCronograma.objects.filter(cronograma=self).delete()
     planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
     planificador.planificar()
     self.estado = ESTADO_CRONOGRAMA_VALIDO
+    self.clean()
     self.save()
 
   def is_valido(self):
@@ -444,10 +447,15 @@ class IntervaloCronograma(models.Model):
   def get_intervalo_anterior(self):
 
     try:
-      fecha_desde_anterior = IntervaloCronograma.objects.filter(maquina=self.maquina, 
-        fecha_desde__lt=self.fecha_desde).aggregate(models.Max('fecha_desde'))['fecha_desde__max']
+
+      fecha_desde_anterior = self.cronograma.get_intervalos_propios_y_activos(
+        self.maquina).filter(fecha_desde__gte=self.cronograma.fecha_inicio,
+        fecha_desde__lt=self.fecha_desde).aggregate(
+        models.Max('fecha_desde'))['fecha_desde__max']
+
       return self.cronograma.intervalocronograma_set.get(maquina=self.maquina, 
         fecha_desde=fecha_desde_anterior)
+
     except IntervaloCronograma.DoesNotExist:
       pass
 
