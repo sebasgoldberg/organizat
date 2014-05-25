@@ -521,12 +521,14 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
           [h.__unicode__() for h in huecos], [i for i in intervalos], fecha_desde, fecha_hasta) )
 
     M3 = Maquina.objects.get(descripcion='M3')
-    huecos = cronograma.get_huecos(M3)
+
+    huecos = []
+    for hueco in cronograma.get_huecos(M3):
+      huecos.append(hueco)
+      self.assertEqual(len(huecos),1)
 
     if len(huecos) == 0:
       return
-
-    self.assertEqual(len(huecos),1)
 
     hueco = huecos[0]
 

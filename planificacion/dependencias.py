@@ -151,10 +151,9 @@ class GerenciadorDependencias:
     return intervalo
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
-    huecos = self.cronograma.get_huecos(maquina)
     tiempo_asignado = 0
     tiempo_a_asignar = tiempo
-    for hueco in huecos:
+    for hueco in self.cronograma.get_huecos(maquina):
       try:
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
         tiempo_restante = tiempo - tiempo_intervalo

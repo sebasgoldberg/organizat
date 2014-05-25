@@ -281,7 +281,6 @@ class Cronograma(models.Model):
     return intervalos_propios | intervalos_activos
 
   def get_huecos(self, maquina):
-    huecos=[]
     intervalos = self.get_intervalos_propios_y_activos(maquina).order_by('fecha_desde')
     intervalo_anterior = None
     for intervalo in intervalos:
@@ -302,8 +301,7 @@ class Cronograma(models.Model):
           continue
       hueco = Hueco(fecha_desde=fecha_desde,
         tiempo=fecha_hasta-fecha_desde)
-      huecos.append(hueco)
-    return huecos
+      yield hueco
 
   def get_ultima_fecha(self, maquina):
     from django.db.models import Max
@@ -475,7 +473,6 @@ class IntervaloCronograma(models.Model):
       raise HuecoAdyacenteAnteriorNoExiste()
       
     return Hueco(intervalo_anterior.get_fecha_hasta(), fecha_hasta=self.fecha_desde)
-      
 
   def mover(self, minutos):
     self.fecha_desde += datetime.timedelta(minutes=minutos)
