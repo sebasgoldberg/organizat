@@ -901,16 +901,22 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
     try:
       intervalo_primer_grado.clean()
       self.fail(_(u'La cantidad de tarea real solo puede ser asignada en intervalos pertenecientes a cronogramas activos.'))
-    except ValidationError:
+    except TareaRealEnCronogramaInactivo:
       pass
 
     cronograma.activar()
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    intervalo_dependiente = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_dependiente).order_by('fecha_desde').first()
 
     intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea + 1
     try:
       intervalo_primer_grado.clean()
       self.fail(_(u'La cantidad de tarea real supera la cantidad de tarea planificada.'))
-    except ValidationError:
+    except TareaRealSuperaPlanificada:
       pass
 
     intervalo_dependiente.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
@@ -918,7 +924,7 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
       intervalo_dependiente.clean()
       self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
         intervalo_dependiente, intervalo_primer_grado))
-    except ValidationError:
+    except TareaRealNoRespetaDependencias:
       pass
 
     intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
@@ -929,3 +935,10 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
     intervalo_dependiente.clean()
     intervalo_dependiente.save()
 
+    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea_real - 1
+    try:
+      intervalo_primer_grado.clean()
+      self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
+        intervalo_dependiente, intervalo_primer_grado))
+    except TareaRealNoRespetaDependencias:
+      pass

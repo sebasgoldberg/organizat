@@ -11,6 +11,16 @@ import datetime
 from decimal import Decimal
 from django.db import transaction
 
+class TareaRealEnCronogramaInactivo(ValidationError):
+  pass
+
+class TareaRealSuperaPlanificada(ValidationError):
+  pass
+
+class TareaRealNoRespetaDependencias(ValidationError):
+  pass
+
+
 ESTRATEGIAS=(
   (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
 
@@ -74,6 +84,14 @@ class Cronograma(models.Model):
     ordering = ['-id']
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
+
+  def get_cantidad_real_tarea(self, tarea, ids_intervalos_excluir=[]):
+    qs = self.intervalocronograma_set.filter(tarea=tarea).exclude(
+      id__in=ids_intervalos_excluir).aggregate(total_real=models.Sum(
+        'cantidad_tarea_real'))
+    if qs['total_real'] is None:
+      return 0
+    return qs['total_real']
 
   def get_ids_posibles_maquinas_cuello_botella(self):
     maquinas_y_tiempos = self.intervalocronograma_set.values(
@@ -431,6 +449,39 @@ class IntervaloCronograma(models.Model):
       raise ValidationError(_('Fecha desde %s anterior a la fecha de inicio del cronograma %s') % (
         self.fecha_desde, self.cronograma.fecha_inicio))
 
+  def validar_cantidad_real_dependencias(self):
+
+    if self.cantidad_tarea_real > 0:
+      cantidades_reales_tareas = {}
+      for listado_dependencias in self.producto.get_listado_secuencias_dependencias():
+        tarea_anterior = None
+        for tarea in listado_dependencias:
+          if not tarea.id in cantidades_reales_tareas:
+            cantidades_reales_tareas[tarea.id] = self.cronograma.get_cantidad_real_tarea(
+              tarea, ids_intervalos_excluir=[self.id])
+            if tarea.id == self.tarea.id:
+              cantidades_reales_tareas[tarea.id] += self.cantidad_tarea_real
+          if tarea_anterior is not None:
+            if cantidades_reales_tareas[tarea.id] > cantidades_reales_tareas[tarea_anterior.id]:
+              raise TareaRealNoRespetaDependencias(_(u'La cantidad real %s de la tarea %s '+
+                u'no puede superar la cantidad %s de la tarea %s de la cual '+
+                u'depende.') % (cantidades_reales_tareas[tarea.id], tarea,
+                cantidades_reales_tareas[tarea_anterior.id], tarea_anterior))
+          tarea_anterior = tarea
+
+  def validar_cantidad_real(self):
+    if self.cantidad_tarea_real > 0:
+      # Se verifica estado del cronograma para poder asignar cantidad real.
+      if not self.cronograma.is_activo():
+        raise TareaRealEnCronogramaInactivo(_(u'La cantidad de tarea real solo puede ser asignada en intervalos pertenecientes a cronogramas activos.'))
+
+    if self.cantidad_tarea_real > self.cantidad_tarea:
+      raise TareaRealSuperaPlanificada(_(u'La cantidad de tarea real %s supera la cantidad de tarea planificada %s.' %(
+        self.cantidad_tarea_real, self.cantidad_tarea)))
+
+    # Se valida que dependencias tengan cantidad real mayor o igual.
+    self.validar_cantidad_real_dependencias()
+
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
@@ -440,6 +491,7 @@ class IntervaloCronograma(models.Model):
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()
     self.calcular_fecha_hasta()
+    self.validar_cantidad_real()
     self.validar_solapamiento()
     self.validar_dependencias_guardado()
     self.validar_fecha_inicio_cronograma()

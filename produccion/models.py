@@ -141,22 +141,31 @@ class Producto(models.Model):
 
     return primer_grado
 
+  def get_listado_secuencias_dependencias(self):
+
+    primer_grado = self.get_tareas_primer_grado_dependencia()
+    secuencias_dependencias = []
+
+    for tarea_primer_grado in primer_grado:
+      secuencias_dependencias += tarea_primer_grado.get_secuencias_dependencias(self)
+
+    return secuencias_dependencias
+
   def get_tareas_ordenadas_por_dependencia(self):
 
     primer_grado = self.get_tareas_primer_grado_dependencia()
 
     grados_tareas = {}
-    for tarea_primer_grado in primer_grado:
-      for secuencia_dependencia in tarea_primer_grado.get_secuencias_dependencias(self):
-        grado = 0
-        for tarea in secuencia_dependencia:
-          grado+=1
-          if not grados_tareas.has_key(tarea.id):
-            grados_tareas[tarea.id]={}
-            grados_tareas[tarea.id]['tarea'] = tarea
-            grados_tareas[tarea.id]['grado'] = grado
-          elif grados_tareas[tarea.id]['grado'] < grado:
-            grados_tareas[tarea.id]['grado'] = grado
+    for secuencia_dependencia in self.get_listado_secuencias_dependencias():
+      grado = 0
+      for tarea in secuencia_dependencia:
+        grado+=1
+        if not grados_tareas.has_key(tarea.id):
+          grados_tareas[tarea.id]={}
+          grados_tareas[tarea.id]['tarea'] = tarea
+          grados_tareas[tarea.id]['grado'] = grado
+        elif grados_tareas[tarea.id]['grado'] < grado:
+          grados_tareas[tarea.id]['grado'] = grado
 
     tareas_por_grado = {}
     for grado_tarea in grados_tareas.itervalues():
