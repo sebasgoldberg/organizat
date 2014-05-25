@@ -43,6 +43,7 @@ INSTALLED_APPS = (
     'south',
     'produccion',
     'planificacion',
+    'calendario',
 )
 
 MIDDLEWARE_CLASSES = (
