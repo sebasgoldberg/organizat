@@ -11,6 +11,10 @@ import datetime
 from decimal import Decimal
 from django.db import transaction
 
+"""
+Excepcione de validación de tareas reales.
+"""
+
 class TareaRealEnCronogramaInactivo(ValidationError):
   pass
 
@@ -20,6 +24,21 @@ class TareaRealSuperaPlanificada(ValidationError):
 class TareaRealNoRespetaDependencias(ValidationError):
   pass
 
+"""
+Excepciones de validación de cambios de estado en intervalos.
+"""
+
+class IntervaloFinalizadoEnCronogramaInactivo(ValidationError):
+  pass
+
+class IntervaloCanceladoEnCronogramaInactivo(ValidationError):
+  pass
+
+class IntervaloFinalizadoConCantidadNula(ValidationError):
+  pass
+
+class IntervaloCanceladoConCantidadNoNula(ValidationError):
+  pass
 
 ESTRATEGIAS=(
   (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
@@ -39,6 +58,18 @@ ESTADOS_CRONOGRAMAS=(
   (ESTADO_CRONOGRAMA_ACTIVO,_(u'Activo')),
   (ESTADO_CRONOGRAMA_INVALIDO,_(u'Inválido')),
   )
+
+ESTADO_INTERVALO_PLANIFICADO=0
+ESTADO_INTERVALO_EN_CURSO=1
+ESTADO_INTERVALO_FINALIZADO=2
+ESTADO_INTERVALO_CANCELADO=3
+
+ESTADOS_INTERVALOS=(
+  (ESTADO_INTERVALO_PLANIFICADO,_(u'Planificado')),
+  (ESTADO_INTERVALO_EN_CURSO,_(u'En curso')),
+  (ESTADO_INTERVALO_FINALIZADO,_(u'Finalizado')),
+  (ESTADO_INTERVALO_CANCELADO,_(u'Cancelado')),
+)
 
 class Hueco(object):
   
@@ -334,6 +365,7 @@ class IntervaloCronograma(models.Model):
     verbose_name=_(u'Fecha desde'), null=False, blank=False)
   fecha_hasta = models.DateTimeField(
     verbose_name=_(u'Fecha hasta'), null=True, blank=False)
+  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_INTERVALOS, default=0)
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
@@ -353,6 +385,19 @@ class IntervaloCronograma(models.Model):
       self.maquina.descripcion, self.tarea.descripcion, self.pedido.id,
       self.producto.descripcion, self.cantidad_tarea,
       self.get_fecha_desde(), self.get_fecha_hasta())
+
+  def finalizar(self, cantidad_tarea_real=None):
+    if cantidad_tarea_real is not None:
+      self.cantidad_tarea_real = cantidad_tarea_real
+    self.estado = ESTADO_INTERVALO_FINALIZADO
+    self.clean()
+    self.save()
+
+  def cancelar(self):
+    self.cantidad_tarea_real = 0
+    self.estado = ESTADO_INTERVALO_CANCELADO
+    self.clean()
+    self.save()
 
   def in_maquina_cuello_botella(self):
     return self.cronograma.is_maquina_cuello_botella(self.maquina)
@@ -482,6 +527,35 @@ class IntervaloCronograma(models.Model):
     # Se valida que dependencias tengan cantidad real mayor o igual.
     self.validar_cantidad_real_dependencias()
 
+  def is_finalizado(self):
+    return self.estado == ESTADO_INTERVALO_FINALIZADO
+
+  def is_cancelado(self):
+    return self.estado == ESTADO_INTERVALO_CANCELADO
+
+  def validar_estado(self):
+    if not self.cronograma.is_activo():
+
+      if self.is_finalizado():
+        raise IntervaloFinalizadoEnCronogramaInactivo(
+          _(u'Para poder finalizar el intervalo %s, primero debe activar el cronograma %s.') % (
+          self, self.cronograma))
+
+      if self.is_cancelado():
+        raise IntervaloCanceladoEnCronogramaInactivo(
+          _(u'Para poder cancelar el intervalo %s, primero debe activar el cronograma %s.') % (
+          self, self.cronograma))
+
+    if self.is_finalizado() and self.cantidad_tarea_real == 0:
+      raise IntervaloFinalizadoConCantidadNula(
+        _(u'Para poder finalizar el intervalo %s debe informar '+
+        u'la cantidad de tarea real producida.') % self)
+
+    if self.is_cancelado() and self.cantidad_tarea_real > 0:
+      raise IntervaloCanceladoConCantidadNoNula(
+        _(u'Para poder cancelar el intervalo %s debe dejar en cero '+
+        u'la cantidad de tarea real producida.') % self)
+
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
@@ -491,6 +565,7 @@ class IntervaloCronograma(models.Model):
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()
     self.calcular_fecha_hasta()
+    self.validar_estado()
     self.validar_cantidad_real()
     self.validar_solapamiento()
     self.validar_dependencias_guardado()

@@ -942,3 +942,68 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
         intervalo_dependiente, intervalo_primer_grado))
     except TareaRealNoRespetaDependencias:
       pass
+
+class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+
+  def test_validaciones_finalizar_cancelar_intervalo(self):
+
+    IntervaloCronograma.objects.all().delete()
+
+    cronograma = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
+
+    algun_producto_del_cronograma = cronograma.get_pedidos()[0].get_items()[0].producto
+
+    tarea_primer_grado = algun_producto_del_cronograma.get_tareas_ordenadas_por_dependencia()[0]
+
+    cronograma.planificar()
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    try:
+      intervalo_primer_grado.finalizar(intervalo_primer_grado.cantidad_tarea / 2)
+      self.fail(_(u'No debería ser posible finalizar un intervalo perteneciente a un cronograma inactivo.'))
+    except IntervaloFinalizadoEnCronogramaInactivo:
+      pass
+
+    try:
+      intervalo_primer_grado.cancelar()
+      self.fail(_(u'No debería ser posible cancelar un intervalo perteneciente a un cronograma inactivo.'))
+    except IntervaloCanceladoEnCronogramaInactivo:
+      pass
+
+    cronograma.activar()
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    try:
+      intervalo_primer_grado.finalizar()
+      self.fail(_(u'No debería ser posible finalizar un intervalo con cantidad real nula'))
+    except IntervaloFinalizadoConCantidadNula:
+      pass
+
+    intervalo_primer_grado.finalizar(intervalo_primer_grado.cantidad_tarea / 2)
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    self.assertEqual(intervalo_primer_grado.estado, ESTADO_INTERVALO_FINALIZADO)
+    self.assertEqual(intervalo_primer_grado.cantidad_tarea_real, intervalo_primer_grado.cantidad_tarea / 2)
+
+    try:
+      intervalo_primer_grado.estado = ESTADO_INTERVALO_CANCELADO
+      intervalo_primer_grado.clean()
+      self.fail(_(u'No debería ser posible cancelar un intervalo con cantidad real mayor a cero.'))
+    except IntervaloCanceladoConCantidadNoNula:
+      pass
+
+    intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
+      tarea=tarea_primer_grado).order_by('fecha_desde').first()
+
+    intervalo_primer_grado.cancelar()
+
+    self.assertEqual(intervalo_primer_grado.estado, ESTADO_INTERVALO_CANCELADO)
+    self.assertEqual(intervalo_primer_grado.cantidad_tarea_real, 0)
