@@ -34,6 +34,9 @@ class IntervaloFinalizadoEnCronogramaInactivo(ValidationError):
 class IntervaloCanceladoEnCronogramaInactivo(ValidationError):
   pass
 
+class IntervaloEnCursoEnCronogramaInactivo(ValidationError):
+  pass
+
 class IntervaloFinalizadoConCantidadNula(ValidationError):
   pass
 
@@ -386,6 +389,11 @@ class IntervaloCronograma(models.Model):
       self.producto.descripcion, self.cantidad_tarea,
       self.get_fecha_desde(), self.get_fecha_hasta())
 
+  def iniciar(self):
+    self.estado = ESTADO_INTERVALO_EN_CURSO
+    self.clean()
+    self.save()
+
   def finalizar(self, cantidad_tarea_real=None):
     if cantidad_tarea_real is not None:
       self.cantidad_tarea_real = cantidad_tarea_real
@@ -533,8 +541,16 @@ class IntervaloCronograma(models.Model):
   def is_cancelado(self):
     return self.estado == ESTADO_INTERVALO_CANCELADO
 
+  def is_en_curso(self):
+    return self.estado == ESTADO_INTERVALO_EN_CURSO
+
   def validar_estado(self):
     if not self.cronograma.is_activo():
+
+      if self.is_en_curso():
+        raise IntervaloEnCursoEnCronogramaInactivo(
+          _(u'Para poder iniciar el intervalo %s, primero debe activar el cronograma %s.') % (
+          self, self.cronograma))
 
       if self.is_finalizado():
         raise IntervaloFinalizadoEnCronogramaInactivo(

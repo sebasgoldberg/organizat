@@ -969,6 +969,12 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
       pass
 
     try:
+      intervalo_primer_grado.iniciar()
+      self.fail(_(u'No debería ser posible iniciar un intervalo perteneciente a un cronograma inactivo.'))
+    except IntervaloEnCursoEnCronogramaInactivo:
+      pass
+
+    try:
       intervalo_primer_grado.cancelar()
       self.fail(_(u'No debería ser posible cancelar un intervalo perteneciente a un cronograma inactivo.'))
     except IntervaloCanceladoEnCronogramaInactivo:
