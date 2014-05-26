@@ -162,78 +162,84 @@ class CalendarioTestCase(TestCase):
     calendario.save()
 
     try:
-      calendario.add_excepcion_laborable(DT(2014,1,2),DT(2014,1,1))
+      calendario.add_excepcion_laborable(DT(2014,1,2),T(18),T(12))
       self.fail(_(u'La fecha desde no debería ser mayor que la fecha hasta.'))
-    except FechaDesdeMayorFechaHasta:
+    except HoraDesdeMayorHoraHasta:
       pass
 
     try:
-      calendario.add_excepcion_no_laborable(DT(2014,1,2),DT(2014,1,1))
+      calendario.add_excepcion_no_laborable(DT(2014,1,2),T(18),T(12))
       self.fail(_(u'La fecha desde no debería ser mayor que la fecha hasta.'))
-    except FechaDesdeMayorFechaHasta:
+    except HoraDesdeMayorHoraHasta:
       pass
 
-    calendario.add_excepcion_laborable(DT(2014,2,1),DT(2014,2,4))
+    calendario.add_excepcion_laborable(DT(2014,2,1),T(12),T(18))
 
     try:
-      calendario.add_excepcion_laborable(DT(2014,2,1),DT(2014,2,4))
+      calendario.add_excepcion_laborable(DT(2014,2,1),T(12),T(18))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_no_laborable(DT(2014,2,1),DT(2014,2,4))
+      calendario.add_excepcion_no_laborable(DT(2014,2,1),T(12),T(18))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_laborable(DT(2014,1,30),DT(2014,2,6))
+      calendario.add_excepcion_laborable(DT(2014,2,1),T(11),T(19))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_no_laborable(DT(2014,1,30),DT(2014,2,6))
+      calendario.add_excepcion_no_laborable(DT(2014,2,1),T(11),T(19))
+      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
+    except SolapamientoExcepcionesLaborales:
+      pass
+
+
+
+
+
+    try:
+      calendario.add_excepcion_laborable(DT(2014,2,1),T(11),T(16))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_laborable(DT(2014,1,30),DT(2014,2,3))
+      calendario.add_excepcion_no_laborable(DT(2014,2,1),T(11),T(16))
+      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
+    except SolapamientoExcepcionesLaborales:
+      pass
+
+
+    try:
+      calendario.add_excepcion_laborable(DT(2014,2,1),T(13),T(17))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_no_laborable(DT(2014,1,30),DT(2014,2,3))
+      calendario.add_excepcion_no_laborable(DT(2014,2,1),T(13),T(17))
+      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
+    except SolapamientoExcepcionesLaborales:
+      pass
+
+
+    try:
+      calendario.add_excepcion_laborable(DT(2014,2,1),T(14),T(19))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
     try:
-      calendario.add_excepcion_laborable(DT(2014,2,3),DT(2014,2,6))
+      calendario.add_excepcion_no_laborable(DT(2014,2,1),T(14),T(19))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
 
-    try:
-      calendario.add_excepcion_no_laborable(DT(2014,2,3),DT(2014,2,6))
-      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
-    except SolapamientoExcepcionesLaborales:
-      pass
-
-    try:
-      calendario.add_excepcion_laborable(DT(2014,2,2),DT(2014,2,3))
-      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
-    except SolapamientoExcepcionesLaborales:
-      pass
-
-    try:
-      calendario.add_excepcion_no_laborable(DT(2014,2,2),DT(2014,2,3))
-      self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
-    except SolapamientoExcepcionesLaborales:
-      pass
-
-    calendario.add_excepcion_no_laborable(DT(2014,2,6),DT(2014,2,7))
+    calendario.add_excepcion_no_laborable(DT(2014,2,1),T(6),T(11))
 

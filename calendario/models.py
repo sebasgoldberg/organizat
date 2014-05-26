@@ -6,6 +6,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from datetime import datetime as DT
 from datetime import timedelta as TD
+from datetime import time as T
 
 class SolapamientoIntervalosLaborales(ValidationError):
 
@@ -18,12 +19,6 @@ class HoraDesdeMayorHoraHasta(ValidationError):
   def __init__(self):
     super(HoraDesdeMayorHoraHasta,self).__init__(
       _(u'La hora desde debe ser menor que la hora hasta.'))
-
-class FechaDesdeMayorFechaHasta(ValidationError):
-
-  def __init__(self):
-    super(FechaDesdeMayorFechaHasta,self).__init__(
-      _(u'La fecha desde debe ser menor que la fecha hasta.'))
 
 class SolapamientoExcepcionesLaborales(ValidationError):
 
@@ -73,21 +68,35 @@ class Calendario(models.Model):
     
   def get_huecos_24x7(self, desde, hasta):
 
-    excepciones_no_laborables = self.excepcionlaborable_set.filter(
-      fecha_hasta__gte=desde, fecha_desde__lte=hasta,
-      laborable=False).order_by('fecha_desde')
+    if desde.date() == hasta.date():
+      excepciones_no_laborables = self.excepcionlaborable_set.filter(
+        fecha=desde.date(), hora_hasta__gte=desde.time(),
+        hora_desde__lte=hasta.time(), laborable=False
+        ).order_by('fecha', 'hora_desde')
+    else:
+      excepciones_no_laborables = (
+        self.excepcionlaborable_set.filter(
+        fecha=desde.date(), hora_hasta__gte=desde.time(),
+        laborable=False) |
+        self.excepcionlaborable_set.filter(
+        fecha__gt=desde.date(), fecha__lt=hasta.date(),
+        laborable=False) |
+        self.excepcionlaborable_set.filter(
+        fecha=hasta.date(), hora_hasta__lte=hasta.time(),
+        laborable=False) 
+        ).order_by('fecha', 'hora_desde')
 
     excepcion_anterior = None
     fecha_desde = desde
-    for excepcion_no_lavorable in excepciones_no_laborables:
+    for excepcion_no_laborable in excepciones_no_laborables:
       if excepcion_anterior is None:
-        if excepcion_no_lavorable.fecha_desde < desde:
-          fecha_desde = excepcion_no_lavorable.fecha_hasta
+        if excepcion_no_laborable.get_fecha_desde() < desde:
+          fecha_desde = excepcion_no_laborable.get_fecha_hasta()
       else:
         yield Hueco(fecha_desde,
-          fecha_hasta=excepcion_no_lavorable.fecha_desde)
-        fecha_desde = excepcion_no_lavorable.fecha_hasta
-      excepcion_anterior = excepcion_no_lavorable
+          fecha_hasta=excepcion_no_laborable.get_fecha_desde())
+        fecha_desde = excepcion_no_laborable.get_fecha_hasta()
+      excepcion_anterior = excepcion_no_laborable
     if fecha_desde < hasta:
       yield Hueco(fecha_desde, fecha_hasta=hasta)
 
@@ -154,17 +163,17 @@ class Calendario(models.Model):
     intervalo.clean()
     intervalo.save()
 
-  def add_excepcion_laborable(self, fecha_desde, fecha_hasta):
+  def add_excepcion_laborable(self, fecha, hora_desde=T(0), hora_hasta=T(23,59)):
     el = ExcepcionLaborable(calendario=self, 
-      fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+      fecha=fecha, hora_desde=hora_desde, hora_hasta=hora_hasta,
       laborable=True)
     el.clean()
     el.save()
     return el
 
-  def add_excepcion_no_laborable(self, fecha_desde, fecha_hasta):
+  def add_excepcion_no_laborable(self, fecha, hora_desde=T(0), hora_hasta=T(23,59)):
     el = ExcepcionLaborable(calendario=self, 
-      fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+      fecha=fecha, hora_desde=hora_desde, hora_hasta=hora_hasta,
       laborable=False)
     el.clean()
     el.save()
@@ -206,70 +215,73 @@ class IntervaloLaborable(models.Model):
 
   def get_huecos(self, fecha):
 
-    fecha_desde = datetime_desde_fecha_hora(fecha, self.hora_desde)
-    fecha_hasta = datetime_desde_fecha_hora(fecha, self.hora_hasta)
-
     no_laborables = self.calendario.excepcionlaborable_set.filter(
-      laborable=False)
+      laborable=False, fecha=fecha)
 
-    if no_laborables.filter(fecha_desde__lte=fecha_desde,
-      fecha_hasta__gte=fecha_hasta).count() > 0:
+    hora_desde = self.hora_desde
+    hora_hasta = self.hora_hasta
+
+    if no_laborables.filter(hora_desde__lte=hora_desde,
+      hora_hasta__gte=hora_hasta).count() > 0:
       return
 
-    no_laborables_fecha_desde = no_laborables.filter(
-      fecha_desde__lte=fecha_desde, fecha_hasta__gte=fecha_desde)
-    if no_laborables_fecha_desde.count() > 0:
-      fecha_desde = no_laborables_fecha_desde[0].fecha_hasta
+    no_laborables_hora_desde = no_laborables.filter(
+      hora_desde__lte=hora_desde, hora_hasta__gte=hora_desde)
+    if no_laborables_hora_desde.count() > 0:
+      hora_desde = no_laborables_hora_desde[0].hora_hasta
 
-    no_laborables_fecha_hasta= no_laborables.filter(
-      fecha_desde__lte=fecha_hasta, fecha_hasta__gte=fecha_hasta)
-    if no_laborables_fecha_hasta.count() > 0:
-      fecha_hasta = no_laborables_fecha_desde[0].fecha_desde
+    no_laborables_hora_hasta= no_laborables.filter(
+      hora_desde__lte=hora_hasta, hora_hasta__gte=hora_hasta)
+    if no_laborables_hora_hasta.count() > 0:
+      hora_hasta = no_laborables_hora_desde[0].hora_desde
 
     no_laborables_interior = no_laborables.filter(
-      fecha_desde__gte=fecha_desde, fecha_hasta__lte=fecha_hasta)
+      hora_desde__gte=hora_desde, hora_hasta__lte=hora_hasta)
 
     for excepcion in no_laborables_interior:
-      yield Hueco(fecha_desde,fecha_hasta=excepcion.fecha_desde)
-      fecha_desde = excepcion.fecha_hasta
+      yield Hueco(datetime_desde_fecha_hora(fecha,hora_desde),
+        fecha_hasta=datetime_desde_fecha_hora(excepcion.fecha,
+          excepcion.hora_desde))
+      hora_desde = excepcion.hora_hasta
 
-    if fecha_desde < fecha_hasta:
-      yield Hueco(fecha_desde, fecha_hasta=fecha_hasta)
+    if hora_desde < hora_hasta:
+      yield Hueco(datetime_desde_fecha_hora(fecha, hora_desde),
+        fecha_hasta=datetime_desde_fecha_hora(fecha, hora_hasta))
 
 class ExcepcionLaborable(models.Model):
   
   calendario = models.ForeignKey(Calendario, verbose_name=_(u'Calendario'))
-  fecha_desde = models.DateTimeField(
-    verbose_name=_(u'Fecha desde'), null=False, blank=False)
-  fecha_hasta = models.DateTimeField(
-    verbose_name=_(u'Fecha hasta'), null=True, blank=False)
+  fecha = models.DateField(
+    verbose_name=_(u'Fecha'), null=False, blank=False)
+  hora_desde = models.TimeField(verbose_name=_(u'Hora desde'))
+  hora_hasta = models.TimeField(verbose_name=_(u'Hora hasta'))
   laborable = models.BooleanField(verbose_name=(u'Laborable'),
     help_text=_(u'Indica si la excepción es laborable o no laborable.'),
     default=False)
 
   def clean(self):
 
-    if self.fecha_desde >= self.fecha_hasta:
-      raise FechaDesdeMayorFechaHasta()
+    if self.hora_desde >= self.hora_hasta:
+      raise HoraDesdeMayorHoraHasta()
 
-    if self.calendario.excepcionlaborable_set.filter(
-      fecha_desde__lte=self.fecha_desde, 
-      fecha_hasta__gte=self.fecha_desde).count()>0:
+    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+      hora_desde__lte=self.hora_desde, 
+      hora_hasta__gte=self.hora_desde).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(
-      fecha_desde__lte=self.fecha_hasta, 
-      fecha_hasta__gte=self.fecha_hasta).count()>0:
+    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+      hora_desde__lte=self.hora_hasta, 
+      hora_hasta__gte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(
-      fecha_desde__gte=self.fecha_desde, 
-      fecha_desde__lte=self.fecha_hasta).count()>0:
+    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+      hora_desde__gte=self.hora_desde, 
+      hora_desde__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(
-      fecha_hasta__gte=self.fecha_desde, 
-      fecha_hasta__lte=self.fecha_hasta).count()>0:
+    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+      hora_hasta__gte=self.hora_desde, 
+      hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
 
