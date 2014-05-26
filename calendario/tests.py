@@ -101,6 +101,32 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,8))
     self.assertEqual(huecos[4].get_fecha_hasta(), DT(2014,6,10,12))
 
+    # Se agrega una excepción laborable el 10/6/2014 entre las 
+    # 7:00 y las 9:00
+    calendario.add_excepcion_laborable(fecha=DT(2014,6,10),
+      hora_desde=T(7), hora_hasta=T(9))
+
+    huecos = [ hueco for hueco in calendario.get_huecos(
+      desde=fecha_desde, hasta=fecha_hasta) ]
+
+    self.assertEqual(len(huecos),6)
+
+    self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,7))
+    self.assertEqual(huecos[4].get_fecha_hasta(), DT(2014,6,10,12))
+
+    # Se agrega una excepción laborable el 10/6/2014 entre las 
+    # 12:00 y las 13:30
+    calendario.add_excepcion_laborable(fecha=DT(2014,6,10),
+      hora_desde=T(12), hora_hasta=T(13,30))
+
+    huecos = [ hueco for hueco in calendario.get_huecos(
+      desde=fecha_desde, hasta=fecha_hasta) ]
+
+    self.assertEqual(len(huecos),5)
+
+    self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,7))
+    self.assertEqual(huecos[4].get_fecha_hasta(), fecha_hasta)
+
   def test_intervalo_laborable(self):
     
     calendario = Calendario()
@@ -199,10 +225,6 @@ class CalendarioTestCase(TestCase):
     except SolapamientoExcepcionesLaborales:
       pass
 
-
-
-
-
     try:
       calendario.add_excepcion_laborable(DT(2014,2,1),T(11),T(16))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
@@ -215,7 +237,6 @@ class CalendarioTestCase(TestCase):
     except SolapamientoExcepcionesLaborales:
       pass
 
-
     try:
       calendario.add_excepcion_laborable(DT(2014,2,1),T(13),T(17))
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
@@ -227,7 +248,6 @@ class CalendarioTestCase(TestCase):
       self.fail(_(u'No debería permitir solapar excepciones laborables/no laborables.'))
     except SolapamientoExcepcionesLaborales:
       pass
-
 
     try:
       calendario.add_excepcion_laborable(DT(2014,2,1),T(14),T(19))

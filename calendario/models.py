@@ -104,9 +104,22 @@ class Calendario(models.Model):
     intervalos = self.intervalolaborable_set.filter(
       dia=fecha.weekday()).order_by('hora_desde')
 
+    huecos_intervalos = []
     for intervalo in intervalos:
       for h in intervalo.get_huecos(fecha):
-        yield h
+        huecos_intervalos.append(h)
+
+    huecos_excepciones = []
+    excepciones_laborables = self.excepcionlaborable_set.filter(
+      fecha=fecha, laborable=True).order_by('hora_desde')
+    for excepcion in excepciones_laborables:
+      huecos_excepciones.append(
+        Hueco(excepcion.get_fecha_desde(),
+          fecha_hasta=excepcion.get_fecha_hasta()))
+
+    for h in Hueco.union(huecos_intervalos, huecos_excepciones):
+      yield h
+
 
   def get_huecos_dia_desde_hora(self, fecha, hora_desde):
     for h in self.get_huecos_dia(fecha):
@@ -284,4 +297,9 @@ class ExcepcionLaborable(models.Model):
       hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
+  def get_fecha_desde(self):
+    return datetime_desde_fecha_hora(self.fecha, self.hora_desde)
+
+  def get_fecha_hasta(self):
+    return datetime_desde_fecha_hora(self.fecha, self.hora_hasta)
 
