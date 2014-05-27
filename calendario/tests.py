@@ -4,16 +4,50 @@ from datetime import time as T
 from datetime import datetime as DT
 from calendario.models import *
 from django.utils.translation import ugettext as _
+import datetime
+from django.utils import timezone
+
+def datetimezone(*args, **kwargs):
+  return timezone.make_aware(
+    datetime.datetime(*args), timezone.get_default_timezone())
+
+DT = datetimezone
 
 class CalendarioTestCase(TestCase):
 
+  def test_24x7(self):
+
+    calendario = Calendario()
+    calendario.clean()
+    calendario.save()
+
+    # Domingo
+    fecha_desde = DT(2014,6,8,22,30)
+
+    self.assertTrue(calendario.is_24x7())
+
+    # Se agrega un feriado el lunes 9/6/2014.
+    calendario.add_excepcion_no_laborable(fecha=DT(2014,6,9))
+
+    huecos = [ hueco for hueco in calendario.get_huecos(
+      desde=fecha_desde, tiempo_total=TD(seconds=60*60*3)) ]
+
+    self.assertEqual(len(huecos),2)
+    self.assertEqual(huecos[0].fecha_desde, fecha_desde)
+    self.assertEqual(huecos[0].get_fecha_hasta(), DT(2014,6,9))
+    self.assertEqual(huecos[1].fecha_desde, DT(2014,6,9,23,59))
+    self.assertEqual(huecos[1].get_fecha_hasta(), DT(2014,6,10,1,29))
+ 
+ 
   def test_calendario(self):
 
     calendario = Calendario()
     calendario.clean()
     calendario.save()
 
+    # jueves
     fecha_desde = DT(2014,6,5,12,30)
+    # martes
     fecha_hasta = DT(2014,6,10,13,45)
 
     self.assertTrue(calendario.is_24x7())
@@ -26,6 +60,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(hueco.fecha_desde, fecha_desde)
     self.assertEqual(hueco.get_fecha_hasta(), fecha_hasta)
 
+    # se define calendario lu a vi de 8 a 12
     calendario.add_intervalos_laborables(
       dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
         DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
@@ -44,6 +79,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[2].fecha_desde, DT(2014,6,10,8))
     self.assertEqual(huecos[2].get_fecha_hasta(), DT(2014,6,10,12))
 
+    # se redefine calendario lu a vi de 8 a 12 y de 13 a 17
     calendario.add_intervalos_laborables(
       dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
         DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
@@ -75,6 +111,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[6].fecha_desde, DT(2014,6,10,13))
     self.assertEqual(huecos[6].get_fecha_hasta(), fecha_hasta)
 
+    # se agrega un día de trabajo el sábado 7/6/2014 de 9 a 13
     calendario.add_excepcion_laborable(fecha=DT(2014,6,7),
       hora_desde=T(9), hora_hasta=T(13))
 
@@ -88,6 +125,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[3].fecha_desde, DT(2014,6,7,9))
     self.assertEqual(huecos[3].get_fecha_hasta(), DT(2014,6,7,13))
 
+    # Se agrega un feriado el lunes 9/6/2014.
     calendario.add_excepcion_no_laborable(fecha=DT(2014,6,9))
 
     huecos = [ hueco for hueco in calendario.get_huecos(
@@ -101,7 +139,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,8))
     self.assertEqual(huecos[4].get_fecha_hasta(), DT(2014,6,10,12))
 
-    # Se agrega una excepción laborable el 10/6/2014 entre las 
+    # Se agrega una excepción laborable el martes 10/6/2014 entre las 
     # 7:00 y las 9:00
     calendario.add_excepcion_laborable(fecha=DT(2014,6,10),
       hora_desde=T(7), hora_hasta=T(9))
@@ -114,7 +152,7 @@ class CalendarioTestCase(TestCase):
     self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,7))
     self.assertEqual(huecos[4].get_fecha_hasta(), DT(2014,6,10,12))
 
-    # Se agrega una excepción laborable el 10/6/2014 entre las 
+    # Se agrega una excepción laborable el martes 10/6/2014 entre las 
     # 12:00 y las 13:30
     calendario.add_excepcion_laborable(fecha=DT(2014,6,10),
       hora_desde=T(12), hora_hasta=T(13,30))
@@ -126,6 +164,20 @@ class CalendarioTestCase(TestCase):
 
     self.assertEqual(huecos[4].fecha_desde, DT(2014,6,10,7))
     self.assertEqual(huecos[4].get_fecha_hasta(), fecha_hasta)
+
+    # Se verifica el funcionamiento de la obtención de huecos
+    # pasando el tiempo total
+    huecos = [ hueco for hueco in calendario.get_huecos(
+      desde=fecha_desde, tiempo_total=TD(seconds=60*60*10)) ]
+
+    self.assertEqual(huecos[0].fecha_desde, DT(2014,6,5,13))
+    self.assertEqual(huecos[0].get_fecha_hasta(), DT(2014,6,5,17))
+
+    self.assertEqual(huecos[1].fecha_desde, DT(2014,6,6,8))
+    self.assertEqual(huecos[1].get_fecha_hasta(), DT(2014,6,6,12))
+    self.assertEqual(huecos[2].fecha_desde, DT(2014,6,6,13))
+    self.assertEqual(huecos[2].get_fecha_hasta(), DT(2014,6,6,15))
+
 
   def test_intervalo_laborable(self):
     

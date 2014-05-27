@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from datetime import datetime as DT
 from datetime import timedelta as TD
 from datetime import time as T
+from django.utils import timezone as TZ
 
 class SolapamientoIntervalosLaborales(ValidationError):
 
@@ -45,8 +46,10 @@ DIAS_SEMANA=(
   (DiaSemana.DOMINGO,_(u'Domingo')),)
 
 def datetime_desde_fecha_hora(fecha, hora):
-  return DT(fecha.year, fecha.month, fecha.day,
-      hora.hour, hora.minute, hora.second)
+  return TZ.make_aware(
+    DT(fecha.year, fecha.month, fecha.day,
+      hora.hour, hora.minute, hora.second),
+    TZ.get_default_timezone())
 
 class Calendario(models.Model):
 
@@ -66,7 +69,26 @@ class Calendario(models.Model):
   def is_24x7(self):
     return self.intervalolaborable_set.count() == 0
     
-  def get_huecos_24x7(self, desde, hasta):
+  def get_huecos_24x7(self, desde, hasta=None, tiempo_total=None):
+
+    # @todo Mejorar performance
+    if tiempo_total is not None:
+      h_anterior = None
+      while tiempo_total.total_seconds() > 0:
+        hasta = desde+tiempo_total
+        for h in self.get_huecos_24x7(desde,hasta=hasta):
+          if h_anterior is None:
+            h_anterior = h
+          if h_anterior.solapado(h):
+            h_anterior = h_anterior.unir(h)
+          else:
+            yield h_anterior
+            h_anterior = h
+          tiempo_total = tiempo_total - h.tiempo
+        desde = hasta
+      if h_anterior is not None:
+        yield h_anterior
+      return
 
     if desde.date() == hasta.date():
       excepciones_no_laborables = self.excepcionlaborable_set.filter(
@@ -82,7 +104,7 @@ class Calendario(models.Model):
         fecha__gt=desde.date(), fecha__lt=hasta.date(),
         laborable=False) |
         self.excepcionlaborable_set.filter(
-        fecha=hasta.date(), hora_hasta__lte=hasta.time(),
+        fecha=hasta.date(), hora_desde__lte=hasta.time(),
         laborable=False) 
         ).order_by('fecha', 'hora_desde')
 
@@ -92,11 +114,12 @@ class Calendario(models.Model):
       if excepcion_anterior is None:
         if excepcion_no_laborable.get_fecha_desde() < desde:
           fecha_desde = excepcion_no_laborable.get_fecha_hasta()
-      else:
+      if fecha_desde < excepcion_no_laborable.get_fecha_hasta():
         yield Hueco(fecha_desde,
           fecha_hasta=excepcion_no_laborable.get_fecha_desde())
-        fecha_desde = excepcion_no_laborable.get_fecha_hasta()
+      fecha_desde = excepcion_no_laborable.get_fecha_hasta()
       excepcion_anterior = excepcion_no_laborable
+
     if fecha_desde < hasta:
       yield Hueco(fecha_desde, fecha_hasta=hasta)
 
@@ -137,32 +160,47 @@ class Calendario(models.Model):
         yield Hueco(h.fecha_desde,
           fecha_hasta=datetime_desde_fecha_hora(fecha, hora_hasta))
 
-  def get_huecos_no_24x7(self, desde, hasta):
+  def get_huecos_no_24x7(self, desde, hasta, tiempo_total):
     fecha_desde = desde.date()
-    fecha_hasta = hasta.date()
     fecha = fecha_desde
-    while fecha <= fecha_hasta:
-      if fecha == fecha_desde:
-        for h in self.get_huecos_dia_desde_hora(fecha, desde.time()):
-          yield h
-      elif fecha == fecha_hasta:
+    while True:
+      if hasta is not None and fecha == hasta.date():
         for h in self.get_huecos_dia_hasta_hora(fecha, hasta.time()):
-          yield h
+          if h.get_fecha_hasta() < desde:
+            continue
+          if h.fecha_desde < desde:
+            yield Hueco(desde, fecha_hasta = h.get_fecha_hasta())
+          else:
+            yield h
+        return
+      iter_huecos = None
+      if fecha == fecha_desde:
+        iter_huecos = self.get_huecos_dia_desde_hora(fecha, desde.time())
       else:
-        for h in self.get_huecos_dia(fecha):
-          yield h
+        iter_huecos = self.get_huecos_dia(fecha)
+
       fecha = fecha + TD(days=1)
 
+      for h in iter_huecos:
+        if tiempo_total is not None:
+          if h.tiempo >= tiempo_total:
+            yield Hueco(h.fecha_desde, tiempo=tiempo_total)
+            return
+          else:
+            yield h
+          tiempo_total = tiempo_total - h.tiempo
+        else:  
+          yield h
 
-  def get_huecos(self, desde, hasta):
+  def get_huecos(self, desde, hasta=None, tiempo_total=None):
     """
     Obtiene los intervalos laborables entre la fecha desde y la fecha hasta.
     """
     if self.is_24x7(): 
-      for h in self.get_huecos_24x7(desde, hasta):
+      for h in self.get_huecos_24x7(desde, hasta, tiempo_total):
         yield h
     else:
-      for h in self.get_huecos_no_24x7(desde, hasta):
+      for h in self.get_huecos_no_24x7(desde, hasta, tiempo_total):
         yield h
 
   @transaction.atomic
@@ -206,22 +244,27 @@ class IntervaloLaborable(models.Model):
     if self.hora_desde >= self.hora_hasta:
       raise HoraDesdeMayorHoraHasta()
 
-    if self.calendario.intervalolaborable_set.filter(dia=self.dia,
+    if self.id:
+      otros_intervalos = self.calendario.intervalolaborable_set.exclude(id=self.id)
+    else:
+      otros_intervalos = self.calendario.intervalolaborable_set
+
+    if otros_intervalos.filter(dia=self.dia,
       hora_desde__lte=self.hora_desde, 
       hora_hasta__gte=self.hora_desde).count()>0:
       raise SolapamientoIntervalosLaborales()
 
-    if self.calendario.intervalolaborable_set.filter(dia=self.dia,
+    if otros_intervalos.filter(dia=self.dia,
       hora_desde__lte=self.hora_hasta, 
       hora_hasta__gte=self.hora_hasta).count()>0:
       raise SolapamientoIntervalosLaborales()
 
-    if self.calendario.intervalolaborable_set.filter(dia=self.dia,
+    if otros_intervalos.filter(dia=self.dia,
       hora_desde__gte=self.hora_desde, 
       hora_desde__lte=self.hora_hasta).count()>0:
       raise SolapamientoIntervalosLaborales()
 
-    if self.calendario.intervalolaborable_set.filter(dia=self.dia,
+    if otros_intervalos.filter(dia=self.dia,
       hora_hasta__gte=self.hora_desde, 
       hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoIntervalosLaborales()

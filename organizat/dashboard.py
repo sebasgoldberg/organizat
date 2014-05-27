@@ -68,6 +68,13 @@ class CustomIndexDashboard(Dashboard):
                       'planificacion.models.Cronograma',
                       ),
                 ),
+                modules.ModelList(
+                    column=1,
+                    collapsible=False,
+                    models=(
+                      'calendario.models.Calendario',
+                      ),
+                ),
             ]
         ))
 
