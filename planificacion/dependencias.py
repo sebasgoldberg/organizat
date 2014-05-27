@@ -126,7 +126,8 @@ class GerenciadorDependencias:
   def crear_intervalos_al_final_respetando_calendario(
     self, maquina, tarea, tiempo, fecha_desde, seguir_hasta_crear_todos=False):
 
-    while tiempo > 0 and seguir_hasta_crear_todos:
+    while tiempo > self.get_tolerancia() and seguir_hasta_crear_todos:
+
       for hueco in maquina.get_calendario().get_huecos(fecha_desde,tiempo_total=TD(seconds=float(tiempo)*60)):
         try:
           fecha_desde = hueco.get_fecha_hasta()
@@ -166,7 +167,7 @@ class GerenciadorDependencias:
       yield i
       tiempo_faltante = tiempo_faltante - float(i.tiempo_intervalo)
 
-    if tiempo_faltante > 0:
+    if tiempo_faltante > self.get_tolerancia():
       raise Exception(_(u'Aún faltan crear intervalos para el tiempo %s.') % tiempo_faltante)
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
