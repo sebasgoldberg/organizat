@@ -3,6 +3,7 @@ from django.utils.translation import ugettext as _
 import planificacion.models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+from datetime import timedelta as TD
 
 class GerenciadorDependencias:
 
@@ -122,7 +123,26 @@ class GerenciadorDependencias:
     intervalo.save()
     return intervalo
 
-  def crear_intervalo_al_final(self, maquina, tarea, tiempo):
+  def crear_intervalos_al_final_respetando_calendario(
+    self, maquina, tarea, tiempo, fecha_desde, seguir_hasta_crear_todos=False):
+
+    while tiempo > 0 and seguir_hasta_crear_todos:
+      for hueco in maquina.get_calendario().get_huecos(fecha_desde,tiempo_total=TD(seconds=float(tiempo)*60)):
+        try:
+          fecha_desde = hueco.get_fecha_hasta()
+          intervalo = planificacion.models.IntervaloCronograma(
+            cronograma=self.cronograma, maquina=maquina, tarea=tarea,
+            producto=self.producto, pedido=self.pedido,
+            tiempo_intervalo=hueco.get_minutos())
+          intervalo.fecha_desde = hueco.fecha_desde
+          intervalo.clean()
+          intervalo.save()
+          yield intervalo
+          tiempo = tiempo - intervalo.tiempo_intervalo
+        except ValidationError as e:
+          pass
+
+  def crear_intervalos_al_final(self, maquina, tarea, tiempo):
     tareas = tarea.get_anteriores(self.producto)
     tareas.append(tarea)
     intervalos=self.get_intervalos(tareas)
@@ -130,25 +150,24 @@ class GerenciadorDependencias:
     particion_temporal = self.get_particion_ordenada_temporal(intervalos, [ultima_fecha_maquina])
     if len(particion_temporal) == 0:
       particion_temporal.append(self.cronograma.fecha_inicio)
-    intervalo =\
-      planificacion.models.IntervaloCronograma(cronograma=self.cronograma, maquina=maquina, tarea=tarea,
-      producto=self.producto, pedido=self.pedido, tiempo_intervalo=tiempo)
+    tiempo_faltante = float(tiempo)
     for t in particion_temporal:
       if t >= ultima_fecha_maquina:
-        try:
-          intervalo.fecha_desde = t
-          intervalo.clean()
-          intervalo.save()
-          return intervalo
-        except ValidationError:
-          pass
-    
+        for i in self.crear_intervalos_al_final_respetando_calendario(
+          maquina, tarea, tiempo_faltante, t):
+          yield i
+          tiempo_faltante = tiempo_faltante - float(i.tiempo_intervalo)
+
     # En caso de no haber podido crear significa que toda la partición
     # temporal se encuentra antes que la ultima fecha de la máquina
-    intervalo.fecha_desde = particion_temporal[-1]
-    intervalo.clean()
-    intervalo.save()
-    return intervalo
+    for i in self.crear_intervalos_al_final_respetando_calendario(
+      maquina, tarea, tiempo_faltante, particion_temporal[-1],
+      seguir_hasta_crear_todos=True):
+      yield i
+      tiempo_faltante = tiempo_faltante - float(i.tiempo_intervalo)
+
+    if tiempo_faltante > 0:
+      raise Exception(_(u'Aún faltan crear intervalos para el tiempo %s.') % tiempo_faltante)
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
     tiempo_asignado = 0
@@ -171,9 +190,8 @@ class GerenciadorDependencias:
       if tiempo <= 0:
         return
 
-    intervalo = self.crear_intervalo_al_final(maquina, tarea, tiempo)
-
-    tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
+    for intervalo in self.crear_intervalos_al_final(maquina, tarea, tiempo):
+      tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
 
     if abs(Decimal(tiempo_asignado) - Decimal(tiempo_a_asignar)) > self.get_tolerancia():
       raise Exception(_(u'El tiempo total de los intervalos creados %s no coincide con el tiempo a asignar a la planificación %s.') % (

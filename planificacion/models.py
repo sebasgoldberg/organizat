@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 import datetime
 from decimal import Decimal
 from django.db import transaction
+from django.utils import timezone as TZ
 
 """
 Excepcione de validación de tareas reales.
@@ -85,7 +86,11 @@ class Hueco(object):
   def __init__(self, fecha_desde, tiempo=None, fecha_hasta=None):
     if tiempo and fecha_hasta or not (tiempo or fecha_hasta):
       raise Exception(_('Debe informa el tiempo del hueco o la fecha hasta'))
-    self.fecha_desde = fecha_desde
+    if fecha_desde.tzinfo is None:
+      self.fecha_desde = TZ.make_aware(
+        fecha_desde, TZ.get_default_timezone())
+    else:
+      self.fecha_desde = fecha_desde
     if tiempo:
       self.tiempo = tiempo
     else:
@@ -112,6 +117,9 @@ class Hueco(object):
     fecha_hasta = max(self.get_fecha_hasta(), hueco.get_fecha_hasta())
 
     return Hueco(fecha_desde, fecha_hasta=fecha_hasta)
+
+  def get_minutos(self):
+    return float(self.tiempo.total_seconds()) / 60
 
   @staticmethod
   def union(lh1, lh2):
@@ -376,9 +384,9 @@ class Cronograma(models.Model):
         else:
           intervalo_anterior = intervalo
           continue
-      hueco = Hueco(fecha_desde=fecha_desde,
-        tiempo=fecha_hasta-fecha_desde)
-      yield hueco
+      calendario = maquina.get_calendario()
+      for hueco in calendario.get_huecos(fecha_desde, fecha_hasta):
+        yield hueco
 
   def get_ultima_fecha(self, maquina):
     from django.db.models import Max

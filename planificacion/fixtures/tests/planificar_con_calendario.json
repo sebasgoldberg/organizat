@@ -1,0 +1,848 @@
+[
+{
+  "pk": 1, 
+  "model": "calendario.calendario", 
+  "fields": {}
+},
+{
+  "pk": 1, 
+  "model": "calendario.intervalolaborable", 
+  "fields": {
+    "calendario": 1, 
+    "hora_hasta": "12:00:00", 
+    "dia": 0, 
+    "hora_desde": "08:00:00"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.1 - Cortadora Laminadora"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6 - Moldeadora de Neum\u00e1ticos (MN1)"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6 - Moldeadora de Neum\u00e1ticos (MN2)"
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "5 - Prensa de Vulcanizado"
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "4 - Soprte Para Inspecci\u00f3n"
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.2.2 - Malaxador Banbury"
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.2.1 - Extructora de Caucho"
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.3.1 - Cortadora de Hilo Met\u00e1lico"
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "3 - Balanza"
+  }
+},
+{
+  "pk": 10, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "2 - Variador de Fuerza"
+  }
+},
+{
+  "pk": 11, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "1 - Rayos X"
+  }
+},
+{
+  "pk": 12, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.3.2 - Calandria Laminadora de Hilo Met\u00e1lico"
+  }
+},
+{
+  "pk": 13, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "6.4.1 - Constructora de Talones"
+  }
+},
+{
+  "pk": 14, 
+  "model": "produccion.maquina", 
+  "fields": {
+    "descripcion": "2 - Variador de Fuerza (VF2)"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.1.1 - Cortado de tejidos al bies", 
+    "tiempo": "0.2"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.1.2 - Laminado de tejidos", 
+    "tiempo": "0.4"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6 - Moldeado de Neum\u00e1ticos", 
+    "tiempo": "2"
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "5 - Prensado del Neum\u00e1tico", 
+    "tiempo": "1.5"
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "4 - Inspecci\u00f3n Visual del Neum\u00e1tico", 
+    "tiempo": "0.5"
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.2.2 - Obtenci\u00f3n de caucho homogeneo", 
+    "tiempo": "0.4"
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.2.1 - Extrucci\u00f3n del Caucho", 
+    "tiempo": "0.6"
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.3.1 - Cortado de hilo met\u00e1lico", 
+    "tiempo": "0.1"
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "3 - Pesaje del Nem\u00e1tico", 
+    "tiempo": "0.15"
+  }
+},
+{
+  "pk": 10, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "2 - Pruebas de Fuerza", 
+    "tiempo": "2"
+  }
+},
+{
+  "pk": 11, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "1 - Verificaci\u00f3n del Estado del Neum\u00e1tico", 
+    "tiempo": "0.2"
+  }
+},
+{
+  "pk": 12, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.3.2 - Laminado de Hilo Met\u00e1lico", 
+    "tiempo": "0.4"
+  }
+},
+{
+  "pk": 13, 
+  "model": "produccion.tarea", 
+  "fields": {
+    "descripcion": "6.4.1 - Construcci\u00f3n de Talones Para Neum\u00e1tico", 
+    "tiempo": "2"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 1, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 2, 
+    "maquina": 1
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 3, 
+    "maquina": 2
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 4, 
+    "maquina": 4
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 5, 
+    "maquina": 5
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 6, 
+    "maquina": 6
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 7, 
+    "maquina": 7
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 8, 
+    "maquina": 8
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 9, 
+    "maquina": 9
+  }
+},
+{
+  "pk": 10, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 10, 
+    "maquina": 10
+  }
+},
+{
+  "pk": 11, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 11, 
+    "maquina": 11
+  }
+},
+{
+  "pk": 12, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 12, 
+    "maquina": 12
+  }
+},
+{
+  "pk": 13, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 13, 
+    "maquina": 13
+  }
+},
+{
+  "pk": 14, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 3, 
+    "maquina": 3
+  }
+},
+{
+  "pk": 15, 
+  "model": "produccion.tareamaquina", 
+  "fields": {
+    "tarea": 10, 
+    "maquina": 14
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.producto", 
+  "fields": {
+    "descripcion": "Neum\u00e1tico de Auto"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.producto", 
+  "fields": {
+    "descripcion": "Neum\u00e1tico de moto"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 13
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 8
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 1
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 7
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 5
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 12
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 2
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 3
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 6
+  }
+},
+{
+  "pk": 10, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 9
+  }
+},
+{
+  "pk": 11, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 4
+  }
+},
+{
+  "pk": 12, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 10
+  }
+},
+{
+  "pk": 13, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea": 11
+  }
+},
+{
+  "pk": 14, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 11
+  }
+},
+{
+  "pk": 15, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 10
+  }
+},
+{
+  "pk": 16, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 9
+  }
+},
+{
+  "pk": 17, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 5
+  }
+},
+{
+  "pk": 18, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 4
+  }
+},
+{
+  "pk": 19, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 3
+  }
+},
+{
+  "pk": 20, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 1
+  }
+},
+{
+  "pk": 21, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 2
+  }
+},
+{
+  "pk": 22, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 7
+  }
+},
+{
+  "pk": 23, 
+  "model": "produccion.tareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea": 6
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 12, 
+    "tarea": 11, 
+    "tarea_anterior": 10, 
+    "tareaproducto": 13
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 10, 
+    "tarea": 10, 
+    "tarea_anterior": 9, 
+    "tareaproducto": 12
+  }
+},
+{
+  "pk": 4, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 11, 
+    "tarea": 5, 
+    "tarea_anterior": 4, 
+    "tareaproducto": 5
+  }
+},
+{
+  "pk": 5, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 8, 
+    "tarea": 4, 
+    "tarea_anterior": 3, 
+    "tareaproducto": 11
+  }
+},
+{
+  "pk": 6, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 5, 
+    "tarea": 9, 
+    "tarea_anterior": 5, 
+    "tareaproducto": 10
+  }
+},
+{
+  "pk": 7, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 3, 
+    "tarea": 3, 
+    "tarea_anterior": 1, 
+    "tareaproducto": 8
+  }
+},
+{
+  "pk": 8, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 4, 
+    "tarea": 3, 
+    "tarea_anterior": 7, 
+    "tareaproducto": 8
+  }
+},
+{
+  "pk": 9, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 2, 
+    "tarea": 3, 
+    "tarea_anterior": 8, 
+    "tareaproducto": 8
+  }
+},
+{
+  "pk": 10, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 1, 
+    "tarea": 3, 
+    "tarea_anterior": 13, 
+    "tareaproducto": 8
+  }
+},
+{
+  "pk": 11, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 7, 
+    "tarea": 1, 
+    "tarea_anterior": 2, 
+    "tareaproducto": 3
+  }
+},
+{
+  "pk": 12, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 9, 
+    "tarea": 7, 
+    "tarea_anterior": 6, 
+    "tareaproducto": 4
+  }
+},
+{
+  "pk": 13, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 1, 
+    "tarea_anteriorproducto": 6, 
+    "tarea": 8, 
+    "tarea_anterior": 12, 
+    "tareaproducto": 2
+  }
+},
+{
+  "pk": 14, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 15, 
+    "tarea": 11, 
+    "tarea_anterior": 10, 
+    "tareaproducto": 14
+  }
+},
+{
+  "pk": 15, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 16, 
+    "tarea": 10, 
+    "tarea_anterior": 9, 
+    "tareaproducto": 15
+  }
+},
+{
+  "pk": 16, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 17, 
+    "tarea": 9, 
+    "tarea_anterior": 5, 
+    "tareaproducto": 16
+  }
+},
+{
+  "pk": 17, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 18, 
+    "tarea": 5, 
+    "tarea_anterior": 4, 
+    "tareaproducto": 17
+  }
+},
+{
+  "pk": 18, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 19, 
+    "tarea": 4, 
+    "tarea_anterior": 3, 
+    "tareaproducto": 18
+  }
+},
+{
+  "pk": 19, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 20, 
+    "tarea": 3, 
+    "tarea_anterior": 1, 
+    "tareaproducto": 19
+  }
+},
+{
+  "pk": 20, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 22, 
+    "tarea": 3, 
+    "tarea_anterior": 7, 
+    "tareaproducto": 19
+  }
+},
+{
+  "pk": 21, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 21, 
+    "tarea": 1, 
+    "tarea_anterior": 2, 
+    "tareaproducto": 20
+  }
+},
+{
+  "pk": 22, 
+  "model": "produccion.dependenciatareaproducto", 
+  "fields": {
+    "producto": 2, 
+    "tarea_anteriorproducto": 23, 
+    "tarea": 7, 
+    "tarea_anterior": 6, 
+    "tareaproducto": 22
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.pedido", 
+  "fields": {
+    "descripcion": "Neum\u00e1ticos de auto x 20 (5x1)"
+  }
+},
+{
+  "pk": 2, 
+  "model": "produccion.pedido", 
+  "fields": {
+    "descripcion": "Neum\u00e1ticos moto"
+  }
+},
+{
+  "pk": 1, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 1, 
+    "pedido": 1, 
+    "cantidad": "100"
+  }
+},
+{
+  "pk": 3, 
+  "model": "produccion.itempedido", 
+  "fields": {
+    "producto": 2, 
+    "pedido": 2, 
+    "cantidad": "200"
+  }
+},
+{
+  "pk": 1, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "fecha_inicio": "2014-05-25T00:00:00Z", 
+    "optimizar_planificacion": false, 
+    "descripcion": "Solo neum\u00e1ticos de auto", 
+    "estrategia": 2, 
+    "estado": 1, 
+    "tiempo_minimo_intervalo": "0"
+  }
+},
+{
+  "pk": 2, 
+  "model": "planificacion.cronograma", 
+  "fields": {
+    "fecha_inicio": "2014-05-25T00:00:00Z", 
+    "optimizar_planificacion": false, 
+    "descripcion": "Cronograma con pedido de neum\u00e1ticos de motos y de autos", 
+    "estrategia": 2, 
+    "estado": 1, 
+    "tiempo_minimo_intervalo": "0"
+  }
+},
+{
+  "pk": 1, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 1, 
+    "pedido": 1
+  }
+},
+{
+  "pk": 2, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 2, 
+    "pedido": 2
+  }
+},
+{
+  "pk": 3, 
+  "model": "planificacion.pedidocronograma", 
+  "fields": {
+    "cronograma": 2, 
+    "pedido": 1
+  }
+}
+]

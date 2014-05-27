@@ -7,6 +7,19 @@ from django.core.exceptions import ValidationError
 class TareaAnteriorNoExiste(Exception):
   pass
 
+class CalendarioProduccion:
+
+  @staticmethod
+  def get_instance():
+    import calendario.models
+    try:
+      return calendario.models.Calendario.objects.get()
+    except calendario.models.Calendario.DoesNotExist:
+      calendario = calendario.models.Calendario()
+      calendario.clean()
+      calendario.save()
+      return calendario
+
 class Maquina(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
 
@@ -17,6 +30,9 @@ class Maquina(models.Model):
 
   def __unicode__(self):
     return self.descripcion
+
+  def get_calendario(self):
+    return CalendarioProduccion.get_instance()
 
   def get_tareas(self):
     return [ x.tarea for x in self.tareamaquina_set.all() ]
