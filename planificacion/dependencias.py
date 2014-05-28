@@ -1,5 +1,6 @@
 # coding=utf-8
 from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy
 import planificacion.models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
@@ -17,7 +18,7 @@ class GerenciadorDependencias:
     self.pedido = pedido
 
   def get_tolerancia(self):
-    return 0.001
+    return 0.1
 
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:
@@ -114,87 +115,65 @@ class GerenciadorDependencias:
           "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
           (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
 
-  def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo):
+  def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
     intervalo =\
       planificacion.models.IntervaloCronograma(cronograma=self.cronograma, maquina=maquina, tarea=tarea,
       producto=self.producto, pedido=self.pedido, fecha_desde=fecha_desde, 
       tiempo_intervalo=tiempo_intervalo)
     intervalo.clean()
-    intervalo.save()
+    if save:
+      intervalo.save()
     return intervalo
 
-  def crear_intervalos_al_final_respetando_calendario(
-    self, maquina, tarea, tiempo, fecha_desde, seguir_hasta_crear_todos=False):
+  def crear_intervalo_optimizado_en_hueco(self, maquina, tarea, hueco, tiempo_intervalo):
 
-    while tiempo > self.get_tolerancia() and seguir_hasta_crear_todos:
+    intervalo = None
 
-      for hueco in maquina.get_calendario().get_huecos(fecha_desde,tiempo_total=TD(seconds=float(tiempo)*60)):
-        try:
-          fecha_desde = hueco.get_fecha_hasta()
-          intervalo = planificacion.models.IntervaloCronograma(
-            cronograma=self.cronograma, maquina=maquina, tarea=tarea,
-            producto=self.producto, pedido=self.pedido,
-            tiempo_intervalo=hueco.get_minutos())
-          intervalo.fecha_desde = hueco.fecha_desde
-          intervalo.clean()
-          intervalo.save()
-          yield intervalo
-          tiempo = tiempo - intervalo.tiempo_intervalo
-        except ValidationError as e:
-          pass
+    cota_inferior = 0
+    cota_superior = hueco.tiempo.total_seconds() - 1
+    fecha_desde = hueco.fecha_desde
 
-  def crear_intervalos_al_final(self, maquina, tarea, tiempo):
-    tareas = tarea.get_anteriores(self.producto)
-    tareas.append(tarea)
-    intervalos=self.get_intervalos(tareas)
-    ultima_fecha_maquina = self.cronograma.get_ultima_fecha(maquina)
-    particion_temporal = self.get_particion_ordenada_temporal(intervalos, [ultima_fecha_maquina])
-    if len(particion_temporal) == 0:
-      particion_temporal.append(self.cronograma.fecha_inicio)
-    tiempo_faltante = float(tiempo)
-    for t in particion_temporal:
-      if t >= ultima_fecha_maquina:
-        for i in self.crear_intervalos_al_final_respetando_calendario(
-          maquina, tarea, tiempo_faltante, t):
-          yield i
-          tiempo_faltante = tiempo_faltante - float(i.tiempo_intervalo)
+    # Se optimiza hasta la media hora
+    while (cota_superior - cota_inferior > 0 ):
 
-    # En caso de no haber podido crear significa que toda la partición
-    # temporal se encuentra antes que la ultima fecha de la máquina
-    for i in self.crear_intervalos_al_final_respetando_calendario(
-      maquina, tarea, tiempo_faltante, particion_temporal[-1],
-      seguir_hasta_crear_todos=True):
-      yield i
-      tiempo_faltante = tiempo_faltante - float(i.tiempo_intervalo)
+      incremento_temporal = int((cota_inferior + cota_superior) / 2)
 
-    if tiempo_faltante > self.get_tolerancia():
-      raise Exception(_(u'Aún faltan crear intervalos para el tiempo %s.') % tiempo_faltante)
+      try:
+        fecha_desde = hueco.fecha_desde + TD(seconds=int(incremento_temporal))
+        tiempo = min(tiempo_intervalo, (hueco.get_fecha_hasta() - fecha_desde).total_seconds() / 60)
+        if tiempo <> tiempo_intervalo and tiempo < self.cronograma.tiempo_minimo_intervalo:
+          break
+        intervalo = self.crear_intervalo(maquina, tarea, fecha_desde, tiempo, save=False)
+        cota_superior = incremento_temporal - 1
+      except ValidationError:
+        cota_inferior = incremento_temporal + 1
+    
+    if intervalo is not None:
+      intervalo.save()
+
+    return intervalo
 
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
-    tiempo_asignado = 0
-    tiempo_a_asignar = tiempo
-    for hueco in self.cronograma.get_huecos(maquina):
-      try:
+    while tiempo > 0:
+      for hueco in self.cronograma.get_huecos(maquina):
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
-        tiempo_restante = tiempo - tiempo_intervalo
-        # Esto es necesario para verificar si el intervalo final 
-        if tiempo_restante < self.cronograma.tiempo_minimo_intervalo:
-          tiempo_intervalo = Decimal(tiempo) - Decimal(self.cronograma.tiempo_minimo_intervalo)
-          tiempo_restante = self.cronograma.tiempo_minimo_intervalo
-          if tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
-            continue
-        intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
-        tiempo = tiempo_restante
-        tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
-      except ValidationError:
-        pass
-      if tiempo <= 0:
-        return
+        if tiempo_intervalo <> tiempo and tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
+          continue
+        intervalo = None
+        try:
+          intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
+        except ValidationError:
+          if self.cronograma.optimizar_planificacion:
+            intervalo = self.crear_intervalo_optimizado_en_hueco(maquina, tarea, hueco, tiempo_intervalo)
+        if intervalo is not None:
+          tiempo = tiempo - intervalo.tiempo_intervalo
+        elif ( tiempo_intervalo > 0 and
+          self.cronograma.intervalocronograma_set.filter(
+            fecha_hasta__gt=hueco.fecha_desde).count() == 0 ):
+          raise ValidationError(
+            ugettext_lazy(u'No se ha podido completar la planificación. Seguramente puede solucionar este error, aumentando la opción tiempo mínimo del intervalo en la configuración del cronograma.'))
+        if tiempo <= 0:
+          break
 
-    for intervalo in self.crear_intervalos_al_final(maquina, tarea, tiempo):
-      tiempo_asignado = Decimal(tiempo_asignado) + Decimal(intervalo.tiempo_intervalo)
-
-    if abs(Decimal(tiempo_asignado) - Decimal(tiempo_a_asignar)) > self.get_tolerancia():
-      raise Exception(_(u'El tiempo total de los intervalos creados %s no coincide con el tiempo a asignar a la planificación %s.') % (
-        tiempo_asignado, tiempo_a_asignar))
+    assert tiempo == 0
 

@@ -11,6 +11,7 @@ import datetime
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone as TZ
+from datetime import timedelta as TD
 
 """
 Excepcione de validación de tareas reales.
@@ -368,6 +369,9 @@ class Cronograma(models.Model):
   def get_huecos(self, maquina):
     intervalos = self.get_intervalos_propios_y_activos(maquina).order_by('fecha_desde')
     intervalo_anterior = None
+    fecha_desde = None
+    fecha_hasta = None
+    calendario = maquina.get_calendario()
     for intervalo in intervalos:
       if not intervalo_anterior:
         intervalo_anterior = intervalo
@@ -384,9 +388,21 @@ class Cronograma(models.Model):
         else:
           intervalo_anterior = intervalo
           continue
-      calendario = maquina.get_calendario()
       for hueco in calendario.get_huecos(fecha_desde, fecha_hasta):
         yield hueco
+    
+    # Ojo! No termina nunca!
+    desde = None
+    if fecha_hasta is None:
+      desde = self.fecha_inicio
+    else:
+      desde = fecha_hasta
+
+    un_anyo = TD(days=365) 
+    while True:
+      for hueco in calendario.get_huecos(desde,tiempo_total=un_anyo):
+        yield hueco
+      desde = desde + un_anyo
 
   def get_ultima_fecha(self, maquina):
     from django.db.models import Max
