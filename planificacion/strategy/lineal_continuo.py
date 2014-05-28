@@ -27,7 +27,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
   def def_tiempo_maquina_maximo_maquinas(self):
 
-    for maquina in self.cronograma.get_maquinas():
+    for maquina in self.get_maquinas_con_maximo_NO_registrado():
       tiempo_maquina = self.tiempos_maquinas[maquina.id]
       is_maximo_tiempo_maquina = self.is_maximo_tiempo_maquina[maquina.id]
       # TMi - M(1-Y_MAX_Mi) <= T_MAX_MAQ <= TMi + M(1-Y_MAX_Mi)
@@ -37,7 +37,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       self.modelo += tiempo_maquina - \
         (1-is_maximo_tiempo_maquina)*self.get_tiempo_infinito() - \
         self.tiempo_maquina_maximo <= 0, "Cota inferior tiempo maquina %s al tiempo de maquina maximo" % maquina.id
-      for otra_maquina in self.cronograma.get_maquinas():
+      for otra_maquina in self.get_maquinas_con_maximo_NO_registrado():
         if maquina.id == otra_maquina.id:
           continue
         tiempo_otra_maquina = self.tiempos_maquinas[otra_maquina.id]
@@ -50,13 +50,14 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
     T_MTPD = self.tiempo_maquina_tarea_pedido_producto
 
-    for maquina in self.cronograma.get_maquinas():
+    for maquina in self.get_maquinas_con_maximo_NO_registrado():
       self.modelo += lpSum([
         T_MTPD[maquina.id][tarea.id][producto.id][pedido.id]
           for pedido in self.cronograma.get_pedidos()
             for producto in pedido.get_productos()
               for tarea in producto.get_tareas_maquina(maquina) ]) - \
-        self.tiempos_maquinas[maquina.id] == 0, "Tiempo de la maquina %s" % maquina.id
+        self.tiempos_maquinas[maquina.id] == 0,\
+          "Tiempo de la maquina %s" % maquina.id
 
   def def_cumplir_cantidad_producir(self):
 
@@ -79,9 +80,62 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     self.def_tiempo_insumido_maquinas()
     self.def_cumplir_cantidad_producir()
 
-  def definir_variables(self):
-
+  def get_maquinas_con_maximo_NO_registrado(self):
     for maquina in self.cronograma.get_maquinas():
+      if not self.is_maquina_con_maximo_registrado(maquina):
+        yield maquina
+
+  def __init__(self, *args, **kwargs):
+    PlanificadorStrategy.__init__(self, *args, **kwargs)
+    self.maquinas_con_maximo_registrado = set()
+    self.tiempos_intervalos_registrados = {}
+    self.tiempo_maximo = None
+
+  def is_maquina_con_maximo_registrado(self, maquina):
+    return maquina.id in self.maquinas_con_maximo_registrado
+
+  def registrar_maximos(self):
+
+    self.tiempo_maximo = self.tiempo_maquina_maximo.value()
+    print self.tiempo_maximo
+
+    if self.tiempo_maximo == 0:
+      return
+
+    for maquina in self.get_maquinas_con_maximo_NO_registrado():
+
+      if self.tiempos_maquinas[maquina.id].value() == self.tiempo_maximo:
+        self.maquinas_con_maximo_registrado.add(maquina.id)
+
+      for pedido in self.cronograma.get_pedidos():
+        for producto in pedido.get_productos():
+          gerenciador_dependencias = GerenciadorDependencias(self.cronograma, producto, pedido)
+          for tarea in producto.get_tareas_maquina(maquina):
+            clave = (maquina.id, tarea.id, producto.id, pedido.id)
+            if clave in self.tiempos_intervalos_registrados:
+              continue
+            tiempo = self.tiempo_maquina_tarea_pedido_producto[
+              maquina.id][tarea.id][producto.id][pedido.id].value()
+            if tiempo > 0:
+              self.tiempos_intervalos_registrados[clave] = tiempo
+
+  def get_cotas_intervalo(self, maquina, tarea, producto, pedido):
+    minimo = 0
+    maximo = None
+    if self.is_maquina_con_maximo_registrado(maquina): 
+      clave = (maquina.id, tarea.id, producto.id, pedido.id)
+      if clave in self.tiempos_intervalos_registrados:
+        minimo = self.tiempos_intervalos_registrados[clave]
+        maximo = minimo
+    return (minimo, maximo)
+
+  def definir_variables(self):
+    
+    self.tiempos_maquinas = {}
+    self.is_maximo_tiempo_maquina = {}
+    self.tiempo_maquina_tarea_pedido_producto = {}
+
+    for maquina in self.get_maquinas_con_maximo_NO_registrado():
       self.tiempos_maquinas[maquina.id] = LpVariable(
         "T_MAQ_%s" % maquina.id,0)
       self.is_maximo_tiempo_maquina[maquina.id] = LpVariable(
@@ -92,13 +146,19 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       for tarea in maquina.get_tareas():
         for pedido in self.cronograma.get_pedidos():
           for producto in pedido.get_productos_maquina_tarea(maquina,tarea):
+
             add_keys_to_dict(
               self.tiempo_maquina_tarea_pedido_producto,
               [maquina.id,tarea.id,producto.id,pedido.id])
+
+            tiempo_minimo, tiempo_maximo = self.get_cotas_intervalo(
+                maquina,tarea,producto,pedido)
+
             self.tiempo_maquina_tarea_pedido_producto[
               maquina.id][tarea.id][producto.id][pedido.id] = LpVariable(
                 "T_M%s_T%s_P%s_D%s" % \
-                (maquina.id, tarea.id, pedido.id, producto.id), 0)
+                (maquina.id, tarea.id, pedido.id, producto.id), 
+                  tiempo_minimo, tiempo_maximo)
 
   def definir_funcional(self):
 
@@ -135,14 +195,24 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
               gerenciador_dependencias.add_intervalos_to_cronograma(
                 maquina=maquina, tarea=tarea, tiempo=tiempo)
 
+  def has_intervalos_sin_resolver(self):
+    return self.tiempo_maximo is None or self.tiempo_maximo > 0
+
   def planificar(self):
     
-    self.definir_modelo()
+    while self.has_intervalos_sin_resolver():
 
-    self.modelo.solve()
+      self.definir_modelo()
 
-    if not self.is_modelo_resuelto():
-      raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
+      self.modelo.solve()
+
+      if not self.is_modelo_resuelto():
+        raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
+
+      if not self.cronograma.optimizar_planificacion:
+        break
+
+      self.registrar_maximos()
 
     self.completar_cronograma()
 
