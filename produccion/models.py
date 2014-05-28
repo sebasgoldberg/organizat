@@ -136,10 +136,12 @@ class Producto(models.Model):
     return [ x.tarea for x in self.tareaproducto_set.all() ]
 
   def get_tareas_maquina(self, maquina):
-    return [ t.tarea for t in self.tiemporealizaciontarea_set.filter(maquina=maquina) ]
+    return [ t.tarea for t in self.tiemporealizaciontarea_set.filter(
+      maquina=maquina, activa=True) ]
 
   def get_maquinas_tarea(self, tarea):
-    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(tarea=tarea) ]
+    return [ t.maquina for t in self.tiemporealizaciontarea_set.filter(tarea=tarea,
+      activa=True) ]
 
   def add_dependencia_tareas(self, tarea_anterior, tarea):
     d=DependenciaTareaProducto(producto=self,tarea_anterior=tarea_anterior,tarea=tarea)
