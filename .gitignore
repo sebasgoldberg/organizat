@@ -9,3 +9,4 @@ django.mo
 /log/*.log
 /static/*
 db.sqlite3
+*.lprof
