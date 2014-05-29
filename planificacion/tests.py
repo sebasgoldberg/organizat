@@ -9,6 +9,7 @@ from django.db.transaction import rollback
 from django.utils.translation import ugettext as _
 from datetime import time as T
 from datetime import datetime as DT
+from decimal import Decimal as D
 
 utc=pytz.UTC
 
@@ -999,4 +1000,27 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
       hueco = huecos[0]
       self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
       self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
+
+  def test_optimizado(self):
+    
+    calendario = CalendarioProduccion.get_instance()
+
+    IntervaloCronograma.objects.all().delete()
+
+    cronograma = Cronograma.objects.get(descripcion='Cronograma con pedido de neumáticos de motos y de autos')
+
+    cronograma.optimizar_planificacion = True
+    cronograma.tiempo_minimo_intervalo = D(30)
+    cronograma.save()
+
+    cronograma.planificar()
+
+    for intervalo in cronograma.get_intervalos():
+      huecos = [ h for h in calendario.get_huecos(
+        intervalo.fecha_desde,
+        hasta=intervalo.get_fecha_hasta()) ]
+      hueco = huecos[0]
+      self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
+      self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
+
 

@@ -178,7 +178,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             clave = (maquina.id, tarea.id, producto.id, pedido.id)
             if clave in self.tiempos_intervalos_registrados:
               tiempo = self.tiempos_intervalos_registrados[clave]
-              print '%s\t%s\t%s\t%s:\t%s' % (maquina, tarea, producto, pedido, tiempo)
+              #print '%s\t%s\t%s\t%s:\t%s' % (maquina, tarea, producto, pedido, tiempo)
               gerenciador_dependencias.add_intervalos_to_cronograma(
                 maquina=maquina, tarea=tarea, tiempo=tiempo)
 
@@ -218,8 +218,6 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
   def planificar(self):
     
-    maquinas_planificadas = set()
-    
     for maquinas in self.get_maquinas_relacionadas_por_tareas():
 
       self.grupo_maquinas_planificado = maquinas
@@ -231,11 +229,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       if not self.is_modelo_resuelto():
         raise ModeloLinealNoResuelto(_(u'No a podido resolverse el modelo lineal.'))
 
-      maquinas_planificadas = set(maquinas) | maquinas_planificadas
-
       self.registrar_tiempos_maquinas_planificadas()
-
-    assert len(maquinas_planificadas) == len(self.cronograma.get_maquinas())
 
     self.completar_cronograma()
 
