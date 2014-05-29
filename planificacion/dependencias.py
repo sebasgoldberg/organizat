@@ -171,7 +171,9 @@ class GerenciadorDependencias:
           self.cronograma.intervalocronograma_set.filter(
             fecha_hasta__gt=hueco.fecha_desde).count() == 0 ):
           raise ValidationError(
-            ugettext_lazy(u'No se ha podido completar la planificación. Seguramente puede solucionar este error, aumentando la opción tiempo mínimo del intervalo en la configuración del cronograma.'))
+            ugettext_lazy((u'No se ha podido completar la planificación. '+
+              u'Seguramente puede solucionar este error, aumentando la opción '+
+              u'tiempo mínimo del intervalo en la configuración del cronograma.')))
         if tiempo <= 0:
           break
 

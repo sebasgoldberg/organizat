@@ -34,6 +34,14 @@ class Maquina(models.Model):
   def get_calendario(self):
     return CalendarioProduccion.get_instance()
 
+  def get_tareas_pedidos(self, pedidos):
+    tareas = set()
+    for pedido in pedidos:
+      for producto in pedido.get_productos():
+        for tarea in producto.get_tareas_maquina(self):
+          tareas.add(tarea)
+    return tareas
+
   def get_tareas(self):
     return [ x.tarea for x in self.tareamaquina_set.all() ]
 
