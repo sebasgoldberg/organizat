@@ -48,6 +48,9 @@ class IntervaloCanceladoConCantidadNoNula(ValidationError):
 class IntervaloDistintoPlanificadoEnCronogramaInactivo(ValidationError):
   pass
 
+class IntervaloNoActivoException(ValidationError):
+  pass
+
 ESTRATEGIAS=(
   (2,_(u'PLM (Modelo Tiempo Contínuo) + Heurística basada en dependencias')),)
 
@@ -68,13 +71,13 @@ ESTADOS_CRONOGRAMAS=(
   )
 
 ESTADO_INTERVALO_PLANIFICADO=0
-ESTADO_INTERVALO_EN_CURSO=1
+ESTADO_INTERVALO_ACTIVO=1
 ESTADO_INTERVALO_FINALIZADO=2
 ESTADO_INTERVALO_CANCELADO=3
 
 ESTADOS_INTERVALOS=(
   (ESTADO_INTERVALO_PLANIFICADO,_(u'Planificado')),
-  (ESTADO_INTERVALO_EN_CURSO,_(u'En curso')),
+  (ESTADO_INTERVALO_ACTIVO,_(u'En curso')),
   (ESTADO_INTERVALO_FINALIZADO,_(u'Finalizado')),
   (ESTADO_INTERVALO_CANCELADO,_(u'Cancelado')),
 )
@@ -246,14 +249,6 @@ class Cronograma(models.Model):
   def is_maquina_cuello_botella(self, maquina):
     return maquina.id in self.get_ids_maquinas_cuello_botella()
 
-  def test_distribuir(self):
-    pedidos_ya_distribuidos =\
-      [ p.pedido.descripcion for p in CronogramaActivo.get_instance().pedidocronograma_set.filter(
-        pedido__in=self.get_pedidos()) ]
-    if len(pedidos_ya_distribuidos)>0:
-      raise PedidoYaDistribuido(_(u'Los siguientes pedidos ya han sido distribuidos: %s ') %
-        pedidos_ya_distribuidos)
-
   def has_maquina(self, maquina):
     try:
       self.maquinacronograma_set.get(cronograma=self,maquina=maquina)
@@ -261,35 +256,6 @@ class Cronograma(models.Model):
     except MaquinaCronograma.DoesNotExist:
       pass
     return False
-
-  def distribuir(self):
-
-    self.test_distribuir()
-
-    cronograma_activo = CronogramaActivo.get_instance()
-
-    for pedido in self.get_pedidos():
-      cronograma_activo.add_pedido(pedido)
-
-    for maquina in self.get_maquinas():
-      if not cronograma_activo.has_maquina(maquina):
-        cronograma_activo.add_maquina(maquina)
-
-    intervalos = [ i for i in self.intervalocronograma_set.all().order_by('fecha_desde') ]
-    ids_intervalos_copiados = []
-    while len(intervalos) > len(ids_intervalos_copiados):
-      for intervalo in intervalos:
-        if intervalo.id in ids_intervalos_copiados:
-          continue
-        id_intervalo = intervalo.id
-        intervalo.id = None
-        intervalo.cronograma = cronograma_activo
-        try:
-          intervalo.clean()
-          intervalo.save()
-          ids_intervalos_copiados.append(id_intervalo)
-        except ValidationError:
-          pass
 
   @transaction.atomic
   def planificar(self):
@@ -314,11 +280,19 @@ class Cronograma(models.Model):
   def is_activo(self):
     return self.estado == ESTADO_CRONOGRAMA_ACTIVO
 
+  @transaction.atomic
   def desactivar(self):
-    if self.is_activo():
-      self.estado = ESTADO_CRONOGRAMA_VALIDO
+    if not self.is_activo():
+      raise ValidationError(_(u'El cronograma %s no se encuentra activo.') % cronograma)
+    self.estado = ESTADO_CRONOGRAMA_VALIDO
+    self.save()
+    self.desactivar_intervalos()
     self.clean()
     self.save()
+
+  def desactivar_intervalos(self):
+    for intervalo in self.intervalocronograma_set.all():
+      intervalo.desactivar()
 
   @transaction.atomic
   def activar(self):
@@ -328,7 +302,12 @@ class Cronograma(models.Model):
       self.planificar()
     self.estado = ESTADO_CRONOGRAMA_ACTIVO
     self.save()
+    self.activar_intervalos()
     Cronograma.invalidar_cronogramas_validos()
+
+  def activar_intervalos(self):
+    for intervalo in self.intervalocronograma_set.all():
+      intervalo.activar()
 
   @staticmethod
   def invalidar_cronogramas_validos():
@@ -521,8 +500,36 @@ class IntervaloCronograma(models.Model):
       self.producto.descripcion, self.cantidad_tarea,
       self.get_fecha_desde(), self.get_fecha_hasta())
 
+  @staticmethod
+  def get_cantidad_planificada(item, tarea):
+    total = IntervaloCronograma.objects.filter(
+      pedido=item.pedido,
+      tarea=tarea,
+      producto=item.producto,
+      estado=ESTADO_INTERVALO_ACTIVO
+      ).aggregate(
+        total=models.Sum('cantidad_tarea'))['total']
+    if total is None:
+      return 0
+    else:
+      return total
+
+  @staticmethod
+  def get_cantidad_realizada(item, tarea):
+    total = IntervaloCronograma.objects.filter(
+      pedido=item.pedido,
+      tarea=tarea,
+      producto=item.producto,
+      estado=ESTADO_INTERVALO_FINALIZADO
+      ).aggregate(
+        total=models.Sum('cantidad_tarea'))['total']
+    if total is None:
+      return 0
+    else:
+      return total
+
   def iniciar(self):
-    self.estado = ESTADO_INTERVALO_EN_CURSO
+    self.estado = ESTADO_INTERVALO_ACTIVO
     self.clean()
     self.save()
 
@@ -530,6 +537,23 @@ class IntervaloCronograma(models.Model):
     if cantidad_tarea_real is not None:
       self.cantidad_tarea_real = cantidad_tarea_real
     self.estado = ESTADO_INTERVALO_FINALIZADO
+    self.clean()
+    self.save()
+
+  def is_activo(self):
+    return self.estado == ESTADO_INTERVALO_ACTIVO
+    
+  def activar(self):
+    if self.is_activo():
+      raise ValidationError(_(u'El intervalo %s ya se encunetra activo'))
+    self.estado = ESTADO_INTERVALO_ACTIVO
+    self.clean()
+    self.save()
+
+  def desactivar(self):
+    if not self.is_activo():
+      raise IntervaloNoActivoException(_(u'El intervalo %s no se encunetra activo'))
+    self.estado = ESTADO_INTERVALO_PLANIFICADO
     self.clean()
     self.save()
 
@@ -678,7 +702,7 @@ class IntervaloCronograma(models.Model):
     return self.estado == ESTADO_INTERVALO_CANCELADO
 
   def is_en_curso(self):
-    return self.estado == ESTADO_INTERVALO_EN_CURSO
+    return self.estado == ESTADO_INTERVALO_ACTIVO
 
   def validar_estado(self):
     if not self.cronograma.is_activo():

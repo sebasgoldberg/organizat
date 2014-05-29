@@ -951,7 +951,7 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
     try:
       cronograma.desactivar()
       self.fail(_(u'No debería poder desactivarse un cronograma que tiene intervalos con estado distinto de planificado.'))
-    except IntervaloDistintoPlanificadoEnCronogramaInactivo:
+    except IntervaloNoActivoException:
       pass
 
 class PlanificacionSoloLunesDe8A12TestCase(PlanificadorTestCase):
@@ -1023,4 +1023,30 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
       self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
       self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
 
+class ActivarAnularFinalizarIntervalosTestCase(PlanificadorTestCase):
+
+  fixtures = [ 'planificacion/fixtures/tests/planificar_con_calendario.json' ]
+
+  def test_cantidad_planificada_respeta_cantidad_ya_activa(self):
+
+    IntervaloCronograma.objects.all().delete()
+
+    crono_solo_neumaticos = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
+
+    crono_solo_neumaticos.planificar()
+    crono_solo_neumaticos.activar()
+
+    antes = crono_solo_neumaticos.intervalocronograma_set.count()
+
+    crono_todo = Cronograma.objects.get(descripcion='Cronograma con pedido de neumáticos de motos y de autos')
+
+    crono_todo.activar()
+
+    for pedido in Pedido.objects.all():
+      for item in pedido.get_items():
+        for tarea in item.producto.get_tareas():
+          cantidad_planificada = item.get_cantidad_planificada(tarea)
+          self.assertEqual(cantidad_planificada, item.cantidad)
+          self.assertEqual(item.get_cantidad_realizada(tarea), 0)
+          self.assertEqual(item.get_cantidad_no_planificada(tarea), 0)
 

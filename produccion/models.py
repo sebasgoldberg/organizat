@@ -387,10 +387,20 @@ class ItemPedido(models.Model):
     verbose_name_plural = _(u"Items pedidos")
     unique_together = (('pedido', 'producto',),)
 
+  def get_cantidad_planificada(self, tarea):
+    from planificacion.models import IntervaloCronograma as IC
+    return IC.get_cantidad_planificada(self, tarea)
+
+  def get_cantidad_realizada(self, tarea):
+    from planificacion.models import IntervaloCronograma as IC
+    return IC.get_cantidad_realizada(self, tarea)
+
+  def get_cantidad_no_planificada(self, tarea):
+    return (self.cantidad - self.get_cantidad_realizada(tarea)
+      - self.get_cantidad_planificada(tarea))
 
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete
-from produccion.models import *
 
 def agregar_combinaciones_tiempos(sender, instance, **kwargs):
   """
