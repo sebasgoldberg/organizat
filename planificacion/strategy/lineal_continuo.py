@@ -9,6 +9,9 @@ from planificacion.dependencias import GerenciadorDependencias
 import planificacion.models 
 from django.core.exceptions import ValidationError
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 C_100_ANYOS_EN_MINUTOS = 52560000
 
@@ -179,7 +182,9 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             clave = (maquina.id, tarea.id, producto.id, pedido.id)
             if clave in self.tiempos_intervalos_registrados:
               tiempo = self.tiempos_intervalos_registrados[clave]
-              #print '%s\t%s\t%s\t%s:\t%s' % (maquina, tarea, producto, pedido, tiempo)
+              logger.debug(_(u'Se agregan intervalos a cronograma para:\n'+
+                u'\tmaquina: %s\ttarea: %s\tproducto: %s\tpedido: %s\ttiempo: %s') % (
+                  maquina, tarea, producto, pedido, tiempo))
               gerenciador_dependencias.add_intervalos_to_cronograma(
                 maquina=maquina, tarea=tarea, tiempo=tiempo)
 

@@ -11,6 +11,7 @@ class MaquinaCronogramaInline(admin.TabularInline):
   extra = 1
 
 class CronogramaAdmin(admin.ModelAdmin):
+  readonly_fields=['id','estado']
   inlines=[PedidoCronogramaInline,MaquinaCronogramaInline]
   list_display=['id','descripcion', 'fecha_inicio', 'estrategia']
   list_display_links = ('id', 'descripcion')

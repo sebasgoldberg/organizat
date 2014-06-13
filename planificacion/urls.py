@@ -15,6 +15,9 @@ urlpatterns = patterns('planificacion.views',
 
     # Uncomment the next line to enable the admin:
     url(r'^planificar/(\d+)/$', 'planificar'),
+    url(r'^invalidar/(\d+)/$', 'invalidar'),
+    url(r'^activar/(\d+)/$', 'activar'),
+    url(r'^desactivar/(\d+)/$', 'desactivar'),
     url(r'^calendario/cronograma/(\d+)/$', 'calendario_cronograma'),
 )
 

@@ -13,6 +13,33 @@ def planificar(request,id_cronograma):
     messages.error(request, e)
   return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
 
+def invalidar(request,id_cronograma):
+  cronograma = Cronograma.objects.get(id=id_cronograma)
+  try:
+    cronograma.invalidar()
+    messages.success(request, _(u'Cronograma invalidado en forma exitosa.'))
+  except ValidationError as e:
+    messages.error(request, e)
+  return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
+
+def activar(request,id_cronograma):
+  cronograma = Cronograma.objects.get(id=id_cronograma)
+  try:
+    cronograma.activar()
+    messages.success(request, _(u'Cronograma activado en forma exitosa.'))
+  except ValidationError as e:
+    messages.error(request, e)
+  return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
+
+def desactivar(request,id_cronograma):
+  cronograma = Cronograma.objects.get(id=id_cronograma)
+  try:
+    cronograma.desactivar()
+    messages.success(request, _(u'Cronograma desactivado en forma exitosa.'))
+  except ValidationError as e:
+    messages.error(request, e)
+  return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
+
 def calendario_cronograma(request, id_cronograma):
   cronograma = Cronograma.objects.get(id=id_cronograma)
   return render(request,

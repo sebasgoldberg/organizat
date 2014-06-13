@@ -6,7 +6,7 @@ tags
 ambiente.py
 .coverage
 django.mo
-/log/*.log
+*.log
 /static/*
 db.sqlite3
 *.lprof

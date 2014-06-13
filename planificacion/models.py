@@ -27,8 +27,14 @@ class TareaRealNoRespetaDependencias(ValidationError):
   pass
 
 """
-Excepciones de validación de cambios de estado en intervalos.
+Excepciones de validación de cambios de estado.
 """
+
+class EstadoCronogramaError(ValidationError):
+  pass
+
+class EstadoIntervaloCronogramaError(ValidationError):
+  pass
 
 class IntervaloFinalizadoEnCronogramaInactivo(ValidationError):
   pass
@@ -58,16 +64,18 @@ CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
   2: lineal_continuo.PlanificadorLinealContinuo, }
 
-ESTADO_CRONOGRAMA_NO_PLANIFICADO=0
+ESTADO_CRONOGRAMA_INVALIDO=0
 ESTADO_CRONOGRAMA_VALIDO=1
 ESTADO_CRONOGRAMA_ACTIVO=2
-ESTADO_CRONOGRAMA_INVALIDO=3
+ESTADO_CRONOGRAMA_FINALIZADO=3
+ESTADO_CRONOGRAMA_CANCELADO=4
 
 ESTADOS_CRONOGRAMAS=(
-  (ESTADO_CRONOGRAMA_NO_PLANIFICADO,_(u'No planificado')),
+  (ESTADO_CRONOGRAMA_INVALIDO,_(u'Inválido')),
   (ESTADO_CRONOGRAMA_VALIDO,_(u'Válido')),
   (ESTADO_CRONOGRAMA_ACTIVO,_(u'Activo')),
-  (ESTADO_CRONOGRAMA_INVALIDO,_(u'Inválido')),
+  (ESTADO_CRONOGRAMA_FINALIZADO,_(u'Finalizado')),
+  (ESTADO_CRONOGRAMA_CANCELADO,_(u'Cancelado')),
   )
 
 ESTADO_INTERVALO_PLANIFICADO=0
@@ -77,7 +85,7 @@ ESTADO_INTERVALO_CANCELADO=3
 
 ESTADOS_INTERVALOS=(
   (ESTADO_INTERVALO_PLANIFICADO,_(u'Planificado')),
-  (ESTADO_INTERVALO_ACTIVO,_(u'En curso')),
+  (ESTADO_INTERVALO_ACTIVO,_(u'Activo')),
   (ESTADO_INTERVALO_FINALIZADO,_(u'Finalizado')),
   (ESTADO_INTERVALO_CANCELADO,_(u'Cancelado')),
 )
@@ -204,7 +212,7 @@ class Cronograma(models.Model):
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
-  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_CRONOGRAMAS, default=0)
+  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
 
   class Meta:
     ordering = ['-id']
@@ -257,22 +265,8 @@ class Cronograma(models.Model):
       pass
     return False
 
-  @transaction.atomic
-  def planificar(self):
-    """
-    Este es el core del producto. Acá es donde en función de la configuración 
-    de producción y del cronograma se van a generar los intervalos del 
-    cronograma con la planificación correspondiente para llevar a cabo la
-    producción.
-    """
-    self.estado = ESTADO_CRONOGRAMA_NO_PLANIFICADO
-    self.clean()
-    IntervaloCronograma.objects.filter(cronograma=self).delete()
-    planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
-    planificador.planificar()
-    self.estado = ESTADO_CRONOGRAMA_VALIDO
-    self.clean()
-    self.save()
+  def is_invalido(self):
+    return self.estado == ESTADO_CRONOGRAMA_INVALIDO
 
   def is_valido(self):
     return self.estado == ESTADO_CRONOGRAMA_VALIDO
@@ -281,9 +275,55 @@ class Cronograma(models.Model):
     return self.estado == ESTADO_CRONOGRAMA_ACTIVO
 
   @transaction.atomic
+  def planificar(self):
+    """
+    Este es el core del producto. Acá es donde en función de la configuración 
+    de producción y del cronograma se van a generar los intervalos del 
+    cronograma con la planificación correspondiente para llevar a cabo la
+    producción.
+    """
+    if not self.is_invalido():
+      raise EstadoCronogramaError(_(u'El cronograma %s no se puede '+
+        u'planificar ya que no se encuentra en un estado invalido.') % self)
+    IntervaloCronograma.objects.filter(cronograma=self).delete()
+    planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
+    planificador.planificar()
+    self.estado = ESTADO_CRONOGRAMA_VALIDO
+    self.clean()
+    self.save()
+
+  @transaction.atomic
+  def invalidar(self, forzar=False):
+
+    if forzar:
+      self.estado = ESTADO_CRONOGRAMA_INVALIDO
+      self.intervalocronograma_set.all().delete()
+      self.save()
+      return
+
+    if not self.is_valido():
+      raise EstadoCronogramaError(_(u'No se puede invalidar el cronograma %s, '+
+        u'el mismo debe tener estado válido para invalidarlo.') % self)
+    self.estado = ESTADO_CRONOGRAMA_INVALIDO
+    self.save()
+    self.intervalocronograma_set.all().delete()
+    self.clean()
+    self.save()
+
+  @transaction.atomic
+  def activar(self):
+    if not self.is_valido():
+      raise EstadoCronogramaError(_(u'El cronograma %s no puede ser '
+        u'activado. Para poder ser activado debe encontrarse en un estado válido.') % self)
+    self.estado = ESTADO_CRONOGRAMA_ACTIVO
+    self.save()
+    self.activar_intervalos()
+    Cronograma.invalidar_cronogramas_validos()
+
+  @transaction.atomic
   def desactivar(self):
     if not self.is_activo():
-      raise ValidationError(_(u'El cronograma %s no se encuentra activo.') % cronograma)
+      raise EstadoCronogramaError(_(u'El cronograma %s no se encuentra activo.') % self)
     self.estado = ESTADO_CRONOGRAMA_VALIDO
     self.save()
     self.desactivar_intervalos()
@@ -294,17 +334,6 @@ class Cronograma(models.Model):
     for intervalo in self.intervalocronograma_set.all():
       intervalo.desactivar()
 
-  @transaction.atomic
-  def activar(self):
-    if self.is_activo():
-      raise ValidationError(_(u'El cronograma ya se encuentra activo'))
-    if not self.is_valido():
-      self.planificar()
-    self.estado = ESTADO_CRONOGRAMA_ACTIVO
-    self.save()
-    self.activar_intervalos()
-    Cronograma.invalidar_cronogramas_validos()
-
   def activar_intervalos(self):
     for intervalo in self.intervalocronograma_set.all():
       intervalo.activar()
@@ -312,9 +341,7 @@ class Cronograma(models.Model):
   @staticmethod
   def invalidar_cronogramas_validos():
     for cronograma in Cronograma.objects.filter(estado=ESTADO_CRONOGRAMA_VALIDO):
-      cronograma.estado = ESTADO_CRONOGRAMA_INVALIDO
-      cronograma.clean()
-      cronograma.save()
+      cronograma.invalidar()
 
   def __unicode__(self):
     return self.descripcion
@@ -335,15 +362,16 @@ class Cronograma(models.Model):
     return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
       maquina__in=self.get_maquinas(), tarea=tarea,producto=producto, activa=True) ]
 
-  def get_intervalos_propios_y_activos(self, maquina):
+  def get_intervalos_propios_y_activos(self, maquina=None):
     intervalos_propios = IntervaloCronograma.objects.filter(
-      cronograma=self,
-      maquina=maquina)
+      cronograma=self)
     intervalos_activos = IntervaloCronograma.objects.filter(
-      maquina=maquina,
       cronograma__estado=ESTADO_CRONOGRAMA_ACTIVO, 
       fecha_hasta__gte=self.fecha_inicio)
-    return intervalos_propios | intervalos_activos
+    resultado = intervalos_propios | intervalos_activos
+    if maquina is not None:
+      resultado = resultado.filter(maquina=maquina)
+    return resultado
 
   def get_huecos(self, maquina):
     intervalos = self.get_intervalos_propios_y_activos(maquina).order_by('fecha_desde')
@@ -540,24 +568,32 @@ class IntervaloCronograma(models.Model):
     self.clean()
     self.save()
 
+  def is_planificado(self):
+    return self.estado == ESTADO_INTERVALO_PLANIFICADO
+
   def is_activo(self):
     return self.estado == ESTADO_INTERVALO_ACTIVO
-    
+
   def activar(self):
-    if self.is_activo():
-      raise ValidationError(_(u'El intervalo %s ya se encunetra activo'))
+    if not self.is_planificado():
+      raise EstadoIntervaloCronogramaError(
+        _(u'El intervalo %s no tiene estado planificado.') % self)
     self.estado = ESTADO_INTERVALO_ACTIVO
     self.clean()
     self.save()
 
   def desactivar(self):
     if not self.is_activo():
-      raise IntervaloNoActivoException(_(u'El intervalo %s no se encunetra activo'))
+      raise EstadoIntervaloCronogramaError(
+        _(u'El intervalo %s no se encunetra activo') % self)
     self.estado = ESTADO_INTERVALO_PLANIFICADO
     self.clean()
     self.save()
 
   def cancelar(self):
+    if not self.is_activo():
+      raise EstadoIntervaloCronogramaError(
+        _(u'El intevalo %s no puede ser cancelado. El mismo no se encuentra activo.') % self)
     self.cantidad_tarea_real = 0
     self.estado = ESTADO_INTERVALO_CANCELADO
     self.clean()

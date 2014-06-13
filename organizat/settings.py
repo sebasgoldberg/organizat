@@ -106,3 +106,21 @@ GRAPPELLI_INDEX_DASHBOARD = 'organizat.dashboard.CustomIndexDashboard'
 SKIP_SOUTH_TESTS = True # To disable South's own unit tests
 SOUTH_TESTS_MIGRATE = False # To disable migrations and use syncdb instead
 
+LOGGING = {
+  'version': 1,
+  'disable_existing_loggers': False,
+  'handlers': {
+    'file': {
+      'level': 'DEBUG',
+      'class': 'logging.FileHandler',
+      'filename': 'debug.log',
+    },
+  },
+  'loggers': {
+    'planificacion': {
+      #'handlers': ['file'],
+      'level': 'DEBUG',
+      'propagate': True,
+    },
+  },
+}

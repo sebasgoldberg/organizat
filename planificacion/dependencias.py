@@ -5,6 +5,9 @@ import planificacion.models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from datetime import timedelta as TD
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GerenciadorDependencias:
 
@@ -156,19 +159,23 @@ class GerenciadorDependencias:
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
     while tiempo > 0:
       for hueco in self.cronograma.get_huecos(maquina):
+        logger.debug(_('Se intenta agregar en hueco %s.') % hueco.__unicode__())
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
         if tiempo_intervalo <> tiempo and tiempo_intervalo < self.cronograma.tiempo_minimo_intervalo:
           continue
+        logger.debug(_('Se intenta asignar la siguiente cantidad de tiempo: %s.') % tiempo_intervalo)
         intervalo = None
         try:
           intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
-        except ValidationError:
+          logger.debug(_('Se ha creado en forma exitosa el intervalo %s.') % intervalo)
+        except ValidationError as e:
+          logger.exception(e)
           if self.cronograma.optimizar_planificacion:
             intervalo = self.crear_intervalo_optimizado_en_hueco(maquina, tarea, hueco, tiempo_intervalo)
         if intervalo is not None:
           tiempo = tiempo - intervalo.tiempo_intervalo
         elif ( tiempo_intervalo > 0 and
-          self.cronograma.intervalocronograma_set.filter(
+          self.cronograma.get_intervalos_propios_y_activos().filter(
             fecha_hasta__gt=hueco.fecha_desde).count() == 0 ):
           raise ValidationError(
             ugettext_lazy((u'No se ha podido completar la planificación. '+
