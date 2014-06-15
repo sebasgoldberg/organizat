@@ -395,9 +395,9 @@ class Cronograma(models.Model):
 
   def get_intervalos_propios_y_activos(self, maquina=None):
     intervalos_propios = IntervaloCronograma.objects.filter(
-      cronograma=self)
+      cronograma=self).exclude(estado=ESTADO_INTERVALO_CANCELADO)
     intervalos_activos = IntervaloCronograma.objects.filter(
-      cronograma__estado__in=[ESTADO_CRONOGRAMA_ACTIVO, ESTADO_CRONOGRAMA_FINALIZADO],
+      estado__in=[ESTADO_INTERVALO_ACTIVO, ESTADO_INTERVALO_FINALIZADO],
       fecha_hasta__gte=self.fecha_inicio)
     resultado = intervalos_propios | intervalos_activos
     if maquina is not None:
@@ -588,11 +588,6 @@ class IntervaloCronograma(models.Model):
     else:
       return total
 
-  def iniciar(self):
-    self.estado = ESTADO_INTERVALO_ACTIVO
-    self.clean()
-    self.save()
-
   def finalizar(self, cantidad_tarea_real=None):
     if cantidad_tarea_real is not None:
       self.cantidad_tarea_real = cantidad_tarea_real
@@ -601,8 +596,7 @@ class IntervaloCronograma(models.Model):
     self.estado = ESTADO_INTERVALO_FINALIZADO
     self.clean()
     self.save()
-    logger.info(_('Intervalo %s:\n\tEstado modificado a: %s') %(
-      self, dict(ESTADOS_INTERVALOS)[self.estado]))
+    logger.info(_('Intervalo FINALIZADO: %s') % self)
 
   def is_planificado(self):
     return self.estado == ESTADO_INTERVALO_PLANIFICADO
@@ -626,14 +620,19 @@ class IntervaloCronograma(models.Model):
     self.clean()
     self.save()
 
-  def cancelar(self):
+  @transaction.atomic
+  def cancelar(self, propagar=True):
     if not self.is_activo():
       raise EstadoIntervaloCronogramaError(
         _(u'El intevalo %s no puede ser cancelado. El mismo no se encuentra activo.') % self)
+    if propagar:
+      for intervalo in reversed([ i for i in self.get_intervalos_dependientes() ]):
+        intervalo.cancelar(propagar=False)
     self.cantidad_tarea_real = 0
     self.estado = ESTADO_INTERVALO_CANCELADO
     self.clean()
     self.save()
+    logger.info(_('Intervalo CANCELADO: %s') % self)
 
   def in_maquina_cuello_botella(self):
     return self.cronograma.is_maquina_cuello_botella(self.maquina)
@@ -679,6 +678,29 @@ class IntervaloCronograma(models.Model):
 
   def get_intervalos_maquina(self):
     return self.cronograma.get_intervalos_maquina(self.maquina)
+
+  def get_intervalos_dependientes(self):
+
+    ids_tareas = set()
+
+    for secuencia_dependencia in self.producto.get_listado_secuencias_dependencias():
+      encontrada_self_tarea = False
+      for tarea in secuencia_dependencia:
+        if tarea.id == self.tarea.id:
+          encontrada_self_tarea = True
+        elif encontrada_self_tarea:
+          ids_tareas.add(tarea.id)
+
+    if len(ids_tareas) == 0:
+      return
+
+    for tarea in self.producto.get_tareas_ordenadas_por_dependencia():
+      if tarea.id not in ids_tareas:
+        continue
+      for intervalo in IntervaloCronograma.objects.filter(
+        tarea=tarea, producto=self.producto, 
+        pedido=self.pedido, estado=ESTADO_INTERVALO_ACTIVO):
+        yield intervalo
 
   def calcular_fecha_desde(self):
     if self.fecha_desde:
@@ -786,8 +808,13 @@ class IntervaloCronograma(models.Model):
       self_in_db = IntervaloCronograma.objects.get(pk=self.id)
       if self_in_db.is_finalizado():
         raise EstadoIntervaloCronogramaError(_(u'El intervalo %s '+
-          u'no puede ser modificado ya que su estado es finalizado') % 
+          u'no puede ser modificado ya que su estado es finalizado.') % 
           self_in_db)
+      elif self_in_db.is_cancelado():
+        raise EstadoIntervaloCronogramaError(_(u'El intervalo %s '+
+          u'no puede ser modificado ya que su estado es cancelado.') % 
+          self_in_db)
+
     if not self.cronograma.is_activo() and not self.cronograma.is_finalizado():
 
       if self.is_en_curso():

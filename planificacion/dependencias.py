@@ -62,13 +62,21 @@ class GerenciadorDependencias:
       intervalos_set = intervalos_set.exclude(id=instante_borrado.id)
     if instante_modificado:
       intervalos_set = intervalos_set.exclude(id=instante_modificado.id)
-    intervalos = [ i for i in intervalos_set.filter(
+    intervalos = [ i for i in ( intervalos_set.filter(
       cronograma=self.cronograma,
       producto=self.producto,
       pedido=self.pedido,
-      tarea__in=tareas) ]
+      tarea__in=tareas).exclude(
+        estado=planificacion.models.ESTADO_INTERVALO_CANCELADO) | 
+      planificacion.models.IntervaloCronograma.objects.exclude(
+        cronograma=self.cronograma).filter(
+        producto=self.producto,
+        pedido=self.pedido,
+        tarea__in=tareas,
+        estado=planificacion.models.ESTADO_INTERVALO_ACTIVO)) ]
     if instante_modificado:
-      intervalos.append(instante_modificado)
+      if not instante_modificado.is_cancelado():
+        intervalos.append(instante_modificado)
     if instante_agregado:
       intervalos.append(instante_agregado)
     return intervalos

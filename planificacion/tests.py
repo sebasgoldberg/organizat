@@ -719,18 +719,21 @@ class PlanificarConMaquinasInactivas(PlanificadorTestCase):
 
       self.assertEqual(intervalos_con_maquinas_inactivas.count(),0)
 
-class CargaAutomaticaDeMaquinasEnCronograma(TestCase):
+class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
 
   fixtures = [ 'planificacion/fixtures/tests/planificar_sin_todas_las_maquinas.json' ]
 
   def setUp(self):
-    
     self.cronograma = Cronograma(descripcion='Carga Automática de Maquinas')
     self.cronograma.clean()
     self.cronograma.save()
 
+    post_save.connect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
     for pedido in Pedido.objects.all():
       self.cronograma.add_pedido(pedido)
+    post_save.disconnect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
 
   def test_planificar_sin_todas_las_maquinas(self):
 
@@ -911,17 +914,7 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
     except IntervaloFinalizadoEnCronogramaInactivo:
       pass
 
-    try:
-      intervalo_primer_grado.iniciar()
-      self.fail(_(u'No debería ser posible iniciar un intervalo perteneciente a un cronograma inactivo.'))
-    except IntervaloEnCursoEnCronogramaInactivo:
-      pass
-
-    try:
-      intervalo_primer_grado.cancelar()
-      self.fail(_(u'No debería ser posible cancelar un intervalo perteneciente a un cronograma inactivo.'))
-    except IntervaloCanceladoEnCronogramaInactivo:
-      pass
+    self.assertRaises(EstadoIntervaloCronogramaError,intervalo_primer_grado.cancelar)
 
     cronograma.activar()
 
@@ -1190,3 +1183,79 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
         self.assertEqual(0, cantidad_planificada)
         self.assertEqual(item.cantidad, item.get_cantidad_realizada(tarea))
         self.assertEqual(0, item.get_cantidad_no_planificada(tarea))
+
+  def test_cancelacion_parcial_replanificacion(self):
+    
+    self.invalidar_cronogramas()
+
+    self.assertEqual(0, IntervaloCronograma.objects.count())
+
+    self.crono_solo_neumaticos.planificar()
+    
+    for intervalo in self.crono_solo_neumaticos.get_intervalos_ordenados_por_dependencia():
+      # No se debería poder cancelar un intervalo que no esté activo
+      self.assertRaises(EstadoIntervaloCronogramaError,intervalo.cancelar)
+      break
+
+    self.crono_solo_neumaticos.activar()
+
+    intervalos = []
+    for intervalo in self.crono_solo_neumaticos.get_intervalos_ordenados_por_dependencia():
+      intervalos.append(intervalo)
+
+    # Se obtiene un intervalo con grado intermedio
+    indice_intermedio = len(intervalos) / 2
+    intervalo_cancelado = intervalos[indice_intermedio]
+
+    # Se asigna 10 a la cantidad de tarea real.
+    intervalo_cancelado.cantidad_tarea_real = 10
+    intervalo_cancelado.clean()
+    intervalo_cancelado.save()
+
+    intervalo_cancelado.cancelar()
+
+    # Luego de cancelar el intervalo se verifica que esté cancelado
+    # y que la cantidad de tarea real sea nula
+    self.assertTrue(intervalo_cancelado.is_cancelado())
+    self.assertEqual(intervalo_cancelado.cantidad_tarea_real, 0)
+
+    intervalo_cancelado.cantidad_tarea_real = 10
+    # No se puede modificar un intervalo cancelado
+    self.assertRaises(EstadoIntervaloCronogramaError, intervalo_cancelado.clean)
+
+    # Se verifica que los intervalos subsiguientes hayan sido cancelados.
+    for intervalo_dependiente in intervalo_cancelado.get_intervalos_dependientes():
+      self.assertTrue(intervalo_dependiente.is_cancelado())
+
+    self.crono_todo.planificar()
+
+    # Se verifica que la cantidad de intervalos planificados del pedido de
+    # neumáticos de autos sea igual a la cantidad de intervalos cancelados
+    pedido_neumaticos = self.crono_solo_neumaticos.get_pedidos()[0]
+    self.assertEqual(
+      self.crono_todo.intervalocronograma_set.filter(
+        pedido=pedido_neumaticos).count(),
+      self.crono_solo_neumaticos.intervalocronograma_set.filter(
+        estado=ESTADO_INTERVALO_CANCELADO).count())
+
+class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
+  
+  fixtures = [ 'planificacion/fixtures/tests/deberia_dejar_cancelar_intervalo_60.json' ]
+  
+  def _fixture_setup(self):
+    post_save.disconnect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
+    result = super(DeberiaDejarCancelarIntervalo60, self)._fixture_setup()
+    return result
+
+  def _fixture_teardown(self):
+    post_save.connect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
+    result = super(DeberiaDejarCancelarIntervalo60, self)._fixture_teardown()
+    return result
+
+  def test_cancelar_intervalo_60(self):
+
+    intervalo = IntervaloCronograma.objects.get(pk=60)
+
+    intervalo.cancelar()
