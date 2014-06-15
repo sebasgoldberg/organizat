@@ -19,10 +19,12 @@ class CronogramaAdmin(admin.ModelAdmin):
   list_per_page = 40
 
 class IntervaloCronogramaAdmin(admin.ModelAdmin):
-  list_display=['id', 'maquina', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'tiempo_intervalo', 
-    'in_maquina_cuello_botella', 'fecha_desde', 'fecha_hasta']
+  readonly_fields=['id','estado']
+  list_display=['id', 'maquina', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'cantidad_tarea_real',
+    'estado', 'tiempo_intervalo', 'in_maquina_cuello_botella', 'fecha_desde', 'fecha_hasta' ]
   list_display_links = ('id',)
   list_filter=['cronograma', 'maquina', 'tarea', 'pedido', 'producto', CuelloBotellaListFilter]
+  list_editable=['cantidad_tarea_real']
   list_per_page = 40
   date_hierarchy='fecha_desde'
 

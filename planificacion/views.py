@@ -40,6 +40,15 @@ def desactivar(request,id_cronograma):
     messages.error(request, e)
   return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
 
+def finalizar(request,id_cronograma):
+  cronograma = Cronograma.objects.get(id=id_cronograma)
+  try:
+    cronograma.finalizar()
+    messages.success(request, _(u'Cronograma finalizado en forma exitosa.'))
+  except ValidationError as e:
+    messages.error(request, e)
+  return redirect('/admin/planificacion/cronograma/%s/' % id_cronograma)
+
 def calendario_cronograma(request, id_cronograma):
   cronograma = Cronograma.objects.get(id=id_cronograma)
   return render(request,

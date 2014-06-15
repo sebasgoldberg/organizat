@@ -18,6 +18,7 @@ urlpatterns = patterns('planificacion.views',
     url(r'^invalidar/(\d+)/$', 'invalidar'),
     url(r'^activar/(\d+)/$', 'activar'),
     url(r'^desactivar/(\d+)/$', 'desactivar'),
+    url(r'^finalizar/(\d+)/$', 'finalizar'),
     url(r'^calendario/cronograma/(\d+)/$', 'calendario_cronograma'),
 )
 

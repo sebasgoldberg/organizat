@@ -111,15 +111,15 @@ LOGGING = {
   'disable_existing_loggers': False,
   'handlers': {
     'file': {
-      'level': 'DEBUG',
+      'level': 'INFO',
       'class': 'logging.FileHandler',
       'filename': 'debug.log',
     },
   },
   'loggers': {
     'planificacion': {
-      #'handlers': ['file'],
-      'level': 'DEBUG',
+      'handlers': ['file'],
+      'level': 'INFO',
       'propagate': True,
     },
   },

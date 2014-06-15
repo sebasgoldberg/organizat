@@ -859,34 +859,31 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
     except TareaRealSuperaPlanificada:
       pass
 
-    intervalo_dependiente.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
-    try:
-      intervalo_dependiente.clean()
-      self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
-        intervalo_dependiente, intervalo_primer_grado))
-    except TareaRealNoRespetaDependencias:
-      pass
-
     intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
     intervalo_primer_grado.clean()
     intervalo_primer_grado.save()
 
-    intervalo_dependiente.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea / 2
-    intervalo_dependiente.clean()
-    intervalo_dependiente.save()
-
-    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea_real - 1
     try:
-      intervalo_primer_grado.clean()
+      intervalo_dependiente.finalizar(intervalo_primer_grado.cantidad_tarea / 2)
       self.fail(_(u'La cantidad de tarea real en el intervalo %s supera la cantidad de tarea real en el intervalo %s.') % (
         intervalo_dependiente, intervalo_primer_grado))
     except TareaRealNoRespetaDependencias:
       pass
 
+    intervalo_primer_grado.finalizar()
+
+    intervalo_primer_grado.cantidad_tarea_real = intervalo_primer_grado.cantidad_tarea_real - 1
+    self.assertRaises(EstadoIntervaloCronogramaError,intervalo_primer_grado.clean)
+
+    self.assertRaises(TareaRealNoRespetaDependencias,
+      intervalo_dependiente.finalizar, intervalo_dependiente.cantidad_tarea)
+
+    intervalo_dependiente.finalizar(intervalo_primer_grado.cantidad_tarea_real)
+
     try:
       cronograma.desactivar()
       self.fail(_(u'No debería poder desactivarse un cronograma que tiene intervalos con cantidad de tarea real.'))
-    except TareaRealEnCronogramaInactivo:
+    except EstadoIntervaloCronogramaError:
       pass
 
 class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
@@ -934,12 +931,6 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
     intervalo_primer_grado = IntervaloCronograma.objects.filter(cronograma=cronograma, 
       tarea=tarea_primer_grado).order_by('fecha_desde').first()
-
-    try:
-      intervalo_primer_grado.finalizar()
-      self.fail(_(u'No debería ser posible finalizar un intervalo con cantidad real nula'))
-    except IntervaloFinalizadoConCantidadNula:
-      pass
 
     intervalo_primer_grado.finalizar(intervalo_primer_grado.cantidad_tarea / 2)
 
@@ -1024,7 +1015,7 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
       self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
       self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
 
-class ActivarAnularFinalizarIntervalosTestCase(PlanificadorTestCase):
+class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
   fixtures = [ 'planificacion/fixtures/tests/planificar_con_calendario.json' ]
 
@@ -1034,12 +1025,36 @@ class ActivarAnularFinalizarIntervalosTestCase(PlanificadorTestCase):
     self.crono_todo = Cronograma.objects.get(descripcion='Cronograma con pedido de neumáticos de motos y de autos')
     
     self.crono_solo_neumaticos.fecha_inicio = self.crono_todo.fecha_inicio
+    self.crono_solo_neumaticos.tiempo_minimo_intervalo = 60
+    self.crono_todo.tiempo_minimo_intervalo = 60
     self.crono_solo_neumaticos.save()
+    self.crono_todo.save()
+
+    Calendario.objects.all().delete()
+
+    calendario = Calendario()
+    calendario.clean()
+    calendario.save()
+
+    # se define calendario lu a vi de 8 a 12
+    calendario.add_intervalos_laborables(
+      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
+        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
+      hora_desde=T(8), hora_hasta=T(12))
+ 
+    # se redefine calendario lu a vi de 8 a 12 y de 13 a 17
+    calendario.add_intervalos_laborables(
+      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
+        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
+      hora_desde=T(13),hora_hasta=T(17))
 
   def invalidar_cronogramas(self):
     
-    self.crono_solo_neumaticos.invalidar(forzar=True)
-    self.crono_todo.invalidar(forzar=True)
+    for c in Cronograma.objects.all():
+      c.invalidar(forzar=True)
+
+    self.crono_solo_neumaticos = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
+    self.crono_todo = Cronograma.objects.get(descripcion='Cronograma con pedido de neumáticos de motos y de autos')
 
   def test_cantidad_planificada_respeta_cantidad_ya_activa(self):
 
@@ -1131,39 +1146,47 @@ class ActivarAnularFinalizarIntervalosTestCase(PlanificadorTestCase):
     self.assertEqual(
       self.crono_solo_neumaticos.intervalocronograma_set.count(), 0)
 
-  def test_error_no_se_puede_planificar_luego_de_activar(self):
+  def test_finalizacion_parcial_replanificacion(self):
     
     self.invalidar_cronogramas()
 
-    Calendario.objects.all().delete()
-
-    calendario = Calendario()
-    calendario.clean()
-    calendario.save()
-
-    # se define calendario lu a vi de 8 a 12
-    calendario.add_intervalos_laborables(
-      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
-        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
-      hora_desde=T(8), hora_hasta=T(12))
- 
-    # se redefine calendario lu a vi de 8 a 12 y de 13 a 17
-    calendario.add_intervalos_laborables(
-      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
-        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
-      hora_desde=T(13),hora_hasta=T(17))
-
-    self.crono_solo_neumaticos.optimizar_planificacion = True
-    self.crono_solo_neumaticos.tiempo_minimo_intervalo = 60
-    self.crono_solo_neumaticos.save()
-    self.crono_todo.optimizar_planificacion = True
-    self.crono_todo.tiempo_minimo_intervalo = 60
-    self.crono_todo.save()
+    self.assertEqual(0, IntervaloCronograma.objects.count())
 
     self.crono_solo_neumaticos.planificar()
     self.crono_solo_neumaticos.activar()
 
+    i = 1  
+    for intervalo in self.crono_solo_neumaticos.intervalocronograma_set.all():
+      i += 1
+      intervalo.finalizar(intervalo.cantidad_tarea / i)
+
+    self.assertEqual(0, IntervaloCronograma.objects.exclude(
+      estado=ESTADO_INTERVALO_FINALIZADO).count())
+
+    pedido_solo_neuma_auto = self.crono_solo_neumaticos.get_pedidos()[0]
+
+    for item in pedido_solo_neuma_auto.get_items():
+      for tarea in item.producto.get_tareas():
+        cantidad_planificada = item.get_cantidad_planificada(tarea)
+        self.assertEqual(0, cantidad_planificada)
+        self.assertLess(0, item.get_cantidad_realizada(tarea))
+        self.assertLess(0, item.get_cantidad_no_planificada(tarea))
+
     self.crono_todo.planificar()
     self.crono_todo.activar()
 
+    for item in pedido_solo_neuma_auto.get_items():
+      for tarea in item.producto.get_tareas():
+        cantidad_planificada = item.get_cantidad_planificada(tarea)
+        self.assertLess(0, cantidad_planificada)
+        self.assertLess(0, item.get_cantidad_realizada(tarea))
+        self.assertEqual(0, item.get_cantidad_no_planificada(tarea))
 
+    self.crono_todo.finalizar()
+
+    for item in pedido_solo_neuma_auto.get_items():
+      for tarea in item.producto.get_tareas():
+        cantidad_planificada = item.get_cantidad_planificada(tarea)
+        self.assertEqual(0, cantidad_planificada)
+        self.assertEqual(item.cantidad, item.get_cantidad_realizada(tarea))
+        self.assertEqual(0, item.get_cantidad_no_planificada(tarea))

@@ -12,6 +12,9 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone as TZ
 from datetime import timedelta as TD
+import logging
+
+logger = logging.getLogger(__name__)
 
 """
 Excepcione de validación de tareas reales.
@@ -212,7 +215,8 @@ class Cronograma(models.Model):
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
-  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
+  estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
+    choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
 
   class Meta:
     ordering = ['-id']
@@ -274,6 +278,9 @@ class Cronograma(models.Model):
   def is_activo(self):
     return self.estado == ESTADO_CRONOGRAMA_ACTIVO
 
+  def is_finalizado(self):
+    return self.estado == ESTADO_CRONOGRAMA_FINALIZADO
+
   @transaction.atomic
   def planificar(self):
     """
@@ -330,6 +337,30 @@ class Cronograma(models.Model):
     self.clean()
     self.save()
 
+  @transaction.atomic
+  def finalizar(self):
+    if not self.is_activo():
+      raise EstadoCronogramaError(_(u'El cronograma %s no se encuentra activo.') % self)
+    self.estado = ESTADO_CRONOGRAMA_FINALIZADO
+    self.save()
+    self.finalizar_intervalos()
+    self.clean()
+    self.save()
+
+  def get_intervalos_ordenados_por_dependencia(self, **filtros_adicionales):
+    for pedido in self.get_pedidos():
+      for producto in pedido.get_productos():
+        for tarea in producto.get_tareas_ordenadas_por_dependencia():
+          for intervalo in self.intervalocronograma_set.filter(
+            pedido=pedido, producto=producto, tarea=tarea,
+            **filtros_adicionales):
+            yield intervalo
+
+  def finalizar_intervalos(self):
+    for intervalo in self.get_intervalos_ordenados_por_dependencia(
+      estado=ESTADO_INTERVALO_ACTIVO):
+      intervalo.finalizar()
+
   def desactivar_intervalos(self):
     for intervalo in self.intervalocronograma_set.all():
       intervalo.desactivar()
@@ -366,7 +397,7 @@ class Cronograma(models.Model):
     intervalos_propios = IntervaloCronograma.objects.filter(
       cronograma=self)
     intervalos_activos = IntervaloCronograma.objects.filter(
-      cronograma__estado=ESTADO_CRONOGRAMA_ACTIVO, 
+      cronograma__estado__in=[ESTADO_CRONOGRAMA_ACTIVO, ESTADO_CRONOGRAMA_FINALIZADO],
       fecha_hasta__gte=self.fecha_inicio)
     resultado = intervalos_propios | intervalos_activos
     if maquina is not None:
@@ -433,7 +464,7 @@ class Cronograma(models.Model):
     return self.pedidocronograma_set.create(pedido=pedido)
 
   def validar_estado(self):
-    if not self.is_activo():
+    if not self.is_activo() and not self.is_finalizado():
 
       cantidad_con_tarea_real= self.intervalocronograma_set.filter(
         cantidad_tarea_real__gt=0).count()
@@ -497,7 +528,7 @@ class IntervaloCronograma(models.Model):
   cantidad_tarea = models.DecimalField( editable=False, default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Planificada'),
     help_text=_(u'Cantidad de tarea a producir en el intervalo.'))
-  cantidad_tarea_real = models.DecimalField( editable=False, default=0,
+  cantidad_tarea_real = models.DecimalField( default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Real'), 
     help_text=_(u'Cantidad de tarea producida (real).'))
   tiempo_intervalo = models.DecimalField(
@@ -507,7 +538,8 @@ class IntervaloCronograma(models.Model):
     verbose_name=_(u'Fecha desde'), null=False, blank=False)
   fecha_hasta = models.DateTimeField(
     verbose_name=_(u'Fecha hasta'), null=True, blank=False)
-  estado = models.IntegerField(verbose_name=_(u'Estado'), choices=ESTADOS_INTERVALOS, default=0)
+  estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
+    choices=ESTADOS_INTERVALOS, default=0)
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
@@ -543,14 +575,14 @@ class IntervaloCronograma(models.Model):
       return total
 
   @staticmethod
-  def get_cantidad_realizada(item, tarea):
-    total = IntervaloCronograma.objects.filter(
+  def get_cantidad_realizada(item, tarea, ids_intervalos_excluir=[]):
+    intervalos_item = IntervaloCronograma.objects.filter(
       pedido=item.pedido,
       tarea=tarea,
       producto=item.producto,
       estado=ESTADO_INTERVALO_FINALIZADO
-      ).aggregate(
-        total=models.Sum('cantidad_tarea'))['total']
+      ).exclude(id__in=ids_intervalos_excluir)
+    total = intervalos_item.aggregate(total=models.Sum('cantidad_tarea_real'))['total']
     if total is None:
       return 0
     else:
@@ -564,9 +596,13 @@ class IntervaloCronograma(models.Model):
   def finalizar(self, cantidad_tarea_real=None):
     if cantidad_tarea_real is not None:
       self.cantidad_tarea_real = cantidad_tarea_real
+    elif self.cantidad_tarea_real == 0:
+      self.cantidad_tarea_real = self.cantidad_tarea
     self.estado = ESTADO_INTERVALO_FINALIZADO
     self.clean()
     self.save()
+    logger.info(_('Intervalo %s:\n\tEstado modificado a: %s') %(
+      self, dict(ESTADOS_INTERVALOS)[self.estado]))
 
   def is_planificado(self):
     return self.estado == ESTADO_INTERVALO_PLANIFICADO
@@ -700,14 +736,19 @@ class IntervaloCronograma(models.Model):
 
   def validar_cantidad_real_dependencias(self):
 
+    if not self.is_finalizado():
+      return
+
     if self.cantidad_tarea_real > 0:
       cantidades_reales_tareas = {}
       for listado_dependencias in self.producto.get_listado_secuencias_dependencias():
         tarea_anterior = None
         for tarea in listado_dependencias:
           if not tarea.id in cantidades_reales_tareas:
-            cantidades_reales_tareas[tarea.id] = self.cronograma.get_cantidad_real_tarea(
-              tarea, ids_intervalos_excluir=[self.id])
+            cantidades_reales_tareas[tarea.id] = self.pedido.get_item_producto(
+              self.producto).get_cantidad_realizada(tarea,[tarea.id])
+            #cantidades_reales_tareas[tarea.id] = self.cronograma.get_cantidad_real_tarea(
+              #tarea, ids_intervalos_excluir=[self.id]) 
             if tarea.id == self.tarea.id:
               cantidades_reales_tareas[tarea.id] += self.cantidad_tarea_real
           if tarea_anterior is not None:
@@ -721,7 +762,7 @@ class IntervaloCronograma(models.Model):
   def validar_cantidad_real(self):
     if self.cantidad_tarea_real > 0:
       # Se verifica estado del cronograma para poder asignar cantidad real.
-      if not self.cronograma.is_activo():
+      if not self.cronograma.is_activo() and not self.cronograma.is_finalizado():
         raise TareaRealEnCronogramaInactivo(_(u'La cantidad de tarea real solo puede ser asignada en intervalos pertenecientes a cronogramas activos.'))
 
     if self.cantidad_tarea_real > self.cantidad_tarea:
@@ -741,7 +782,13 @@ class IntervaloCronograma(models.Model):
     return self.estado == ESTADO_INTERVALO_ACTIVO
 
   def validar_estado(self):
-    if not self.cronograma.is_activo():
+    if self.id:
+      self_in_db = IntervaloCronograma.objects.get(pk=self.id)
+      if self_in_db.is_finalizado():
+        raise EstadoIntervaloCronogramaError(_(u'El intervalo %s '+
+          u'no puede ser modificado ya que su estado es finalizado') % 
+          self_in_db)
+    if not self.cronograma.is_activo() and not self.cronograma.is_finalizado():
 
       if self.is_en_curso():
         raise IntervaloEnCursoEnCronogramaInactivo(

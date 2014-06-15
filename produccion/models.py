@@ -391,9 +391,9 @@ class ItemPedido(models.Model):
     from planificacion.models import IntervaloCronograma as IC
     return IC.get_cantidad_planificada(self, tarea)
 
-  def get_cantidad_realizada(self, tarea):
+  def get_cantidad_realizada(self, tarea, ids_intervalos_excluir=[]):
     from planificacion.models import IntervaloCronograma as IC
-    return IC.get_cantidad_realizada(self, tarea)
+    return IC.get_cantidad_realizada(self, tarea, ids_intervalos_excluir)
 
   def get_cantidad_no_planificada(self, tarea):
     return (self.cantidad - self.get_cantidad_realizada(tarea)

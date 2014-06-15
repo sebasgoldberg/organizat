@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from datetime import timedelta as TD
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,14 @@ class GerenciadorDependencias:
       else:
         tiempo = (fecha - intervalo.fecha_desde).total_seconds()
       cantidad_tarea += float(tiempo) / float(intervalo.get_tiempo_tarea() * 60)
-    return cantidad_tarea
+
+    # Se suma la cantidad de tarea real de intervalos que ya se
+    # encuentran finalizados.
+    item = self.pedido.get_item_producto(self.producto)
+    from planificacion.models import IntervaloCronograma
+    cantidad_realizada = IntervaloCronograma.get_cantidad_realizada(item, tarea)
+
+    return float(cantidad_tarea) + float(cantidad_realizada)
 
   def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None, instante_modificado=None):
     operaciones = 0
@@ -168,11 +176,13 @@ class GerenciadorDependencias:
         try:
           intervalo = self.crear_intervalo(maquina, tarea, hueco.fecha_desde, tiempo_intervalo)
           logger.debug(_('Se ha creado en forma exitosa el intervalo %s.') % intervalo)
-        except ValidationError as e:
-          logger.exception(e)
+        except ValidationError:
+          logger.debug(traceback.format_exc())
           if self.cronograma.optimizar_planificacion:
             intervalo = self.crear_intervalo_optimizado_en_hueco(maquina, tarea, hueco, tiempo_intervalo)
         if intervalo is not None:
+          logger.info(_('Intervalo agregado a cronograma %s:\n\t%s') % (
+            self.cronograma, intervalo))
           tiempo = tiempo - intervalo.tiempo_intervalo
         elif ( tiempo_intervalo > 0 and
           self.cronograma.get_intervalos_propios_y_activos().filter(
