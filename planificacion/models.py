@@ -3,8 +3,8 @@ from django.db import models
 from produccion.models import *
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
-from planificacion.strategy.hago_lo_que_puedo import PlanificadorHagoLoQuePuedo
-from planificacion.strategy import lineal_continuo 
+from planificacion.strategy import PlanificadorHagoLoQuePuedo
+from planificacion.strategy import PlanificadorLinealContinuo
 from planificacion.dependencias import GerenciadorDependencias
 from django.core.exceptions import ValidationError
 import datetime
@@ -66,7 +66,7 @@ ESTRATEGIAS=(
 
 CLASES_ESTRATEGIAS={
   0: PlanificadorHagoLoQuePuedo,
-  2: lineal_continuo.PlanificadorLinealContinuo, }
+  2: PlanificadorLinealContinuo, }
 
 ESTADO_CRONOGRAMA_INVALIDO=0
 ESTADO_CRONOGRAMA_VALIDO=1
