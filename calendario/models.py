@@ -1,7 +1,7 @@
 # coding=utf-8
 from django.db import models
 from django.utils.translation import ugettext as _
-from planificacion.models import Hueco
+from utils import Hueco
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from datetime import datetime as DT

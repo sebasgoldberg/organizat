@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+import calendario.models
 
 class TareaAnteriorNoExiste(Exception):
   pass
@@ -11,14 +12,13 @@ class CalendarioProduccion:
 
   @staticmethod
   def get_instance():
-    import calendario.models
     try:
       return calendario.models.Calendario.objects.get()
     except calendario.models.Calendario.DoesNotExist:
-      calendario = calendario.models.Calendario()
-      calendario.clean()
-      calendario.save()
-      return calendario
+      instance = calendario.models.Calendario()
+      instance.clean()
+      instance.save()
+      return instance
 
 class Maquina(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
@@ -386,18 +386,6 @@ class ItemPedido(models.Model):
     verbose_name = _(u"Item pedido")
     verbose_name_plural = _(u"Items pedidos")
     unique_together = (('pedido', 'producto',),)
-
-  def get_cantidad_planificada(self, tarea):
-    from planificacion.models import IntervaloCronograma as IC
-    return IC.get_cantidad_planificada(self, tarea)
-
-  def get_cantidad_realizada(self, tarea, ids_intervalos_excluir=[]):
-    from planificacion.models import IntervaloCronograma as IC
-    return IC.get_cantidad_realizada(self, tarea, ids_intervalos_excluir)
-
-  def get_cantidad_no_planificada(self, tarea):
-    return (self.cantidad - self.get_cantidad_realizada(tarea)
-      - self.get_cantidad_planificada(tarea))
 
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete

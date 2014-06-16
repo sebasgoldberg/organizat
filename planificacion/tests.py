@@ -80,9 +80,9 @@ class TiempoRealizacionTareaTestCase(TestCase):
     TareaProducto.objects.create(tarea=T2,producto=P3)
     TareaProducto.objects.create(tarea=T3,producto=P3)
 
-    D1=Pedido.objects.create(descripcion='D1')
-    D2=Pedido.objects.create(descripcion='D2')
-    D3=Pedido.objects.create(descripcion='D3')
+    D1=PedidoPlanificable.objects.create(descripcion='D1')
+    D2=PedidoPlanificable.objects.create(descripcion='D2')
+    D3=PedidoPlanificable.objects.create(descripcion='D3')
 
     """
           D1    D2    D3
@@ -158,9 +158,9 @@ class IntervaloCronogramaTestCase(TestCase):
     TareaProducto.objects.create(tarea=T2,producto=P3)
     TareaProducto.objects.create(tarea=T3,producto=P3)
 
-    D1=Pedido.objects.create(descripcion='D1')
-    D2=Pedido.objects.create(descripcion='D2')
-    D3=Pedido.objects.create(descripcion='D3')
+    D1=PedidoPlanificable.objects.create(descripcion='D1')
+    D2=PedidoPlanificable.objects.create(descripcion='D2')
+    D3=PedidoPlanificable.objects.create(descripcion='D3')
 
     """
           D1    D2    D3
@@ -196,7 +196,7 @@ class IntervaloCronogramaTestCase(TestCase):
     M1 = Maquina.objects.get(descripcion='M1')
     T1 = Tarea.objects.get(descripcion='T1')
     P1 = Producto.objects.get(descripcion='P1')
-    D1 = Pedido.objects.get(descripcion='D1')
+    D1 = PedidoPlanificable.objects.get(descripcion='D1')
     
     intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
       tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
@@ -239,7 +239,7 @@ class TareaDependienteTestCase(TestCase):
     TareaProducto.objects.create(tarea=T1,producto=P1)
     TareaProducto.objects.create(tarea=T2,producto=P1)
 
-    D1=Pedido.objects.create(descripcion='D1')
+    D1=PedidoPlanificable.objects.create(descripcion='D1')
 
     D1.add_item(P1,100)
 
@@ -264,7 +264,7 @@ class TareaDependienteTestCase(TestCase):
     T1 = Tarea.objects.get(descripcion='T1')
     T2 = Tarea.objects.get(descripcion='T2')
     P1 = Producto.objects.get(descripcion='P1')
-    D1 = Pedido.objects.get(descripcion='D1')
+    D1 = PedidoPlanificable.objects.get(descripcion='D1')
 
     # Se verifica la obtención de tareas ordenadas por grado de dependencia
     tareas_ordenadas_por_grado_dependencia=P1.get_tareas_ordenadas_por_dependencia()
@@ -435,7 +435,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
     TareaProducto.objects.create(tarea=T1,producto=P1)
     TareaProducto.objects.create(tarea=T2,producto=P1)
 
-    D1=Pedido.objects.create(descripcion='D1')
+    D1=PedidoPlanificable.objects.create(descripcion='D1')
 
     D1.add_item(P1,100)
 
@@ -455,7 +455,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
   def test_completar_cronograma(self):
  
     cronograma = Cronograma.objects.get(descripcion='CRON1')
-    D1 = Pedido.objects.get(descripcion='D1')
+    D1 = PedidoPlanificable.objects.get(descripcion='D1')
     P1 = Producto.objects.get(descripcion='P1')
     T1 = Tarea.objects.get(descripcion='T1')
     T2 = Tarea.objects.get(descripcion='T2')
@@ -542,7 +542,7 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
   def setUp(self):
 
-    pedido=Pedido(descripcion='D4')
+    pedido=PedidoPlanificable(descripcion='D4')
     pedido.clean()
     pedido.save()
 
@@ -730,7 +730,7 @@ class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
 
     post_save.connect(add_maquinas_posibles_to_cronograma, 
       sender=PedidoCronograma)
-    for pedido in Pedido.objects.all():
+    for pedido in PedidoPlanificable.objects.all():
       self.cronograma.add_pedido(pedido)
     post_save.disconnect(add_maquinas_posibles_to_cronograma, 
       sender=PedidoCronograma)
@@ -821,7 +821,12 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
 
     cronograma = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
 
-    algun_producto_del_cronograma = cronograma.get_pedidos()[0].get_items()[0].producto
+    algun_producto_del_cronograma = None
+    for pedido in cronograma.get_pedidos():
+      for item in pedido.get_items():
+        algun_producto_del_cronograma = item.producto
+        break
+      break
 
     tarea_primer_grado = algun_producto_del_cronograma.get_tareas_ordenadas_por_dependencia()[0]
 
@@ -899,7 +904,12 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
     cronograma = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
 
-    algun_producto_del_cronograma = cronograma.get_pedidos()[0].get_items()[0].producto
+    algun_producto_del_cronograma = None
+    for pedido in cronograma.get_pedidos():
+      for item in pedido.get_items():
+        algun_producto_del_cronograma = item.producto
+        break
+      break
 
     tarea_primer_grado = algun_producto_del_cronograma.get_tareas_ordenadas_por_dependencia()[0]
 
@@ -1059,7 +1069,7 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
     self.crono_todo.planificar()
     self.crono_todo.activar()
 
-    for pedido in Pedido.objects.all():
+    for pedido in PedidoPlanificable.objects.all():
       for item in pedido.get_items():
         for tarea in item.producto.get_tareas():
           cantidad_planificada = item.get_cantidad_planificada(tarea)
