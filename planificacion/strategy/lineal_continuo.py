@@ -5,7 +5,6 @@ from django.utils.translation import ugettext_lazy as _
 from math import ceil
 from planificacion.strategy.base import PlanificadorStrategy
 from planificacion.strategy.utils import add_keys_to_dict
-from planificacion.dependencias import GerenciadorDependencias
 import planificacion.models 
 from django.core.exceptions import ValidationError
 import datetime
@@ -112,7 +111,6 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
       for pedido in self.cronograma.get_pedidos():
         for producto in pedido.get_productos():
-          gerenciador_dependencias = GerenciadorDependencias(self.cronograma, producto, pedido)
           for tarea in producto.get_tareas_maquina(maquina):
             clave = (maquina.id, tarea.id, producto.id, pedido.id)
             if clave in self.tiempos_intervalos_registrados:
@@ -176,7 +174,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
     for pedido in self.cronograma.get_pedidos():
       for producto in pedido.get_productos():
-        gerenciador_dependencias = GerenciadorDependencias(self.cronograma, producto, pedido)
+        gerenciador_dependencias = self.cronograma.get_gerenciador_dependencias(producto, pedido)
         for tarea in producto.get_tareas_ordenadas_por_dependencia():
           for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, producto):
             clave = (maquina.id, tarea.id, producto.id, pedido.id)

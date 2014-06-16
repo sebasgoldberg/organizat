@@ -150,6 +150,9 @@ class Cronograma(models.Model):
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
 
+  def get_gerenciador_dependencias(self, producto, pedido):
+    return GerenciadorDependencias(self, producto, pedido)
+
   def get_cantidad_real_tarea(self, tarea, ids_intervalos_excluir=[]):
     qs = self.intervalocronograma_set.filter(tarea=tarea).exclude(
       id__in=ids_intervalos_excluir).aggregate(total_real=models.Sum(

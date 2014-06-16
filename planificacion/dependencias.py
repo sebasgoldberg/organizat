@@ -110,8 +110,7 @@ class GerenciadorDependencias:
     # Se suma la cantidad de tarea real de intervalos que ya se
     # encuentran finalizados.
     item = self.pedido.get_item_producto(self.producto)
-    from planificacion.models import IntervaloCronograma
-    cantidad_realizada = IntervaloCronograma.get_cantidad_realizada(item, tarea)
+    cantidad_realizada = planificacion.models.IntervaloCronograma.get_cantidad_realizada(item, tarea)
 
     return float(cantidad_tarea) + float(cantidad_realizada)
 
