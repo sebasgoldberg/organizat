@@ -288,7 +288,8 @@ class TareaDependienteTestCase(TestCase):
     self.assertEqual(I2.get_fecha_desde(),I1.get_fecha_hasta())
 
     # Se verifica que la obtención de los intervalos sea correcta:
-    intervalos = GerenciadorDependencias.crear_desde_instante(I2).get_intervalos([T1,T2],instante_agregado=I2)
+    intervalos = [ i for i in GerenciadorDependencias.crear_desde_instante(
+      I2).get_intervalos([T1,T2],instante_agregado=I2) ]
     self.assertEqual(len(intervalos),2)
 
     try:
@@ -336,7 +337,7 @@ class TareaDependienteTestCase(TestCase):
 
     # Se verifica que la obtención de los intervalos sea correcta:
     gd = GerenciadorDependencias.crear_desde_instante(I3)
-    intervalos = gd.get_intervalos([T1,T2],instante_borrado=I3)
+    intervalos = [i for i in gd.get_intervalos([T1,T2],instante_borrado=I3)]
     self.assertEqual(len(intervalos),2)
 
     # Se verifica que no se hata recuperado el intervalo I3
@@ -1159,7 +1160,7 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
     self.crono_solo_neumaticos.activar()
 
     i = 1  
-    for intervalo in self.crono_solo_neumaticos.intervalocronograma_set.all():
+    for intervalo in self.crono_solo_neumaticos.get_intervalos_ordenados_por_dependencia():
       i += 1
       intervalo.finalizar(intervalo.cantidad_tarea / i)
 

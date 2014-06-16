@@ -112,6 +112,7 @@ LOGGING = {
   'handlers': {
     'file': {
       'level': 'INFO',
+      #'level': 'DEBUG',
       'class': 'logging.FileHandler',
       'filename': 'debug.log',
     },
@@ -120,6 +121,7 @@ LOGGING = {
     'planificacion': {
       'handlers': ['file'],
       'level': 'INFO',
+      #'level': 'DEBUG',
       'propagate': True,
     },
   },

@@ -1,7 +1,6 @@
 # coding=utf-8
 from django.utils.translation import ugettext as _
 from django.utils.translation import ugettext_lazy
-import planificacion.models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from datetime import timedelta as TD
@@ -57,29 +56,30 @@ class GerenciadorDependencias:
       self.validar_dependencias(instante.tarea, tarea_posterior, instante_modificado=instante)
 
   def get_intervalos(self, tareas, instante_agregado=None, instante_borrado=None, instante_modificado=None):
-    intervalos_set = planificacion.models.IntervaloCronograma.objects
+
+    intervalos_set = (
+      self.cronograma.get_intervalos_propios_no_cancelados() |
+      self.cronograma.get_intervalos_activos_otros_cronogramas() )
+
+    intervalos_set = intervalos_set.filter(
+      producto=self.producto,
+      pedido=self.pedido,
+      tarea__in=tareas)
+
     if instante_borrado:
       intervalos_set = intervalos_set.exclude(id=instante_borrado.id)
     if instante_modificado:
       intervalos_set = intervalos_set.exclude(id=instante_modificado.id)
-    intervalos = [ i for i in ( intervalos_set.filter(
-      cronograma=self.cronograma,
-      producto=self.producto,
-      pedido=self.pedido,
-      tarea__in=tareas).exclude(
-        estado=planificacion.models.ESTADO_INTERVALO_CANCELADO) | 
-      planificacion.models.IntervaloCronograma.objects.exclude(
-        cronograma=self.cronograma).filter(
-        producto=self.producto,
-        pedido=self.pedido,
-        tarea__in=tareas,
-        estado=planificacion.models.ESTADO_INTERVALO_ACTIVO)) ]
+
+    for i in intervalos_set:
+      yield i
+
     if instante_modificado:
       if not instante_modificado.is_cancelado():
-        intervalos.append(instante_modificado)
+        yield instante_modificado
+
     if instante_agregado:
-      intervalos.append(instante_agregado)
-    return intervalos
+      yield instante_agregado
 
   def get_particion_ordenada_temporal(self, intervalos, tiempos_a_incluir=[]):
     particion = []
@@ -110,7 +110,7 @@ class GerenciadorDependencias:
     # Se suma la cantidad de tarea real de intervalos que ya se
     # encuentran finalizados.
     item = self.pedido.get_item_producto(self.producto)
-    cantidad_realizada = planificacion.models.IntervaloCronograma.get_cantidad_realizada(item, tarea)
+    cantidad_realizada = item.get_cantidad_realizada(tarea)
 
     return float(cantidad_tarea) + float(cantidad_realizada)
 
@@ -122,11 +122,17 @@ class GerenciadorDependencias:
     if operaciones <> 1:
       raise Exception('Solo puede informar una única operación por instante')
 
-    intervalos=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instante_borrado, instante_modificado)
+    intervalos_iter=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instante_borrado, instante_modificado)
+    intervalos = [i for i in intervalos_iter]
+    logger.debug('Se validan dependencia entre las tareas %s (anterior) y %s (posterior) utilizando los siguientes intervalos:')
+    logger.debug(intervalos)
     particion_temporal = self.get_particion_ordenada_temporal(intervalos)
+    logger.debug('Particion temporal utilizada: %s' % particion_temporal)
     for t in particion_temporal:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
+      logger.debug('Cantidad tarea %s anterior a %s: %s' % (t, tarea_anterior, cantidad_tarea_anterior))
+      logger.debug('Cantidad tarea %s posterior a %s: %s' % (t, tarea_posterior, cantidad_tarea_posterior))
       # @todo Hacer configurable la tolerancia a la diferencia de cantidad.
       if ( cantidad_tarea_posterior - cantidad_tarea_anterior ) > self.get_tolerancia():
         raise ValidationError(
@@ -134,10 +140,9 @@ class GerenciadorDependencias:
           (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
 
   def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
-    intervalo =\
-      planificacion.models.IntervaloCronograma(cronograma=self.cronograma, maquina=maquina, tarea=tarea,
-      producto=self.producto, pedido=self.pedido, fecha_desde=fecha_desde, 
-      tiempo_intervalo=tiempo_intervalo)
+    intervalo = self.cronograma.crear_intervalo(
+      maquina=maquina, tarea=tarea, producto=self.producto,
+      pedido=self.pedido, fecha_desde=fecha_desde, tiempo_intervalo=tiempo_intervalo)
     intervalo.clean()
     if save:
       intervalo.save()

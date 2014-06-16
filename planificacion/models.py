@@ -150,6 +150,13 @@ class Cronograma(models.Model):
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
 
+  def crear_intervalo(self, maquina, tarea, producto, pedido,
+    fecha_desde, tiempo_intervalo):
+    return IntervaloCronograma(
+      cronograma=self, maquina=maquina, tarea=tarea, producto=producto,
+      pedido=pedido, fecha_desde=fecha_desde, 
+      tiempo_intervalo=tiempo_intervalo)
+
   def get_gerenciador_dependencias(self, producto, pedido):
     return GerenciadorDependencias(self, producto, pedido)
 
@@ -324,16 +331,31 @@ class Cronograma(models.Model):
       if maquina.produce(tarea, producto):
         yield maquina
 
+  def get_intervalos_propios_no_cancelados(self):
+
+    return IntervaloCronograma.objects.filter(
+      cronograma=self).exclude(estado=ESTADO_INTERVALO_CANCELADO)
+
+  def get_intervalos_activos_otros_cronogramas(self):
+
+    return IntervaloCronograma.objects.filter(
+      estado=ESTADO_INTERVALO_ACTIVO).exclude(
+      cronograma=self)
 
   def get_intervalos_propios_y_activos(self, maquina=None):
+
     intervalos_propios = IntervaloCronograma.objects.filter(
       cronograma=self).exclude(estado=ESTADO_INTERVALO_CANCELADO)
+
     intervalos_activos = IntervaloCronograma.objects.filter(
       estado__in=[ESTADO_INTERVALO_ACTIVO, ESTADO_INTERVALO_FINALIZADO],
       fecha_hasta__gte=self.fecha_inicio)
+
     resultado = intervalos_propios | intervalos_activos
+
     if maquina is not None:
       resultado = resultado.filter(maquina=maquina)
+
     return resultado
 
   def get_huecos(self, maquina):
