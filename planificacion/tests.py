@@ -42,9 +42,9 @@ class TiempoRealizacionTareaTestCase(TestCase):
 
   def setUp(self):
 
-    M1=Maquina.objects.create(descripcion='M1')
-    M2=Maquina.objects.create(descripcion='M2')
-    M3=Maquina.objects.create(descripcion='M3')
+    M1=MaquinaPlanificacion.objects.create(descripcion='M1')
+    M2=MaquinaPlanificacion.objects.create(descripcion='M2')
+    M3=MaquinaPlanificacion.objects.create(descripcion='M3')
 
     T1=Tarea.objects.create(descripcion='T1', tiempo=5)
     T2=Tarea.objects.create(descripcion='T2', tiempo=10)
@@ -120,9 +120,9 @@ class IntervaloCronogramaTestCase(TestCase):
 
   def setUp(self):
 
-    M1=Maquina.objects.create(descripcion='M1')
-    M2=Maquina.objects.create(descripcion='M2')
-    M3=Maquina.objects.create(descripcion='M3')
+    M1=MaquinaPlanificacion.objects.create(descripcion='M1')
+    M2=MaquinaPlanificacion.objects.create(descripcion='M2')
+    M3=MaquinaPlanificacion.objects.create(descripcion='M3')
 
     T1=Tarea.objects.create(descripcion='T1', tiempo=5)
     T2=Tarea.objects.create(descripcion='T2', tiempo=10)
@@ -193,7 +193,7 @@ class IntervaloCronogramaTestCase(TestCase):
   def test_calcular_fecha_desde(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')
-    M1 = Maquina.objects.get(descripcion='M1')
+    M1 = MaquinaPlanificacion.objects.get(descripcion='M1')
     T1 = Tarea.objects.get(descripcion='T1')
     P1 = Producto.objects.get(descripcion='P1')
     D1 = PedidoPlanificable.objects.get(descripcion='D1')
@@ -225,8 +225,8 @@ class TareaDependienteTestCase(TestCase):
 
   def setUp(self):
 
-    M1=Maquina.objects.create(descripcion='M1')
-    M2=Maquina.objects.create(descripcion='M2')
+    M1=MaquinaPlanificacion.objects.create(descripcion='M1')
+    M2=MaquinaPlanificacion.objects.create(descripcion='M2')
 
     T1=Tarea.objects.create(descripcion='T1', tiempo=5)
     T2=Tarea.objects.create(descripcion='T2', tiempo=10)
@@ -259,8 +259,8 @@ class TareaDependienteTestCase(TestCase):
   def test_calcular_fecha_desde(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')
-    M1 = Maquina.objects.get(descripcion='M1')
-    M2 = Maquina.objects.get(descripcion='M2')
+    M1 = MaquinaPlanificacion.objects.get(descripcion='M1')
+    M2 = MaquinaPlanificacion.objects.get(descripcion='M2')
     T1 = Tarea.objects.get(descripcion='T1')
     T2 = Tarea.objects.get(descripcion='T2')
     P1 = Producto.objects.get(descripcion='P1')
@@ -421,8 +421,8 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
   
   def setUp(self):
 
-    M1=Maquina.objects.create(descripcion='M1')
-    M2=Maquina.objects.create(descripcion='M2')
+    M1=MaquinaPlanificacion.objects.create(descripcion='M1')
+    M2=MaquinaPlanificacion.objects.create(descripcion='M2')
 
     T1=Tarea.objects.create(descripcion='T1', tiempo=5)
     T2=Tarea.objects.create(descripcion='T2', tiempo=10)
@@ -495,7 +495,7 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
 
     self.verificar_cantidad_planificada(cronograma)
 
-    M3 = Maquina.objects.get(descripcion='M3')
+    M3 = MaquinaPlanificacion.objects.get(descripcion='M3')
 
     huecos = []
     for hueco in cronograma.get_huecos(M3):
@@ -803,7 +803,7 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
     """
     Se verifica que no existan solapamientos.
     """
-    for maquina in Maquina.objects.all():
+    for maquina in MaquinaPlanificacion.objects.all():
       fecha_hasta_anterior = None
       for intervalo in maquina.intervalocronograma_set.order_by('fecha_desde'):
         if fecha_hasta_anterior is None:

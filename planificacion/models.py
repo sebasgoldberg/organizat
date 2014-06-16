@@ -14,6 +14,7 @@ from django.utils import timezone as TZ
 from datetime import timedelta as TD
 import logging
 from utils import Hueco
+import calendario.models
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,35 @@ ESTADOS_INTERVALOS=(
 class PedidoYaDistribuido(ValidationError):
   pass
 
+class CalendarioProduccion:
+
+  @staticmethod
+  def get_instance():
+    try:
+      return calendario.models.Calendario.objects.get()
+    except calendario.models.Calendario.DoesNotExist:
+      instance = calendario.models.Calendario()
+      instance.clean()
+      instance.save()
+      return instance
+
+class MaquinaPlanificacion(Maquina):
+
+  class Meta:
+    proxy = True
+
+  def get_calendario(self):
+    return CalendarioProduccion.get_instance()
+
+  def produce(self, tarea, producto):
+    return self.tiemporealizaciontarea_set.filter(
+      tarea=tarea,producto=producto, activa=True).count() > 0
+
+  @staticmethod
+  def fromMaquina(maquina):
+    maquina.__class__ = MaquinaPlanificacion
+    return maquina
+
 class Cronograma(models.Model):
   """
   Validar:
@@ -149,7 +179,7 @@ class Cronograma(models.Model):
     for x in MaquinaCronograma.objects.exclude(
       maquina__id__in=posibles):
       tareas_maquinas_restantes = tareas_maquinas_restantes | set(x.maquina.get_tareas())
-    for maquina in Maquina.objects.filter(id__in=posibles):
+    for maquina in MaquinaPlanificacion.objects.filter(id__in=posibles):
       if maquina.tareamaquina_set.filter(
         tarea__in=tareas_maquinas_restantes).count() == 0:
         result.add(maquina.id) 
@@ -287,8 +317,10 @@ class Cronograma(models.Model):
     return [ x.maquina for x in self.maquinacronograma_set.all() ]
 
   def get_maquinas_tarea_producto(self, tarea, producto):
-    return [ t.maquina for t in TiempoRealizacionTarea.objects.filter(
-      maquina__in=self.get_maquinas(), tarea=tarea,producto=producto, activa=True) ]
+    for maquina in self.get_maquinas():
+      if maquina.produce(tarea, producto):
+        yield maquina
+
 
   def get_intervalos_propios_y_activos(self, maquina=None):
     intervalos_propios = IntervaloCronograma.objects.filter(
@@ -408,6 +440,10 @@ class PedidoPlanificable(Pedido):
     return ItemPlanificable.objects.get(
       pedido=self, producto=producto)
 
+  def get_maquinas_posibles_produccion(self):
+    for maquina in super(PedidoPlanificable, self).get_maquinas_posibles_produccion():
+      yield MaquinaPlanificacion.fromMaquina(maquina)
+
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
@@ -423,7 +459,7 @@ class PedidoCronograma(models.Model):
 
 class MaquinaCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
-  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
+  maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
 
   class Meta:
     ordering = ['maquina__descripcion']
@@ -446,7 +482,7 @@ class HuecoAdyacenteAnteriorNoExiste(Exception):
 class IntervaloCronograma(models.Model):
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
-  maquina = models.ForeignKey(Maquina, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
+  maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
   producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
   pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
@@ -807,6 +843,7 @@ def add_maquinas_posibles_to_cronograma(sender, instance, created, **kwargs):
     return
   for maquina in instance.pedido.get_maquinas_posibles_produccion():
     if not instance.cronograma.has_maquina(maquina):
+      maquina = MaquinaPlanificacion.fromMaquina(maquina)
       instance.cronograma.add_maquina(maquina)
 
 post_save.connect(add_maquinas_posibles_to_cronograma, 

@@ -3,22 +3,9 @@ from django.db import models
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
-import calendario.models
 
 class TareaAnteriorNoExiste(Exception):
   pass
-
-class CalendarioProduccion:
-
-  @staticmethod
-  def get_instance():
-    try:
-      return calendario.models.Calendario.objects.get()
-    except calendario.models.Calendario.DoesNotExist:
-      instance = calendario.models.Calendario()
-      instance.clean()
-      instance.save()
-      return instance
 
 class Maquina(models.Model):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
@@ -30,9 +17,6 @@ class Maquina(models.Model):
 
   def __unicode__(self):
     return self.descripcion
-
-  def get_calendario(self):
-    return CalendarioProduccion.get_instance()
 
   def get_tareas_pedidos(self, pedidos):
     tareas = set()
