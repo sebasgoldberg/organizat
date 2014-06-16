@@ -1019,7 +1019,7 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
       self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
       self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
 
-class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
+class PlanificacionConCalendarioTestCase(PlanificadorTestCase):
 
   fixtures = [ 'planificacion/fixtures/tests/planificar_con_calendario.json' ]
 
@@ -1059,6 +1059,8 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
     self.crono_solo_neumaticos = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
     self.crono_todo = Cronograma.objects.get(descripcion='Cronograma con pedido de neumáticos de motos y de autos')
+
+class EstadoCronogramaIntervalosTestCase(PlanificacionConCalendarioTestCase):
 
   def test_cantidad_planificada_respeta_cantidad_ya_activa(self):
 
@@ -1270,3 +1272,57 @@ class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
     intervalo = IntervaloCronograma.objects.get(pk=60)
 
     intervalo.cancelar()
+
+class PlanificacionPedidoTestCase(PlanificacionConCalendarioTestCase):
+
+  def setUp(self):
+    
+    Cronograma.objects.all().delete()
+  
+  def test_planificar_pedido(self):
+
+    pedido = PedidoPlanificable.objects.all()[0]
+
+    self.assertTrue(pedido.is_pendiente_planificar())
+
+    crono1 = pedido.planificar()
+    self.assertTrue(pedido.is_planificado())
+    self.verificar_cantidad_planificada(crono1)
+
+    self.assertRaises(EstadoPedidoError, pedido.finalizar)
+    self.assertRaises(EstadoPedidoError, pedido.cancelar)
+
+    crono1.activar()
+    self.assertTrue(pedido.is_activo())
+
+    self.assertRaises(EstadoPedidoError, pedido.planificar)
+
+    intervalos = [ i for i in pedido.get_intervalos_ordenados_por_dependencia() ]
+    intervalos[0].cancelar()
+    self.assertTrue(pedido.is_pendiente_planificar())
+
+    crono2 = pedido.planificar()
+    self.assertTrue(pedido.is_planificado())
+    self.verificar_cantidad_planificada(crono1)
+
+    crono2.activar()
+    self.assertTrue(pedido.is_activo())
+    
+    intervalos = [ i for i in pedido.get_intervalos_ordenados_por_dependencia() ]
+
+    intervalo_cancelado = intervalos[len(intervalos)/2]
+    intervalo_cancelado.cancelar()
+    self.assertTrue(pedido.is_pendiente_planificar())
+
+    pedido.finalizar()
+    self.assertTrue(pedido.is_pendiente_planificar())
+
+    crono3 = pedido.planificar()
+    self.assertTrue(pedido.is_planificado())
+    self.verificar_cantidad_planificada(crono3)
+
+    crono3.activar()
+    self.assertTrue(pedido.is_activo())
+ 
+    pedido.finalizar()
+    self.assertTrue(pedido.is_finalizado())
