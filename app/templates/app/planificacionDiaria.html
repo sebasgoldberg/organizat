@@ -1,0 +1,24 @@
+{% verbatim %}
+
+<div>
+  <label for='fechaPlanificacion'>Fecha de planificación</label>
+  <input datepicker type='text' ng-model='fechaPlanificacion' ng-change='planificacionDiariaCtrl.fechaPlanificacionModificada()'>
+</div>
+
+<div class='contenerdorCajasIntervalos' ng-repeat='maquina in maquinas'>
+  <h3><a href ng-click='detalleMaquinaSeleccionadaCtrl.setMaquina(maquina)'>Maquina #{{maquina.id}} - {{maquina.descripcion}}</a></h3>
+
+  <div 
+    class='cajaIntervalo'
+    ng-style='{"width":"{{intervalo.getWidth()}}", "left":"{{intervalo.getLeftPosition(fechaPlanificacion)}}"}'
+    ng-repeat='intervalo in maquina.intervalos'>
+
+    <a href ng-click='detalleIntervalosSeleccionadosCtrl.addIntervaloSeleccionado(intervalo)'>
+      {{intervalo.id}}
+    </a>
+
+  </div>
+
+</div>
+
+{% endverbatim %}

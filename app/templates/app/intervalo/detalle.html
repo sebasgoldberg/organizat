@@ -1,0 +1,10 @@
+{% verbatim %}
+<div ng-repeat='intervalo in intervalos'>
+  <h1>Intervalo #{{ intervalo.id }}</h1>
+  <ul>
+    <li>Máquina: {{ intervalo.maquina }}</li>
+    <li>Fecha desde: {{ intervalo.fecha_desde | date:'HH:mm' }}</li>
+    <li>Fecha hasta: {{ intervalo.fecha_hasta | date:'HH:mm' }}</li>
+  </ul>
+</div>
+{% endverbatim %}

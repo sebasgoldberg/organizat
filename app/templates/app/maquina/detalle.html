@@ -1,0 +1,12 @@
+{% verbatim %}
+<div ng-hide='maquina == null'>
+  <h1>Maquina #{{ maquina.id }} - {{maquina.descripcion}}</h1>
+  <div ng-repeat='intervalo in maquina.intervalos'>
+    <ul>
+      <li>ID: {{ intervalo.id }}</li>
+      <li>Fecha desde: {{ intervalo.fecha_desde | date:'HH:mm' }}</li>
+      <li>Fecha hasta: {{ intervalo.fecha_hasta | date:'HH:mm' }}</li>
+    </ul>
+  </div>
+</div>
+{% endverbatim %}

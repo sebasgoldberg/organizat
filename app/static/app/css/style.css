@@ -1,0 +1,17 @@
+
+.contenerdorCajasIntervalos{
+  position: relative; /* Esto permite que la posición absoluta de la caja sea respecto del contenedor*/
+  height: 2em;
+  }
+
+.cajaIntervalo{
+  border-style: solid;
+  border-color: blue;
+  background-color: black;
+  width: 1px;
+  position: absolute;
+  left: 0px;
+  text-align:center;
+  vertical-align: middle;
+  }
+
