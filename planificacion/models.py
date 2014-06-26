@@ -122,6 +122,12 @@ class MaquinaPlanificacion(Maquina):
     return self.tiemporealizaciontarea_set.filter(
       tarea=tarea,producto=producto, activa=True).count() > 0
 
+  def get_intervalos_activos_dia(self, fecha):
+      return self.intervalocronograma_set.filter(estado=ESTADO_INTERVALO_ACTIVO, 
+                                                 fecha_desde__year=fecha.year,
+                                                 fecha_desde__month=fecha.month,
+                                                 fecha_desde__day=fecha.day)
+
   @staticmethod
   def fromMaquina(maquina):
     maquina.__class__ = MaquinaPlanificacion
@@ -528,11 +534,11 @@ class IntervaloCronograma(models.Model):
     choices=ESTADOS_INTERVALOS, default=0)
 
   # atributos exclusivos para asegurar la consistencia de la información
-  tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
-  tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.PROTECT)
-  itempedido = models.ForeignKey(ItemPlanificable, editable=False, on_delete=models.PROTECT)
-  pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False)
-  maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
+  tareamaquina = models.ForeignKey(TareaMaquina, editable=False, null=True, on_delete=models.PROTECT)
+  tareaproducto = models.ForeignKey(TareaProducto, editable=False, null=True, on_delete=models.PROTECT)
+  itempedido = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.PROTECT)
+  pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False, null=True)
+  maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False, null=True)
 
   class Meta:
     ordering = ['-cronograma__id', 'fecha_desde']

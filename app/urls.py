@@ -8,16 +8,13 @@ admin.autodiscover()
 from django.views.generic.base import TemplateView
 from .views import AppView
 
-urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'alternativa.views.home', name='home'),
-    # url(r'^alternativa/', include('alternativa.foo.urls')),
+from .rest.views import MaquinasYIntervalos
 
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+from rest_framework.urlpatterns import format_suffix_patterns
+from django.contrib.auth.decorators import login_required
 
-    # Uncomment the next line to enable the admin:
-    url(r'^(?P<path>.*)$', AppView.as_view()),
-    #url(r'^intervalo/detalle/$', TemplateView.as_view(template_name='app/intervalo/detalle.html')),
+urlpatterns = format_suffix_patterns(patterns('',
+    url(r'^rest/maquinas/y/intervalos/(?P<year>\d{4})/(?P<month>\d{1,2})/(?P<day>\d{1,2})/$', MaquinasYIntervalos.as_view()),
+)) + patterns('',
+    url(r'^(?P<path>.*)$', login_required( AppView.as_view() ) ),
 )
-

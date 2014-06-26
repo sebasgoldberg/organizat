@@ -21,7 +21,7 @@ class GerenciadorDependencias:
     self.pedido = pedido
 
   def get_tolerancia(self):
-    return 0.1
+    return 0.5
 
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:

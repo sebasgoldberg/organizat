@@ -4,6 +4,26 @@ function segundosAPixels(segundos){
   return Math.floor( segundos / SEGUNDOS_X_PIXEL );
   }
 
+function Param(){
+	
+	this.setFechaPlanificacion = function(fecha){
+		this.fechaPlanificacion = fecha;
+	}
+	
+	this.getFechaPlanificacion = function(){
+		return this.fechaPlanificacion;
+	}
+
+}
+
+Param.instance = null;
+
+Param.getInstance = function(){
+	if (Param.instance === null)
+		Param.instance = new Param();
+	return Param.instance;
+};
+
 /*
  * Definición de las distintas longitudes de un intervalo.
  * Como representamos 24 hs de 1 día, y cada hora la 
@@ -11,72 +31,67 @@ function segundosAPixels(segundos){
  * Respecto de las posiciones posibles, las mismas iran
  * desde 0 hasta 95.
  */
-function crearIntervalo(intervalo){
+function Intervalo(intervalo){
+	
+	this.id = intervalo.id;
+	this.fecha_desde = new Date(intervalo.fecha_desde);
+	this.fecha_hasta = new Date(intervalo.fecha_hasta);
 
-  intervalo.getDuracionEnSegundos = function(){
+  this.getDuracionEnSegundos = function(){
     return moment.duration(this.fecha_hasta - this.fecha_desde).asSeconds();
     }
 
-  intervalo.getWidth = function(){
+  this.getWidth = function(){
     /*
      * Obtiene el ancho en función del intervalo
      * de tiempo del intervalo
      */
-    segundos = this.getDuracionEnSegundos();
-    pixels = segundosAPixels(segundos);
+    var segundos = this.getDuracionEnSegundos();
+    var pixels = segundosAPixels(segundos);
     return pixels+'px';
     };
 
-  intervalo.getInicioEnSegundos = function(fechaPlanificacion){
-    return moment.duration(this.fecha_desde - fechaPlanificacion).asSeconds();
+  this.getInicioEnSegundos = function(){
+    return moment.duration(this.fecha_desde - 
+    	Param.getInstance().getFechaPlanificacion()).asSeconds();
     };
 
-  intervalo.getLeftPosition = function(fechaPlanificacion){
+  this.getLeftPosition = function(){
     /*
      * Obtiene la posición en función de la fecha de
      * inicio del intervalo
      */
-    segundos_inicio = this.getInicioEnSegundos(fechaPlanificacion);
-    pixels = segundosAPixels(segundos_inicio);
+    var segundos_inicio = this.getInicioEnSegundos();
+    var pixels = segundosAPixels(segundos_inicio);
     return pixels+'px';
     };
 
-  return intervalo;
-
+	this.setMaquina = function(maquina){
+		this.maquina = maquina;
+	}
+	
   }
+
+function Maquina(maquina, intervalos){
+
+	this.id = maquina.id;
+	this.descripcion = maquina.descripcion;
+	this.intervalos = [];
+	
+	this.addIntervalo = function(intervalo){
+		intervalo.setMaquina(this);
+		this.intervalos.push(intervalo);
+	}
+
+	for(var i=0;i<intervalos.length;i++){
+		var intervalo = new Intervalo(intervalos[i]);
+		this.addIntervalo(intervalo);		
+	}
+
+}
 
 (function(){
   var app = angular.module('djprod', [ ]);
-
-  var intervalos = [
-    {
-      id: 100,
-      fecha_desde: new Date(2014,6,23,10),
-      fecha_hasta: new Date(2014,6,23,10,30)
-      },
-    {
-      id: 101,
-      fecha_desde: new Date(2014,6,23,16),
-      fecha_hasta: new Date(2014,6,23,18)
-      },
-  ];
-
-  for(i=0;i<intervalos.length;i++){
-    intervalos[i]=crearIntervalo(intervalos[i]);
-    }
-
-  var maquinas = [
-    {
-      id: 10,
-      descripcion: 'Malaxador',
-      intervalos: intervalos
-      },
-    {
-      id: 11,
-      descripcion: 'Compresor',
-      intervalos: intervalos
-      },
-  ];
 
   app.directive('datepicker', function() {
     return {
@@ -106,18 +121,43 @@ function crearIntervalo(intervalo){
     return {
       restrict: 'E',
       templateUrl: 'planificacionDiaria.html',
-      controller: function($rootScope, $scope){
+      controller: function($rootScope, $scope, $http){
 
-        $scope.fechaPlanificacion = new Date(2014,6,23);
+        $scope.fechaPlanificacion = '19/05/2014';
+
+		this.selectMaquinas = function(fecha){
+            $scope.maquinas = [];
+			var mfecha = moment(fecha,'DD-MM-YYYY');
+            Param.getInstance().setFechaPlanificacion(mfecha);
+            var response = $http.get(
+            	"/app/rest/maquinas/y/intervalos/"+
+            	mfecha.format('YYYY')+"/"+
+            	mfecha.format('MM')+"/"+
+            	mfecha.format('DD')+"/"+
+            	".json");
+
+            response.success(function(data, status, headers, config) {
+            	$scope.maquinas = [];
+            	for (var i=0; i < data.length; i++){
+            		var maquina = new Maquina(data[i].maquina, data[i].intervalos)
+            		$scope.maquinas.push(maquina);
+            	}
+          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas)
+            });
+            response.error(function(data, status, headers, config) {
+            	$scope.maquinas = [];
+                alert("AJAX failed!");
+          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas)
+             });
+		};
 
         this.selectPlanificacionDiaria = function(){
           $scope.maquinas = [ ];
-          $scope.maquinas = maquinas;
+          this.selectMaquinas($scope.fechaPlanificacion);          
           };
 
         this.fechaPlanificacionModificada = function(fecha){
-          this.selectPlanificacionDiaria();
-          $rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas)
+          this.selectPlanificacionDiaria(fecha);
           };
 
         this.selectPlanificacionDiaria();
