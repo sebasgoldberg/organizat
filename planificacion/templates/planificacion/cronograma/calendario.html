@@ -35,11 +35,11 @@
       allDaySlot: false,
       slotEventOverlap: false,
       slotMinutes: 10,
-      {%with fi=cronograma.fecha_inicio %}
+      {%with fi=fecha_inicio %}
       firstHour: {{fi.hour}},
       {% endwith %}
       events: [
-        {%for intervalo in cronograma.intervalocronograma_set.all%}
+        {%for intervalo in intervalos%}
         {
           id: {{intervalo.id}},
           title: "{{intervalo}}",
@@ -55,7 +55,7 @@
       });
 
     calendar.fullCalendar('gotoDate',
-      {%with fi=cronograma.fecha_inicio %}
+      {%with fi=fecha_inicio %}
       new Date({{fi.year}}, {{fi.month}}-1, {{fi.day}})
       {% endwith %}
       );

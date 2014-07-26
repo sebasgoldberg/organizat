@@ -547,6 +547,12 @@ class IntervaloCronograma(models.Model):
       self.get_fecha_desde(), self.get_fecha_hasta())
 
   @staticmethod
+  def get_intervalos_activos():
+    return IntervaloCronograma.objects.filter(
+      estado__in=[ESTADO_INTERVALO_ACTIVO,
+        ESTADO_INTERVALO_FINALIZADO])
+
+  @staticmethod
   def get_cantidad_planificada(item, tarea):
     total = IntervaloCronograma.objects.filter(
       pedido=item.pedido,

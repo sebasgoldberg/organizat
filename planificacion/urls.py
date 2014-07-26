@@ -34,5 +34,6 @@ urlpatterns = patterns('planificacion.views',
       ExecuteIntervaloCronogramaMethodView.as_view(method=IntervaloCronograma.cancelar)),
 
     url(r'^calendario/cronograma/(\d+)/$', 'calendario_cronograma'),
+    url(r'^calendario/activo/$', 'calendario_activo'),
 )
 
