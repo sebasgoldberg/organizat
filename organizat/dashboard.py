@@ -94,3 +94,15 @@ class CustomIndexDashboard(Dashboard):
             column=2,
         ))
 
+        # append another link list module for "support".
+        self.children.append(modules.LinkList(
+            _('Links'),
+            column=3,
+            children=[
+                {
+                    'title': _(u'Visualizar calendario activo'),
+                    'url': '/planificacion/calendario/activo/',
+                },
+            ]
+        ))
+
