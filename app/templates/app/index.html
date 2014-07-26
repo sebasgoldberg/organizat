@@ -3,7 +3,7 @@
   <head>
     <link rel="stylesheet" href="/static/jquery-ui/jquery-ui.css">
     <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.css">
-    <link rel="stylesheet" href="/static/app/css/style.css">
+    <!-- <link rel="stylesheet" href="/static/app/css/style.css"> -->
     <script src="/static/moment.js"></script>
     <script src="/static/jquery.js"></script>
     <script src="/static/jquery-ui/jquery-ui.js"></script>
@@ -13,13 +13,25 @@
   </head>
   <body>
 
-    <planificacion-diaria></planificacion-diaria>
+	<div class="container">
 
-    <detalle-intervalos-seleccionados></detalle-intervalos-seleccionados>
+		<div class="row">
+			
+			<div class="col-xs-8">
+	    		<planificacion-diaria></planificacion-diaria>
+	    	</div>
+	
+			<div class="col-xs-4">
+	    		<detalle-intervalos-seleccionados></detalle-intervalos-seleccionados>
+	
+	    		<detalle-maquina-seleccionada> </detalle-maquina-seleccionada>
 
-    <detalle-maquina-seleccionada> </detalle-maquina-seleccionada>
+	    		<detalle-pedido-intervalo-seleccionado></detalle-pedido-intervalo-seleccionado>
+	    	</div>
 
-    <detalle-pedido-intervalo-seleccionado></detalle-pedido-intervalo-seleccionado>
+	    </div>
+
+	</div>
 
   </body>
 </html>

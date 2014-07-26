@@ -5,7 +5,7 @@
   <input datepicker type='text' ng-model='fechaPlanificacion' ng-change='planificacionDiariaCtrl.fechaPlanificacionModificada()'>
 </div>
 
-<div class='contenerdorCajasIntervalos' ng-repeat='maquina in maquinas'>
+<!-- <div class='contenerdorCajasIntervalos' ng-repeat='maquina in maquinas'>
   <h3><a href ng-click='detalleMaquinaSeleccionadaCtrl.setMaquina(maquina)'>Maquina #{{maquina.id}} - {{maquina.descripcion}}</a></h3>
 
   <div 
@@ -19,6 +19,30 @@
 
   </div>
 
+</div> -->
+
+<div class="panel-group" id="accordion-fecha-planificacion">
+	<div class="panel panel-default" ng-repeat='maquina in maquinas'>
+		<div class="panel-heading">
+			<h5 class="panel-title">
+				<a data-toggle="collapse" data-parent="#accordion-fecha-planificacion" href="#collapse-maquina-{{maquina.id}}">
+          		Maquina #{{maquina.id}} - {{maquina.descripcion}}
+        		</a>
+        		<button class="btn btn-default btn-xs"
+        			ng-click='detalleMaquinaSeleccionadaCtrl.setMaquina(maquina)'>
+        			Ver detalle
+        		</button>
+        	</h5>
+        </div>
+        <div id="collapse-maquina-{{maquina.id}}" class="panel-collapse collapse in">
+        	<div class="panel-body">
+        		<button class="btn btn-default" ng-repeat='intervalo in maquina.intervalos'
+        			ng-click='detalleIntervalosSeleccionadosCtrl.addIntervaloSeleccionado(intervalo)'>
+        			{{intervalo.id}}
+        		</button>
+        	</div>
+        </div>
+	</div>
 </div>
 
 {% endverbatim %}
