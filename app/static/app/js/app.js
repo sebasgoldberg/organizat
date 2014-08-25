@@ -8,11 +8,11 @@ function Param(){
 	
 	this.setFechaPlanificacion = function(fecha){
 		this.fechaPlanificacion = fecha;
-	}
+	};
 	
 	this.getFechaPlanificacion = function(){
 		return this.fechaPlanificacion;
-	}
+	};
 
 }
 
@@ -39,7 +39,7 @@ function Intervalo(intervalo){
 
   this.getDuracionEnSegundos = function(){
     return moment.duration(this.fecha_hasta - this.fecha_desde).asSeconds();
-    }
+   };
 
   this.getWidth = function(){
     /*
@@ -68,7 +68,7 @@ function Intervalo(intervalo){
 
 	this.setMaquina = function(maquina){
 		this.maquina = maquina;
-	}
+	};
 	
   }
 
@@ -81,13 +81,13 @@ function Maquina(maquina, intervalos){
 	this.addIntervalo = function(intervalo){
 		intervalo.setMaquina(this);
 		this.intervalos.push(intervalo);
-	}
+	};
 
 	for(var i=0;i<intervalos.length;i++){
 		var intervalo = new Intervalo(intervalos[i]);
 		this.addIntervalo(intervalo);		
 	}
-
+	
 }
 
 (function(){
@@ -111,7 +111,7 @@ function Maquina(maquina, intervalos){
           });
         });
       }
-    }
+    };
   });
 
   //---------------------------------------------
@@ -139,15 +139,15 @@ function Maquina(maquina, intervalos){
             response.success(function(data, status, headers, config) {
             	$scope.maquinas = [];
             	for (var i=0; i < data.length; i++){
-            		var maquina = new Maquina(data[i].maquina, data[i].intervalos)
+            		var maquina = new Maquina(data[i].maquina, data[i].intervalos);
             		$scope.maquinas.push(maquina);
             	}
-          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas)
+          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas);
             });
             response.error(function(data, status, headers, config) {
             	$scope.maquinas = [];
                 alert("AJAX failed!");
-          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas)
+          		$rootScope.$broadcast('fechaPlanificacionModificada',$scope.maquinas);
              });
 		};
 
