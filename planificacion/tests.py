@@ -1247,14 +1247,25 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
     self.crono_todo.planificar()
 
-    # Se verifica que la cantidad de intervalos planificados del pedido de
-    # neumáticos de autos sea igual a la cantidad de intervalos cancelados
+    # Se verifica que coincidan los intervalos planificados del pedido de
+    # neumáticos de autos con los intervalos cancelados.
     pedido_neumaticos = self.crono_solo_neumaticos.get_pedidos()[0]
-    self.assertEqual(
-      self.crono_todo.intervalocronograma_set.filter(
-        pedido=pedido_neumaticos).count(),
-      self.crono_solo_neumaticos.intervalocronograma_set.filter(
-        estado=ESTADO_INTERVALO_CANCELADO).count())
+    cantidadTarea={}
+
+    for intervaloCancelado in IntervaloCronograma.objects.filter(
+        cronograma=self.crono_solo_neumaticos,
+        estado=ESTADO_INTERVALO_CANCELADO): 
+        cantidadTarea.setdefault(intervaloCancelado.tarea.id,0)
+        cantidadTarea[intervaloCancelado.tarea.id]+=intervaloCancelado.cantidad_tarea;
+
+    for intervaloPlanificado in IntervaloCronograma.objects.filter(
+        cronograma=self.crono_todo,
+        pedido=pedido_neumaticos):
+        cantidadTarea[intervaloPlanificado.tarea.id]-=intervaloPlanificado.cantidad_tarea;
+
+    for cantidad in cantidadTarea.itervalues():
+        self.assertEqual(cantidad, 0)
+        
 
 class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
   
