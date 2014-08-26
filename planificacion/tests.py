@@ -11,8 +11,15 @@ from datetime import time as T
 from datetime import datetime as DT
 from decimal import Decimal as D
 from calendario.models import *
+from django.conf import settings
+import os
 
 utc=pytz.UTC
+
+FIXTURE_TEST_DIR = os.path.join(settings.BASE_DIR, 'planificacion', 'fixtures', 'tests')
+
+def getFixture(fixtureFileName):
+    return os.path.join(FIXTURE_TEST_DIR,fixtureFileName)
 
 class PlanificadorTestCase(TestCase):
 
@@ -485,7 +492,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
 
 class HuecoInexplicableTestCase(PlanificadorTestCase):
   
-  fixtures = [ 'planificacion/fixtures/tests/hueco_inexplicable.json' ]
+  fixtures = [ getFixture('hueco_inexplicable.json') ]
 
   def test_no_existe_hueco_inexplicable(self):
 
@@ -519,7 +526,7 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
 
 class TiempoMinimoDeBloqueTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/hueco_inexplicable.json' ]
+  fixtures = [ getFixture('hueco_inexplicable.json') ]
 
   def setUp(self):
 
@@ -539,7 +546,7 @@ class TiempoMinimoDeBloqueTestCase(PlanificadorTestCase):
 
 class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/hueco_inexplicable.json' ]
+  fixtures = [ getFixture('hueco_inexplicable.json') ]
 
   def setUp(self):
 
@@ -573,7 +580,7 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
 
 class PlanificarSinHuecosEvitables(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/hueco_inexplicable.json' ]
+  fixtures = [ getFixture('hueco_inexplicable.json') ]
 
   def setUp(self):
 
@@ -609,7 +616,7 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
 
 class MasDeUnaDependenciaError(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/mas_de_una_dependencia.json' ]
+  fixtures = [ getFixture('mas_de_una_dependencia.json') ]
 
   def setUp(self):
 
@@ -628,7 +635,7 @@ class MasDeUnaDependenciaError(PlanificadorTestCase):
 
 class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/mas_de_una_dependencia.json' ]
+  fixtures = [ getFixture('mas_de_una_dependencia.json') ]
 
   def setUp(self):
 
@@ -647,7 +654,7 @@ class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
 
 class DosCronogramasTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/dos_cronogramas.json' ]
+  fixtures = [ getFixture('dos_cronogramas.json') ]
 
   def setUp(self):
 
@@ -665,7 +672,7 @@ class DosCronogramasTestCase(PlanificadorTestCase):
 
 class PlanificarSinTodasLasMaquinas(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_sin_todas_las_maquinas.json' ]
+  fixtures = [ getFixture('planificar_sin_todas_las_maquinas.json') ]
 
   def test_planificar_sin_todas_las_maquinas(self):
 
@@ -678,7 +685,7 @@ class PlanificarSinTodasLasMaquinas(PlanificadorTestCase):
 
 class PlanificarConMaquinasInactivas(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+  fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
   def test_planificar_con_maquinas_inactivas(self):
 
@@ -722,7 +729,7 @@ class PlanificarConMaquinasInactivas(PlanificadorTestCase):
 
 class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_sin_todas_las_maquinas.json' ]
+  fixtures = [ getFixture('planificar_sin_todas_las_maquinas.json') ]
 
   def setUp(self):
     self.cronograma = Cronograma(descripcion='Carga Automática de Maquinas')
@@ -746,7 +753,7 @@ class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
 
 class ActivacionCronogramaTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/dos_cronogramas.json' ]
+  fixtures = [ getFixture('dos_cronogramas.json') ]
 
   def setUp(self):
 
@@ -814,7 +821,7 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
 
 class CantidadTareaRealTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+  fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
   def test_validaciones_asignacion_cantidad_tarea_real(self):
 
@@ -897,7 +904,7 @@ class CantidadTareaRealTestCase(PlanificadorTestCase):
 
 class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+  fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
   def test_validaciones_finalizar_cancelar_intervalo(self):
 
@@ -952,7 +959,7 @@ class EstadoIntervaloCronogramaTestCase(PlanificadorTestCase):
 
 class PlanificacionSoloLunesDe8A12TestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_maquinas_inactivas.json' ]
+  fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
   def test_planificacion_solo_lunes_8_a_12(self):
 
@@ -977,7 +984,7 @@ class PlanificacionSoloLunesDe8A12TestCase(PlanificadorTestCase):
 
 class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_calendario.json' ]
+  fixtures = [ getFixture('planificar_con_calendario.json') ]
 
   def test_planificacion_solo_lunes_8_a_12(self):
 
@@ -1021,7 +1028,7 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
 
 class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
-  fixtures = [ 'planificacion/fixtures/tests/planificar_con_calendario.json' ]
+  fixtures = [ getFixture('planificar_con_calendario.json') ]
 
   def setUp(self):
     
@@ -1251,7 +1258,7 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
 class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
   
-  fixtures = [ 'planificacion/fixtures/tests/deberia_dejar_cancelar_intervalo_60.json' ]
+  fixtures = [ getFixture('deberia_dejar_cancelar_intervalo_60.json') ]
   
   def _fixture_setup(self):
     post_save.disconnect(add_maquinas_posibles_to_cronograma, 
