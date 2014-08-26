@@ -10,3 +10,7 @@ django.mo
 /static/*
 db.sqlite3
 *.lprof
+.project
+.pydevproject
+.settings/
+
