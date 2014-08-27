@@ -170,6 +170,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
   def is_modelo_resuelto(self):
     return (self.modelo and self.modelo.status == LpStatusOptimal)
 
+  @profile
   def completar_cronograma(self):
 
     for pedido in self.cronograma.get_pedidos():
@@ -220,6 +221,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       yield conjunto_maquinas
       maquinas = maquinas - conjunto_maquinas
 
+  @profile
   def planificar(self):
     
     for maquinas in self.get_maquinas_relacionadas_por_tareas():

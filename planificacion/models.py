@@ -439,18 +439,47 @@ class Cronograma(models.Model):
 
 class ItemPlanificable(ItemPedido):
 
-  class Meta:
-    proxy=True
+    class Meta:
+        proxy=True
+    
+    def get_cantidad_planificada(self, tarea):
+        return IntervaloCronograma.get_cantidad_planificada(self, tarea)
+    
+    def get_cantidad_realizada(self, tarea, ids_intervalos_excluir=[]):
+        return IntervaloCronograma.get_cantidad_realizada(self, tarea, ids_intervalos_excluir)
+    
+    def get_cantidad_no_planificada(self, tarea):
+        return (self.cantidad - self.get_cantidad_realizada(tarea)
+                - self.get_cantidad_planificada(tarea))
 
-  def get_cantidad_planificada(self, tarea):
-    return IntervaloCronograma.get_cantidad_planificada(self, tarea)
+    def incrementarTareaReal(self, tarea, cantidad_tarea_real):
+        try:
+            tareaItem = TareaItem.objects.get(
+                                              item=self,
+                                              tarea=tarea)
+            tareaItem.cantidad_realizada += cantidad_tarea_real
+            tareaItem.save()
+        except TareaItem.DoesNotExist:
+            TareaItem(
+                      item=self,
+                      tarea=tarea,
+                      cantidad_realizada=cantidad_tarea_real).save()
 
-  def get_cantidad_realizada(self, tarea, ids_intervalos_excluir=[]):
-    return IntervaloCronograma.get_cantidad_realizada(self, tarea, ids_intervalos_excluir)
+class TareaItem(models.Model):
+    
+    item = models.ForeignKey(ItemPlanificable, verbose_name=_(u'Item'))
+    tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'))
+    
+    """
+    Acumula la cantidad realizada de tarea para el item en cuestión de
+    forma de optimizar la consulta de tarea real realizada.
+    Se debe actualizar cuando se finaliza un intervalo.
+    """
+    cantidad_realizada = models.DecimalField( default=0,
+        max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Realizada'), 
+        help_text=_(u'Cantidad de tarea realizada (real).'))
 
-  def get_cantidad_no_planificada(self, tarea):
-    return (self.cantidad - self.get_cantidad_realizada(tarea)
-      - self.get_cantidad_planificada(tarea))
+
 
 class PedidoPlanificable(Pedido):
   
@@ -568,6 +597,30 @@ class IntervaloCronograma(models.Model):
 
   @staticmethod
   def get_cantidad_realizada(item, tarea, ids_intervalos_excluir=[]):
+    """
+    Se obtiene la cantidad real de tarea realizada hasta el momento 
+    para el item pasado. Lo ideal es obtener lo realizado hasta el momento de
+    una sola consulta y restarle las cantidades reales de los intervalos a
+    excluir.
+    """
+    
+    try:
+        tareaItem=TareaItem.objects.get(
+                                 item=item,
+                                 tarea=tarea)
+        intervalos_a_excluir = IntervaloCronograma.objects.filter(
+                                                            id__in=ids_intervalos_excluir)
+        totalExcluir = intervalos_a_excluir.aggregate(
+            total=models.Sum('cantidad_tarea_real'))['total']
+            
+        if totalExcluir is None:
+            return tareaItem.cantidad_realizada
+        else:
+            return tareaItem.cantidad_realizada - totalExcluir
+        
+    except TareaItem.DoesNotExist:
+        return 0
+    
     intervalos_item = IntervaloCronograma.objects.filter(
       pedido=item.pedido,
       tarea=tarea,
@@ -587,7 +640,12 @@ class IntervaloCronograma(models.Model):
       self.cantidad_tarea_real = self.cantidad_tarea
     self.estado = ESTADO_INTERVALO_FINALIZADO
     self.clean()
+
     self.save()
+
+    item = self.pedido.get_item_producto(self.producto)
+    item.incrementarTareaReal(self.tarea, self.cantidad_tarea_real)
+    
     logger.info(_('Intervalo FINALIZADO: %s') % self)
 
   def is_planificado(self):
@@ -732,6 +790,7 @@ class IntervaloCronograma(models.Model):
           _(u'Ha ocurrido solapamiento entre el intervalo que está siendo validado %s y el intervalo %s:') %
           (self, intervalo))
 
+  @profile
   def validar_dependencias_guardado(self):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     if self.id:
@@ -760,7 +819,7 @@ class IntervaloCronograma(models.Model):
         for tarea in listado_dependencias:
           if not tarea.id in cantidades_reales_tareas:
             cantidades_reales_tareas[tarea.id] = self.pedido.get_item_producto(
-              self.producto).get_cantidad_realizada(tarea,[tarea.id])
+              self.producto).get_cantidad_realizada(tarea,[self.id])
             #cantidades_reales_tareas[tarea.id] = self.cronograma.get_cantidad_real_tarea(
               #tarea, ids_intervalos_excluir=[self.id]) 
             if tarea.id == self.tarea.id:
@@ -834,6 +893,7 @@ class IntervaloCronograma(models.Model):
         _(u'Para poder cancelar el intervalo %s debe dejar en cero '+
         u'la cantidad de tarea real producida.') % self)
 
+  @profile
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)

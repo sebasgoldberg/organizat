@@ -23,6 +23,7 @@ class GerenciadorDependencias:
   def get_tolerancia(self):
     return 0.1
 
+  @profile
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:
       raise Exception(_(u'El instante %s ya se encuentra persistido.') % instante.id )
@@ -98,6 +99,7 @@ class GerenciadorDependencias:
         result.append(intervalo)
     return result
 
+  @profile
   def get_cantidad_tarea_hasta(self, intervalos, tarea, fecha):
     cantidad_tarea = 0
     for intervalo in self.get_intervalos_anteriores(intervalos, tarea, fecha):
@@ -114,6 +116,7 @@ class GerenciadorDependencias:
 
     return float(cantidad_tarea) + float(cantidad_realizada)
 
+  @profile
   def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None, instante_modificado=None):
     operaciones = 0
     if instante_agregado: operaciones+=1
@@ -139,6 +142,7 @@ class GerenciadorDependencias:
           "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
           (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
 
+  @profile
   def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
     intervalo = self.cronograma.crear_intervalo(
       maquina=maquina, tarea=tarea, producto=self.producto,
@@ -176,6 +180,7 @@ class GerenciadorDependencias:
 
     return intervalo
 
+  @profile
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
     while tiempo > 0:
       for hueco in self.cronograma.get_huecos(maquina):
