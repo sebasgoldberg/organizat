@@ -170,12 +170,13 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
   def is_modelo_resuelto(self):
     return (self.modelo and self.modelo.status == LpStatusOptimal)
 
-  @profile
+  #@profile
   def completar_cronograma(self):
 
     for pedido in self.cronograma.get_pedidos():
       for producto in pedido.get_productos():
         gerenciador_dependencias = self.cronograma.get_gerenciador_dependencias(producto, pedido)
+        # Se obtienen las tareas ordenas por dependencia.
         for tarea in producto.get_tareas_ordenadas_por_dependencia():
           for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, producto):
             clave = (maquina.id, tarea.id, producto.id, pedido.id)
@@ -221,7 +222,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       yield conjunto_maquinas
       maquinas = maquinas - conjunto_maquinas
 
-  @profile
+  #@profile
   def planificar(self):
     
     for maquinas in self.get_maquinas_relacionadas_por_tareas():

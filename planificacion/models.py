@@ -144,6 +144,9 @@ class Cronograma(models.Model):
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
   estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
     choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
+  tolerancia = models.DecimalField(default=0.02,
+    max_digits=7, decimal_places=2, verbose_name=_(u'Tolerancia a errores de planificación.'), 
+    help_text=_(u'Tolerancia a errores de planificación. Indica el factor de tolerancia a los errores durante la planificación. Por ejemplo, un valor de 0.02 para un item de un pedido con cantidad 100, indica que puede haber un error de planificación de 2 unidades.'))
 
   class Meta:
     ordering = ['-id']
@@ -303,7 +306,7 @@ class Cronograma(models.Model):
       intervalo.desactivar()
 
   def activar_intervalos(self):
-    for intervalo in self.intervalocronograma_set.all():
+    for intervalo in self.get_intervalos_ordenados_por_dependencia():
       intervalo.activar()
 
   @staticmethod
@@ -643,7 +646,7 @@ class IntervaloCronograma(models.Model):
 
     self.save()
 
-    item = self.pedido.get_item_producto(self.producto)
+    item = self.getItem()
     item.incrementarTareaReal(self.tarea, self.cantidad_tarea_real)
     
     logger.info(_('Intervalo FINALIZADO: %s') % self)
@@ -762,6 +765,7 @@ class IntervaloCronograma(models.Model):
       self.fecha_desde = intervalos.order_by('fecha_desde').last().get_fecha_hasta()
 
   def calcular_fecha_hasta(self):
+#    self.fecha_hasta = self.get_fecha_desde() + datetime.timedelta(seconds=int(self.tiempo_intervalo*60))
     self.fecha_hasta = self.get_fecha_hasta()
 
   def get_fecha_desde(self):
@@ -769,6 +773,11 @@ class IntervaloCronograma(models.Model):
 
   def get_fecha_hasta(self):
     return self.get_fecha_desde() + datetime.timedelta(seconds=int(self.tiempo_intervalo*60))
+  """
+    if self.fecha_hasta is None:
+      self.calcular_fecha_hasta()
+    return self.fecha_hasta
+    """
 
   def calcular_cantidad_tarea(self):
     if self.cantidad_tarea:
@@ -790,7 +799,7 @@ class IntervaloCronograma(models.Model):
           _(u'Ha ocurrido solapamiento entre el intervalo que está siendo validado %s y el intervalo %s:') %
           (self, intervalo))
 
-  @profile
+  #@profile
   def validar_dependencias_guardado(self):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     if self.id:
@@ -818,8 +827,8 @@ class IntervaloCronograma(models.Model):
         tarea_anterior = None
         for tarea in listado_dependencias:
           if not tarea.id in cantidades_reales_tareas:
-            cantidades_reales_tareas[tarea.id] = self.pedido.get_item_producto(
-              self.producto).get_cantidad_realizada(tarea,[self.id])
+            cantidades_reales_tareas[tarea.id] = self.getItem(
+              ).get_cantidad_realizada(tarea,[self.id])
             #cantidades_reales_tareas[tarea.id] = self.cronograma.get_cantidad_real_tarea(
               #tarea, ids_intervalos_excluir=[self.id]) 
             if tarea.id == self.tarea.id:
@@ -893,7 +902,10 @@ class IntervaloCronograma(models.Model):
         _(u'Para poder cancelar el intervalo %s debe dejar en cero '+
         u'la cantidad de tarea real producida.') % self)
 
-  @profile
+  def getItem(self):
+    return self.itempedido
+
+  #@profile
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
@@ -939,3 +951,4 @@ def add_maquinas_posibles_to_cronograma(sender, instance, created, **kwargs):
 
 post_save.connect(add_maquinas_posibles_to_cronograma, 
   sender=PedidoCronograma)
+

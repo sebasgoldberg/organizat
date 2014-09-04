@@ -1288,3 +1288,46 @@ class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
     intervalo = IntervaloCronograma.objects.get(pk=60)
 
     intervalo.cancelar()
+
+class StandsTestCase(PlanificadorTestCase):
+  
+  fixtures = [ getFixture('stands.json') ]
+  
+  def _fixture_setup(self):
+    post_save.disconnect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
+    post_save.disconnect(agregar_combinaciones_tiempos, 
+      sender=TareaMaquina)
+    post_save.disconnect(agregar_combinaciones_tiempos, 
+      sender=TareaProducto)
+    result = super(StandsTestCase, self)._fixture_setup()
+    return result
+
+  def _fixture_teardown(self):
+    post_save.connect(add_maquinas_posibles_to_cronograma, 
+      sender=PedidoCronograma)
+    post_save.connect(agregar_combinaciones_tiempos, 
+      sender=TareaMaquina)
+    post_save.connect(agregar_combinaciones_tiempos, 
+      sender=TareaProducto)
+    result = super(StandsTestCase, self)._fixture_teardown()
+    return result
+
+  def test_loreal(self):
+
+    # Se realiza la prueba con un calendario 24 hs de forma de verificar
+    # si es más performante.
+    #Calendario.objects.all().delete()
+
+    cronogramaLoreal = Cronograma.objects.get(descripcion='Loreal')
+    
+    item = cronogramaLoreal.pedidocronograma_set.first().pedido.itempedido_set.first()
+    item.cantidad = 7
+    item.save()
+
+    cronogramaLoreal.planificar()
+
+    for i in cronogramaLoreal.intervalocronograma_set.all().order_by('fecha_desde'):
+        print i
+
+    print cronogramaLoreal.optimizar_planificacion
