@@ -13,48 +13,44 @@ class GerenciadorDependencias:
 
   @staticmethod
   def crear_desde_instante(instante):
-    return GerenciadorDependencias(instante.cronograma,instante.producto,instante.pedido)
+    return GerenciadorDependencias(instante.cronograma,instante.item)
 
-  def __init__(self, cronograma, producto, pedido):
+  def __init__(self, cronograma, item):
     self.cronograma = cronograma
-    self.producto = producto
-    self.pedido = pedido
+    self.item = item
 
   def get_tolerancia(self):
-    return float(self.cronograma.tolerancia*
-        self.pedido.get_item_producto(self.producto).cantidad)
+    return float(self.cronograma.tolerancia * self.item.cantidad)
 
   #@profile
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:
       raise Exception(_(u'El instante %s ya se encuentra persistido.') % instante.id )
     if self.cronograma.id <> instante.cronograma.id or\
-      self.producto.id <> instante.producto.id or\
-      self.pedido.id <> instante.pedido.id:
+      self.item.id <> instante.item.id:
       raise Exception(_(u'No coinciden cronograma, producto y pedido entre el gerenciador de dependencias y el instante pasado.'))
-    for tarea_anterior in instante.tarea.get_anteriores(instante.producto):
+    for tarea_anterior in instante.tarea.get_anteriores(instante.item.producto):
       self.validar_dependencias(tarea_anterior,instante.tarea,instante_agregado=instante)
+    # TODO Verificar si es correcto no validar dependencias de tareas posteriores.
 
   def verificar_eliminar_instante(self, instante):
     if instante.id is None:
       raise Exception(_(u'El instante %s no se encuentra persistido.') % instante.id )
     if self.cronograma <> instante.cronograma or\
-      self.producto <> instante.producto or\
-      self.pedido <> instante.pedido:
+      self.item.id <> instante.item.id:
       raise Exception(_(u'No coinciden cronograma, producto y pedido entre el gerenciador de dependencias y el instante pasado.'))
-    for tarea_posterior in instante.tarea.get_posteriores(instante.producto):
+    for tarea_posterior in instante.tarea.get_posteriores(instante.item.producto):
       self.validar_dependencias(instante.tarea, tarea_posterior, instante_borrado=instante)
 
   def verificar_modificar_instante(self, instante):
     if instante.id is None:
       raise Exception(_(u'El instante %s no se encuentra persistido.') % instante.id )
     if self.cronograma <> instante.cronograma or\
-      self.producto <> instante.producto or\
-      self.pedido <> instante.pedido:
+      self.item <> instante.item:
       raise Exception(_(u'No coinciden cronograma, producto y pedido entre el gerenciador de dependencias y el instante pasado.'))
-    for tarea_anterior in instante.tarea.get_anteriores(instante.producto):
+    for tarea_anterior in instante.tarea.get_anteriores(instante.getItem().producto):
       self.validar_dependencias(tarea_anterior, instante.tarea, instante_modificado=instante)
-    for tarea_posterior in instante.tarea.get_posteriores(instante.producto):
+    for tarea_posterior in instante.tarea.get_posteriores(instante.getItem().producto):
       self.validar_dependencias(instante.tarea, tarea_posterior, instante_modificado=instante)
 
   def get_intervalos(self, tareas, instante_agregado=None, instante_borrado=None, instante_modificado=None):
@@ -64,8 +60,7 @@ class GerenciadorDependencias:
       self.cronograma.get_intervalos_activos_otros_cronogramas() )
 
     intervalos_set = intervalos_set.filter(
-      producto=self.producto,
-      pedido=self.pedido,
+      item=self.item,
       tarea__in=tareas)
 
     if instante_borrado:
@@ -112,8 +107,7 @@ class GerenciadorDependencias:
 
     # Se suma la cantidad de tarea real de intervalos que ya se
     # encuentran finalizados.
-    item = self.pedido.get_item_producto(self.producto)
-    cantidad_realizada = item.get_cantidad_realizada(tarea)
+    cantidad_realizada = self.item.get_cantidad_realizada(tarea)
 
     return float(cantidad_tarea) + float(cantidad_realizada)
 
@@ -147,8 +141,8 @@ class GerenciadorDependencias:
   #@profile
   def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
     intervalo = self.cronograma.crear_intervalo(
-      maquina=maquina, tarea=tarea, producto=self.producto,
-      pedido=self.pedido, fecha_desde=fecha_desde, tiempo_intervalo=tiempo_intervalo)
+      maquina=maquina, tarea=tarea, item=self.item,
+      fecha_desde=fecha_desde, tiempo_intervalo=tiempo_intervalo)
     intervalo.clean()
     if save:
       intervalo.save()

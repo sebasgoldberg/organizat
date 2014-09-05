@@ -348,8 +348,15 @@ class Pedido(models.Model):
 
   def get_productos_maquina_tarea(self, maquina, tarea):
     productos_pedido = [ i.producto for i in self.itempedido_set.all() ]
-    return [ t.producto for t in TiempoRealizacionTarea.objects.filter(
-      producto__in=productos_pedido, maquina=maquina, tarea=tarea) ]
+    for t in TiempoRealizacionTarea.objects.filter(
+        producto__in=productos_pedido, maquina=maquina, tarea=tarea):
+      yield t.producto
+
+  def get_items_maquina_tarea(self, maquina, tarea):
+    productos = [ p for p in self.get_productos_maquina_tarea(
+      maquina, tarea) ]
+    for item in self.itempedido_set.filter(producto__in=productos):
+      yield item
 
   def get_item_producto(self, producto):
     return self.itempedido_set.get(producto=producto)

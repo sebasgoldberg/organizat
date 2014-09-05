@@ -22,7 +22,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
   modelo = None
   tiempos_maquinas = {}
   is_maximo_tiempo_maquina = {}
-  tiempo_maquina_tarea_pedido_producto = {}
+  tiempo_maquina_tarea_item = {}
 
   def get_tiempo_infinito(self):
     return C_100_ANYOS_EN_MINUTOS
@@ -50,14 +50,14 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
   def def_tiempo_insumido_maquinas(self):
 
-    T_MTPD = self.tiempo_maquina_tarea_pedido_producto
+    T_MTI = self.tiempo_maquina_tarea_item
 
     for maquina in self.get_grupo_maquinas_planificado():
       self.modelo += lpSum([
-        T_MTPD[maquina.id][tarea.id][producto.id][pedido.id]
+        T_MTI[maquina.id][tarea.id][item.id]
           for pedido in self.cronograma.get_pedidos()
-            for producto in pedido.get_productos()
-              for tarea in producto.get_tareas_maquina(maquina) ]) - \
+            for item in pedido.get_items()
+              for tarea in item.producto.get_tareas_maquina(maquina) ]) - \
         self.tiempos_maquinas[maquina.id] == 0,\
           "Tiempo de la maquina %s" % maquina.id
 
@@ -78,19 +78,18 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
   def def_cumplir_cantidad_producir(self):
 
-    T_MTPD = self.tiempo_maquina_tarea_pedido_producto
+    T_MTI = self.tiempo_maquina_tarea_item
 
     for pedido in self.cronograma.get_pedidos():
       for item in pedido.get_items():
-        producto = item.producto
-        for tarea in self.get_tareas_producto_segun_grupo_maquinas(producto):
+        for tarea in self.get_tareas_producto_segun_grupo_maquinas(item.producto):
           self.modelo += lpSum([
-            T_MTPD[maquina.id][tarea.id][producto.id][pedido.id] /\
-            float(tarea.get_tiempo(maquina,producto))
-            for maquina in self.get_maquinas_tarea_producto(tarea, producto)
+            T_MTI[maquina.id][tarea.id][item.id] /\
+            float(tarea.get_tiempo(maquina,item.producto))
+            for maquina in self.get_maquinas_tarea_producto(tarea, item.producto)
             ]) - float(item.get_cantidad_no_planificada(tarea))\
-            == 0, "La suma del tiempo de produccion en maquinas para tarea %s, para producto %s, pedido %s, debe corresponderse con la cantidad de tarea a producir" % (
-              tarea.id, producto.id, pedido.id)
+            == 0, "La suma del tiempo de produccion en maquinas para tarea %s, item %s, debe corresponderse con la cantidad de tarea a producir" % (
+              tarea.id, item.id)
 
   def definir_restricciones(self):
 
@@ -110,13 +109,13 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     for maquina in self.get_grupo_maquinas_planificado():
 
       for pedido in self.cronograma.get_pedidos():
-        for producto in pedido.get_productos():
-          for tarea in producto.get_tareas_maquina(maquina):
-            clave = (maquina.id, tarea.id, producto.id, pedido.id)
+        for item in pedido.get_items():
+          for tarea in item.producto.get_tareas_maquina(maquina):
+            clave = (maquina.id, tarea.id, item.id)
             if clave in self.tiempos_intervalos_registrados:
               continue
-            tiempo = self.tiempo_maquina_tarea_pedido_producto[
-              maquina.id][tarea.id][producto.id][pedido.id].value()
+            tiempo = self.tiempo_maquina_tarea_item[
+              maquina.id][tarea.id][item.id].value()
             if tiempo > 0:
               self.tiempos_intervalos_registrados[clave] = tiempo
 
@@ -124,7 +123,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     
     self.tiempos_maquinas = {}
     self.is_maximo_tiempo_maquina = {}
-    self.tiempo_maquina_tarea_pedido_producto = {}
+    self.tiempo_maquina_tarea_item = {}
 
     for maquina in self.get_grupo_maquinas_planificado():
       self.tiempos_maquinas[maquina.id] = LpVariable(
@@ -136,16 +135,16 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       # Se obtienen solo las tareas que pertencen a la máquina iterada
       for tarea in maquina.get_tareas():
         for pedido in self.cronograma.get_pedidos():
-          for producto in pedido.get_productos_maquina_tarea(maquina,tarea):
+          for item in pedido.get_items_maquina_tarea(maquina,tarea):
 
             add_keys_to_dict(
-              self.tiempo_maquina_tarea_pedido_producto,
-              [maquina.id,tarea.id,producto.id,pedido.id])
+              self.tiempo_maquina_tarea_item,
+              [maquina.id,tarea.id,item.id])
 
-            self.tiempo_maquina_tarea_pedido_producto[
-              maquina.id][tarea.id][producto.id][pedido.id] = LpVariable(
-                "T_M%s_T%s_P%s_D%s" % \
-                (maquina.id, tarea.id, pedido.id, producto.id), 0)
+            self.tiempo_maquina_tarea_item[
+              maquina.id][tarea.id][item.id] = LpVariable(
+                "T_M%s_T%s_I%s" % \
+                (maquina.id, tarea.id, item.id), 0)
 
   def definir_funcional(self):
 
@@ -174,17 +173,17 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
   def completar_cronograma(self):
 
     for pedido in self.cronograma.get_pedidos():
-      for producto in pedido.get_productos():
-        gerenciador_dependencias = self.cronograma.get_gerenciador_dependencias(producto, pedido)
+      for item in pedido.get_items():
+        gerenciador_dependencias = self.cronograma.get_gerenciador_dependencias(item)
         # Se obtienen las tareas ordenas por dependencia.
-        for tarea in producto.get_tareas_ordenadas_por_dependencia():
-          for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, producto):
-            clave = (maquina.id, tarea.id, producto.id, pedido.id)
+        for tarea in item.producto.get_tareas_ordenadas_por_dependencia():
+          for maquina in self.cronograma.get_maquinas_tarea_producto(tarea, item.producto):
+            clave = (maquina.id, tarea.id, item.id)
             if clave in self.tiempos_intervalos_registrados:
               tiempo = self.tiempos_intervalos_registrados[clave]
               logger.debug(_(u'Se agregan intervalos a cronograma para:\n'+
-                u'\tmaquina: %s\ttarea: %s\tproducto: %s\tpedido: %s\ttiempo: %s') % (
-                  maquina, tarea, producto, pedido, tiempo))
+                u'\tmaquina: %s\ttarea: %s\titem: %s\ttiempo: %s') % (
+                  maquina, tarea, item, tiempo))
               gerenciador_dependencias.add_intervalos_to_cronograma(
                 maquina=maquina, tarea=tarea, tiempo=tiempo)
 

@@ -153,15 +153,14 @@ class Cronograma(models.Model):
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
 
-  def crear_intervalo(self, maquina, tarea, producto, pedido,
+  def crear_intervalo(self, maquina, tarea, item,
     fecha_desde, tiempo_intervalo):
     return IntervaloCronograma(
-      cronograma=self, maquina=maquina, tarea=tarea, producto=producto,
-      pedido=pedido, fecha_desde=fecha_desde, 
-      tiempo_intervalo=tiempo_intervalo)
+      cronograma=self, maquina=maquina, tarea=tarea, item=item, 
+      fecha_desde=fecha_desde, tiempo_intervalo=tiempo_intervalo)
 
-  def get_gerenciador_dependencias(self, producto, pedido):
-    return GerenciadorDependencias(self, producto, pedido)
+  def get_gerenciador_dependencias(self, item):
+    return GerenciadorDependencias(self, item)
 
   def get_cantidad_real_tarea(self, tarea, ids_intervalos_excluir=[]):
     qs = self.intervalocronograma_set.filter(tarea=tarea).exclude(
@@ -289,11 +288,10 @@ class Cronograma(models.Model):
 
   def get_intervalos_ordenados_por_dependencia(self, **filtros_adicionales):
     for pedido in self.get_pedidos():
-      for producto in pedido.get_productos():
-        for tarea in producto.get_tareas_ordenadas_por_dependencia():
+      for item in pedido.get_items():
+        for tarea in item.producto.get_tareas_ordenadas_por_dependencia():
           for intervalo in self.intervalocronograma_set.filter(
-            pedido=pedido, producto=producto, tarea=tarea,
-            **filtros_adicionales):
+            item=item, tarea=tarea, **filtros_adicionales):
             yield intervalo
 
   def finalizar_intervalos(self):
@@ -541,8 +539,8 @@ class IntervaloCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
-  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
-  pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
+  #producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
+  #pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
   cantidad_tarea = models.DecimalField( editable=False, default=0,
     max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Planificada'),
     help_text=_(u'Cantidad de tarea a producir en el intervalo.'))
@@ -560,9 +558,9 @@ class IntervaloCronograma(models.Model):
     choices=ESTADOS_INTERVALOS, default=0)
 
   # atributos exclusivos para asegurar la consistencia de la información
+  item = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.PROTECT)
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
   tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.PROTECT)
-  itempedido = models.ForeignKey(ItemPlanificable, editable=False, on_delete=models.PROTECT)
   pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False)
   maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
 
@@ -573,10 +571,9 @@ class IntervaloCronograma(models.Model):
     unique_together = (('cronograma', 'maquina', 'fecha_desde'),)
 
   def __unicode__(self):
-    return '#%s(%s, %s, ped #%s, %s, cant: %s, %s, %s)' % (self.id,
-      self.maquina.descripcion, self.tarea.descripcion, self.pedido.id,
-      self.producto.descripcion, self.cantidad_tarea,
-      self.get_fecha_desde(), self.get_fecha_hasta())
+    return '#%s(%s, %s, %s, cant: %s, %s, %s)' % (self.id,
+      self.maquina.descripcion, self.tarea.descripcion, self.item,
+      self.cantidad_tarea, self.get_fecha_desde(), self.get_fecha_hasta())
 
   @staticmethod
   def get_intervalos_activos():
@@ -587,9 +584,8 @@ class IntervaloCronograma(models.Model):
   @staticmethod
   def get_cantidad_planificada(item, tarea):
     total = IntervaloCronograma.objects.filter(
-      pedido=item.pedido,
       tarea=tarea,
-      producto=item.producto,
+      item=item,
       estado=ESTADO_INTERVALO_ACTIVO
       ).aggregate(
         total=models.Sum('cantidad_tarea'))['total']
@@ -625,9 +621,8 @@ class IntervaloCronograma(models.Model):
         return 0
     
     intervalos_item = IntervaloCronograma.objects.filter(
-      pedido=item.pedido,
       tarea=tarea,
-      producto=item.producto,
+      item=item,
       estado=ESTADO_INTERVALO_FINALIZADO
       ).exclude(id__in=ids_intervalos_excluir)
     total = intervalos_item.aggregate(total=models.Sum('cantidad_tarea_real'))['total']
@@ -727,7 +722,7 @@ class IntervaloCronograma(models.Model):
     self.fecha_desde += datetime.timedelta(minutes=minutos)
 
   def get_tiempo_tarea(self):
-    return self.tarea.get_tiempo(self.maquina,self.producto)
+    return self.tarea.get_tiempo(self.maquina,self.item.producto)
 
   def get_intervalos_maquina(self):
     return self.cronograma.get_intervalos_maquina(self.maquina)
@@ -736,7 +731,7 @@ class IntervaloCronograma(models.Model):
 
     ids_tareas = set()
 
-    for secuencia_dependencia in self.producto.get_listado_secuencias_dependencias():
+    for secuencia_dependencia in self.item.producto.get_listado_secuencias_dependencias():
       encontrada_self_tarea = False
       for tarea in secuencia_dependencia:
         if tarea.id == self.tarea.id:
@@ -747,12 +742,11 @@ class IntervaloCronograma(models.Model):
     if len(ids_tareas) == 0:
       return
 
-    for tarea in self.producto.get_tareas_ordenadas_por_dependencia():
+    for tarea in self.item.producto.get_tareas_ordenadas_por_dependencia():
       if tarea.id not in ids_tareas:
         continue
       for intervalo in IntervaloCronograma.objects.filter(
-        tarea=tarea, producto=self.producto, 
-        pedido=self.pedido, estado=ESTADO_INTERVALO_ACTIVO):
+        tarea=tarea, item=self.item, estado=ESTADO_INTERVALO_ACTIVO):
         yield intervalo
 
   def calcular_fecha_desde(self):
@@ -782,9 +776,11 @@ class IntervaloCronograma(models.Model):
   def calcular_cantidad_tarea(self):
     if self.cantidad_tarea:
       return
-    self.cantidad_tarea = Decimal(self.tiempo_intervalo) / Decimal(self.tarea.get_tiempo(self.maquina,self.producto))
+    self.cantidad_tarea = Decimal(self.tiempo_intervalo) / Decimal(
+      self.tarea.get_tiempo(self.maquina,self.item.producto))
 
   def validar_solapamiento(self):
+    # TODO Analizar una posible mejora de performance
     intervalos_maquina = self.cronograma.get_intervalos_propios_y_activos(self.maquina)
     if self.id:
       intervalos_maquina = intervalos_maquina.exclude(pk=self.id)
@@ -823,7 +819,8 @@ class IntervaloCronograma(models.Model):
 
     if self.cantidad_tarea_real > 0:
       cantidades_reales_tareas = {}
-      for listado_dependencias in self.producto.get_listado_secuencias_dependencias():
+      for listado_dependencias in self.getItem(
+        ).producto.get_listado_secuencias_dependencias():
         tarea_anterior = None
         for tarea in listado_dependencias:
           if not tarea.id in cantidades_reales_tareas:
@@ -903,14 +900,13 @@ class IntervaloCronograma(models.Model):
         u'la cantidad de tarea real producida.') % self)
 
   def getItem(self):
-    return self.itempedido
+    return self.item
 
   #@profile
   def clean(self):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
-    self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.producto)
-    self.itempedido = ItemPlanificable.objects.get(pedido=self.pedido,producto=self.producto)
-    self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.pedido,cronograma=self.cronograma)
+    self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.item.producto)
+    self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.item.pedido,cronograma=self.cronograma)
     self.maquinacronograma = MaquinaCronograma.objects.get(maquina=self.maquina,cronograma=self.cronograma)
     self.calcular_fecha_desde()
     self.calcular_cantidad_tarea()

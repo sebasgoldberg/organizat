@@ -31,11 +31,11 @@ class PlanificadorTestCase(TestCase):
       for item in pedido.get_items():
         for tarea in item.producto.get_tareas():
           cantidad_tarea = cronograma.intervalocronograma_set.filter(
-            tarea=tarea,pedido=pedido,producto=item.producto).aggregate(
+            tarea=tarea,item=item).aggregate(
             models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
           self.assertEqual(item.cantidad, cantidad_tarea, 
             'Intervalos involucrados: %s' % cronograma.intervalocronograma_set.filter(
-              tarea=tarea,pedido=pedido,producto=item.producto))
+              tarea=tarea,item=item))
 
   def test_fecha_hasta(self):
     for intervalo in IntervaloCronograma.objects.all():
@@ -204,15 +204,16 @@ class IntervaloCronogramaTestCase(TestCase):
     T1 = Tarea.objects.get(descripcion='T1')
     P1 = Producto.objects.get(descripcion='P1')
     D1 = PedidoPlanificable.objects.get(descripcion='D1')
+    I1 = D1.get_item_producto(P1)
     
     intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
-      tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
+      tarea=T1,item=I1,cantidad_tarea=100/5,
       tiempo_intervalo=100)
     intervalo.clean()
     intervalo.save()
 
     intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
-      tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
+      tarea=T1,item=I1,cantidad_tarea=100/5,
       tiempo_intervalo=100)
     intervalo.clean()
 
@@ -222,7 +223,7 @@ class IntervaloCronogramaTestCase(TestCase):
 
     fecha_hasta = intervalo.get_fecha_hasta()
     intervalo=IntervaloCronograma(cronograma=cronograma,maquina=M1,
-      tarea=T1,producto=P1,pedido=D1,cantidad_tarea=100/5,
+      tarea=T1,item=I1,cantidad_tarea=100/5,
       tiempo_intervalo=100, fecha_desde=fecha_hasta)
 
     self.assertEqual(intervalo.fecha_desde,fecha_hasta)
@@ -272,6 +273,7 @@ class TareaDependienteTestCase(TestCase):
     T2 = Tarea.objects.get(descripcion='T2')
     P1 = Producto.objects.get(descripcion='P1')
     D1 = PedidoPlanificable.objects.get(descripcion='D1')
+    itemP1 = D1.get_item_producto(P1)
 
     # Se verifica la obtención de tareas ordenadas por grado de dependencia
     tareas_ordenadas_por_grado_dependencia=P1.get_tareas_ordenadas_por_dependencia()
@@ -280,7 +282,7 @@ class TareaDependienteTestCase(TestCase):
     
     # Se agrega una tarea T1 entre [0;25] como resultado da una cantidad de 5
     I1=IntervaloCronograma(cronograma=cronograma,maquina=M1,
-      tarea=T1,producto=P1,pedido=D1,cantidad_tarea=25/5,
+      tarea=T1,item=itemP1,cantidad_tarea=25/5,
       tiempo_intervalo=25, fecha_desde=cronograma.fecha_inicio)
     I1.clean()
     I1.save()
@@ -288,7 +290,7 @@ class TareaDependienteTestCase(TestCase):
 
     # Se planifica I2 en la máquina M2 en la fecha de finalización de I1
     I2=IntervaloCronograma(cronograma=cronograma,maquina=M2,
-      tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
+      tarea=T2,item=itemP1,cantidad_tarea=100/10,
       tiempo_intervalo=100, fecha_desde=I1.get_fecha_hasta())
 
     # Se verifica que cuando se asigna la fecha desde, el cálculo no la modifica.
@@ -324,7 +326,7 @@ class TareaDependienteTestCase(TestCase):
 
     # Agregamos el intervalo I3:M1:T1:5:[25;50]
     I3=IntervaloCronograma(cronograma=cronograma,maquina=M1,
-      tarea=T1,producto=P1,pedido=D1,cantidad_tarea=25/5,
+      tarea=T1,item=itemP1,cantidad_tarea=25/5,
       tiempo_intervalo=25, fecha_desde=I1.get_fecha_hasta())
     I3.clean()
     I3.save()
@@ -412,7 +414,7 @@ class TareaDependienteTestCase(TestCase):
       pass
 
     I4=IntervaloCronograma(cronograma=cronograma,maquina=M2,
-      tarea=T2,producto=P1,pedido=D1,cantidad_tarea=100/10,
+      tarea=T2,item=itemP1,cantidad_tarea=100/10,
       tiempo_intervalo=100, fecha_desde=I2.get_fecha_hasta())
 
     try:
@@ -573,7 +575,7 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
     cronograma.planificar()
 
     # Tomamos cualquier intervalo del pedido D4
-    intervalo = IntervaloCronograma.objects.filter(pedido__descripcion='D4').first()
+    intervalo = IntervaloCronograma.objects.filter(item__pedido__descripcion='D4').first()
 
     # Verificamos que el intervalo tiene una duración menor a la del tiempo mínimo
     self.assertLess(intervalo.tiempo_intervalo,tiempo_minimo_intervalo)
@@ -723,7 +725,7 @@ class PlanificarConMaquinasInactivas(PlanificadorTestCase):
 
     for x in TiempoRealizacionTarea.objects.filter(activa=False):
       intervalos_con_maquinas_inactivas = cronograma.intervalocronograma_set.filter(
-        maquina=x.maquina, producto=x.producto, tarea=x.tarea)
+        maquina=x.maquina, item__producto=x.producto, tarea=x.tarea)
 
       self.assertEqual(intervalos_con_maquinas_inactivas.count(),0)
 
@@ -1260,7 +1262,7 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
 
     for intervaloPlanificado in IntervaloCronograma.objects.filter(
         cronograma=self.crono_todo,
-        pedido=pedido_neumaticos):
+        item__in=[i for i in pedido_neumaticos.get_items()]):
         cantidadTarea[intervaloPlanificado.tarea.id]-=intervaloPlanificado.cantidad_tarea;
 
     for cantidad in cantidadTarea.itervalues():
@@ -1327,7 +1329,3 @@ class StandsTestCase(PlanificadorTestCase):
 
     cronogramaLoreal.planificar()
 
-    for i in cronogramaLoreal.intervalocronograma_set.all().order_by('fecha_desde'):
-        print i
-
-    print cronogramaLoreal.optimizar_planificacion
