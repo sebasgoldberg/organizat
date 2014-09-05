@@ -6,6 +6,7 @@ from decimal import Decimal
 from datetime import timedelta as TD
 import logging
 import traceback
+from decimal import Decimal as D
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,10 @@ class GerenciadorDependencias:
     self.cronograma = cronograma
     self.item = item
 
-  def get_tolerancia(self):
-    return float(self.cronograma.tolerancia * self.item.cantidad)
+  def get_tolerancia(self, cantidad=None):
+    if cantidad is None:
+      cantidad = self.item.cantidad
+    return self.cronograma.get_tolerancia(cantidad)
 
   #@profile
   def verificar_agregar_instante(self, instante):
@@ -100,16 +103,16 @@ class GerenciadorDependencias:
     cantidad_tarea = 0
     for intervalo in self.get_intervalos_anteriores(intervalos, tarea, fecha):
       if intervalo.get_fecha_hasta() <= fecha:
-        cantidad_tarea += float(intervalo.cantidad_tarea)
+        cantidad_tarea += D(intervalo.cantidad_tarea)
       else:
         tiempo = (fecha - intervalo.fecha_desde).total_seconds()
-        cantidad_tarea += float(tiempo) / float(intervalo.get_tiempo_tarea() * 60)
+        cantidad_tarea += D(tiempo) / D(intervalo.get_tiempo_tarea() * 60)
 
     # Se suma la cantidad de tarea real de intervalos que ya se
     # encuentran finalizados.
     cantidad_realizada = self.item.get_cantidad_realizada(tarea)
 
-    return float(cantidad_tarea) + float(cantidad_realizada)
+    return D(cantidad_tarea) + D(cantidad_realizada)
 
   #@profile
   def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None, instante_modificado=None):
@@ -123,20 +126,25 @@ class GerenciadorDependencias:
 
     intervalos_iter=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instante_borrado, instante_modificado)
     intervalos = [i for i in intervalos_iter]
-    logger.debug('Se validan dependencia entre las tareas %s (anterior) y %s (posterior) utilizando los siguientes intervalos:')
+    logger.debug('Se validan dependencia entre las tareas %s (anterior) y %s (posterior) utilizando los siguientes intervalos:' % (
+      tarea_anterior, tarea_posterior))
     logger.debug(intervalos)
     particion_temporal = self.get_particion_ordenada_temporal(intervalos)
     logger.debug('Particion temporal utilizada: %s' % particion_temporal)
     for t in particion_temporal:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
-      logger.debug('Cantidad tarea %s anterior a %s: %s' % (tarea_anterior, t, cantidad_tarea_anterior))
-      logger.debug('Cantidad tarea %s posterior a %s: %s' % (tarea_posterior, t, cantidad_tarea_posterior))
-      # @todo Hacer configurable la tolerancia a la diferencia de cantidad.
-      if ( cantidad_tarea_posterior - cantidad_tarea_anterior ) > self.get_tolerancia():
-        raise ValidationError(
-          "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
-          (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
+      logger.debug('Cantidad tarea anterior %s hasta %s: %s' % (tarea_anterior, t, cantidad_tarea_anterior))
+      logger.debug('Cantidad tarea posterior %s hasta %s: %s' % (tarea_posterior, t, cantidad_tarea_posterior))
+
+      if D(cantidad_tarea_posterior) > D(cantidad_tarea_anterior):
+        if abs( cantidad_tarea_posterior - D(self.item.cantidad) ) > self.get_tolerancia():
+          if cantidad_tarea_posterior - cantidad_tarea_anterior > self.get_tolerancia(cantidad_tarea_anterior):
+            e = ValidationError(
+              "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
+              (cantidad_tarea_posterior, tarea_posterior.descripcion, cantidad_tarea_anterior, tarea_anterior.descripcion, t) )
+            logger.debug(e)
+            raise e
 
   #@profile
   def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
@@ -170,14 +178,19 @@ class GerenciadorDependencias:
         cota_superior = incremento_temporal - 1
       except ValidationError:
         cota_inferior = incremento_temporal + 1
-    
+
     if intervalo is not None:
+      try:
+        intervalo.clean()
+      except:
+        assert False
       intervalo.save()
 
     return intervalo
 
   #@profile
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
+
     while tiempo > 0:
       for hueco in self.cronograma.get_huecos(maquina):
         logger.debug(_('Se intenta agregar en hueco %s.') % hueco.__unicode__())
@@ -201,9 +214,9 @@ class GerenciadorDependencias:
           self.cronograma.get_intervalos_propios_y_activos().filter(
             fecha_hasta__gt=hueco.fecha_desde).count() == 0 ):
           raise ValidationError(
-            ugettext_lazy((u'No se ha podido completar la planificación. '+
+            ugettext_lazy((u'No se ha podido completar la planificación para el item %s. '+
               u'Seguramente puede solucionar este error, aumentando la opción '+
-              u'tiempo mínimo del intervalo en la configuración del cronograma.')))
+              u'tiempo mínimo del intervalo en la configuración del cronograma.')) % self.item)
         if tiempo <= 0:
           break
 

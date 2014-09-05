@@ -15,6 +15,7 @@ from datetime import timedelta as TD
 import logging
 from utils import Hueco
 import calendario.models
+from decimal import Decimal as D
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +139,14 @@ class Cronograma(models.Model):
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=datetime.datetime.now())
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
   tiempo_minimo_intervalo = models.DecimalField(default=0,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
+    max_digits=8, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
   estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
     choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
-  tolerancia = models.DecimalField(default=0.02,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Tolerancia a errores de planificación.'), 
+  tolerancia = models.DecimalField(default=0.001,
+    max_digits=3, decimal_places=3, verbose_name=_(u'Tolerancia a errores de planificación.'), 
     help_text=_(u'Tolerancia a errores de planificación. Indica el factor de tolerancia a los errores durante la planificación. Por ejemplo, un valor de 0.02 para un item de un pedido con cantidad 100, indica que puede haber un error de planificación de 2 unidades.'))
 
   class Meta:
@@ -158,6 +159,9 @@ class Cronograma(models.Model):
     return IntervaloCronograma(
       cronograma=self, maquina=maquina, tarea=tarea, item=item, 
       fecha_desde=fecha_desde, tiempo_intervalo=tiempo_intervalo)
+
+  def get_tolerancia(self, cantidad):
+    return D(self.tolerancia) * D(cantidad)
 
   def get_gerenciador_dependencias(self, item):
     return GerenciadorDependencias(self, item)
@@ -477,7 +481,7 @@ class TareaItem(models.Model):
     Se debe actualizar cuando se finaliza un intervalo.
     """
     cantidad_realizada = models.DecimalField( default=0,
-        max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Realizada'), 
+        max_digits=8, decimal_places=2, verbose_name=_(u'Cantidad Realizada'), 
         help_text=_(u'Cantidad de tarea realizada (real).'))
 
 
@@ -539,16 +543,14 @@ class IntervaloCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
   tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'), on_delete=models.PROTECT)
-  #producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), on_delete=models.PROTECT)
-  #pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
   cantidad_tarea = models.DecimalField( editable=False, default=0,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Planificada'),
+    max_digits=12, decimal_places=6, verbose_name=_(u'Cantidad Tarea Planificada'),
     help_text=_(u'Cantidad de tarea a producir en el intervalo.'))
   cantidad_tarea_real = models.DecimalField( default=0,
-    max_digits=7, decimal_places=2, verbose_name=_(u'Cantidad Tarea Real'), 
+    max_digits=8, decimal_places=2, verbose_name=_(u'Cantidad Tarea Real'), 
     help_text=_(u'Cantidad de tarea producida (real).'))
   tiempo_intervalo = models.DecimalField(
-    max_digits=7, decimal_places=2,
+    max_digits=12, decimal_places=6,
     verbose_name=_(u'Tiempo del intervalo (min)'))
   fecha_desde = models.DateTimeField(
     verbose_name=_(u'Fecha desde'), null=False, blank=False)
@@ -556,13 +558,17 @@ class IntervaloCronograma(models.Model):
     verbose_name=_(u'Fecha hasta'), null=True, blank=False)
   estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
     choices=ESTADOS_INTERVALOS, default=0)
+  item = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.PROTECT)
 
   # atributos exclusivos para asegurar la consistencia de la información
-  item = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.PROTECT)
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
   tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.PROTECT)
   pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False)
   maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
+
+  # Atributos solo para usar en admin
+  producto = models.ForeignKey(Producto, verbose_name=_(u'Producto'), editable=False, on_delete=models.PROTECT)
+  pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), editable=False, on_delete=models.PROTECT)
 
   class Meta:
     ordering = ['-cronograma__id', 'fecha_desde']
@@ -574,6 +580,12 @@ class IntervaloCronograma(models.Model):
     return '#%s(%s, %s, %s, cant: %s, %s, %s)' % (self.id,
       self.maquina.descripcion, self.tarea.descripcion, self.item,
       self.cantidad_tarea, self.get_fecha_desde(), self.get_fecha_hasta())
+
+  def __init__(self, *args, **kwargs):
+      super(IntervaloCronograma, self).__init__(*args,**kwargs)
+      self.producto = self.item.producto
+      self.item.pedido.__class__ = PedidoPlanificable
+      self.pedido = self.item.pedido
 
   @staticmethod
   def get_intervalos_activos():
@@ -831,7 +843,8 @@ class IntervaloCronograma(models.Model):
             if tarea.id == self.tarea.id:
               cantidades_reales_tareas[tarea.id] += self.cantidad_tarea_real
           if tarea_anterior is not None:
-            if cantidades_reales_tareas[tarea.id] > cantidades_reales_tareas[tarea_anterior.id]:
+            if (cantidades_reales_tareas[tarea.id] - cantidades_reales_tareas[tarea_anterior.id] >
+                    self.cronograma.get_tolerancia(cantidades_reales_tareas[tarea.id]) ):
               raise TareaRealNoRespetaDependencias(_(u'La cantidad real %s de la tarea %s '+
                 u'no puede superar la cantidad %s de la tarea %s de la cual '+
                 u'depende.') % (cantidades_reales_tareas[tarea.id], tarea,

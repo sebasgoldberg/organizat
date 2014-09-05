@@ -33,7 +33,8 @@ class PlanificadorTestCase(TestCase):
           cantidad_tarea = cronograma.intervalocronograma_set.filter(
             tarea=tarea,item=item).aggregate(
             models.Sum('cantidad_tarea'))['cantidad_tarea__sum']
-          self.assertEqual(item.cantidad, cantidad_tarea, 
+          self.assertLessEqual(abs(item.cantidad - cantidad_tarea),
+            cronograma.get_tolerancia(item.cantidad), 
             'Intervalos involucrados: %s' % cronograma.intervalocronograma_set.filter(
               tarea=tarea,item=item))
 
@@ -1326,6 +1327,10 @@ class StandsTestCase(PlanificadorTestCase):
     item = cronogramaLoreal.pedidocronograma_set.first().pedido.itempedido_set.first()
     item.cantidad = 7
     item.save()
+
+    item.pedido.add_item(item.producto,7)
+
+    cronogramaLoreal.save()
 
     cronogramaLoreal.planificar()
 

@@ -1,5 +1,6 @@
 # coding=utf-8
 from django.utils.translation import ugettext_lazy as _
+from decimal import Decimal as D
 
 class Hueco(object):
   
@@ -42,7 +43,7 @@ class Hueco(object):
     return Hueco(fecha_desde, fecha_hasta=fecha_hasta)
 
   def get_minutos(self):
-    return float(self.tiempo.total_seconds()) / 60
+    return D(self.tiempo.total_seconds()) / 60
 
   @staticmethod
   def union(lh1, lh2):

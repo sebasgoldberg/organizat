@@ -376,7 +376,13 @@ class ItemPedido(models.Model):
     ordering = ['-pedido__id','producto__descripcion']
     verbose_name = _(u"Item pedido")
     verbose_name_plural = _(u"Items pedidos")
-    unique_together = (('pedido', 'producto',),)
+
+  def __unicode__(self):
+    return _(u'P#%(pedido)s-I#%(item)s-%(producto)s') % {
+        'pedido': self.pedido.id,
+        'item': self.id,
+        'producto': self.producto,
+        }
 
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete

@@ -110,18 +110,24 @@ LOGGING = {
   'version': 1,
   'disable_existing_loggers': False,
   'handlers': {
-    'file': {
+    'info': {
       'level': 'INFO',
       #'level': 'DEBUG',
+      'class': 'logging.FileHandler',
+      'filename': 'info.log',
+    },
+    'debug': {
+      #'level': 'INFO',
+      'level': 'DEBUG',
       'class': 'logging.FileHandler',
       'filename': 'debug.log',
     },
   },
   'loggers': {
     'planificacion': {
-      'handlers': ['file'],
-      'level': 'INFO',
-      #'level': 'DEBUG',
+      'handlers': ['info', 'debug'],
+      #'level': 'INFO',
+      'level': 'DEBUG',
       'propagate': False,
     },
   },

@@ -20,7 +20,7 @@ class CronogramaAdmin(admin.ModelAdmin):
 
 class IntervaloCronogramaAdmin(admin.ModelAdmin):
   readonly_fields=['id','estado']
-  list_display=['id', 'maquina', 'tarea', 'pedido', 'producto', 'cantidad_tarea', 'cantidad_tarea_real',
+  list_display=['id', 'maquina', 'tarea', 'item', 'cantidad_tarea', 'cantidad_tarea_real',
     'estado', 'tiempo_intervalo', 'in_maquina_cuello_botella', 'fecha_desde', 'fecha_hasta' ]
   list_display_links = ('id',)
   list_filter=['cronograma', 'maquina', 'tarea', 'pedido', 'producto', CuelloBotellaListFilter]

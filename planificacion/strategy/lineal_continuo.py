@@ -9,6 +9,7 @@ import planificacion.models
 from django.core.exceptions import ValidationError
 import datetime
 import logging
+from decimal import Decimal as D
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +86,9 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
         for tarea in self.get_tareas_producto_segun_grupo_maquinas(item.producto):
           self.modelo += lpSum([
             T_MTI[maquina.id][tarea.id][item.id] /\
-            float(tarea.get_tiempo(maquina,item.producto))
+            D(tarea.get_tiempo(maquina,item.producto))
             for maquina in self.get_maquinas_tarea_producto(tarea, item.producto)
-            ]) - float(item.get_cantidad_no_planificada(tarea))\
+            ]) - D(item.get_cantidad_no_planificada(tarea))\
             == 0, "La suma del tiempo de produccion en maquinas para tarea %s, item %s, debe corresponderse con la cantidad de tarea a producir" % (
               tarea.id, item.id)
 
