@@ -114,7 +114,8 @@ class TareaMaquina(models.Model):
       'maquina': self.maquina.descripcion,}
 
 class Producto(models.Model):
-  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
+  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True,
+      null=True, blank=False)
 
   class Meta:
     ordering = ['descripcion']
@@ -320,7 +321,8 @@ class DependenciaTareaProducto(models.Model):
         dependencia.tarea, nuevo_camino)
 
 class Pedido(models.Model):
-  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'))
+  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'),
+      null=True, blank=False)
 
   def __unicode__(self):
     return u'#%s - %s' % (self.id, self.descripcion)

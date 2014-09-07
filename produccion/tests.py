@@ -216,3 +216,4 @@ class DependenciaTareaProductoTestCase(TestCase):
       self.assertEqual('Dependencia circular detectada: T2 -> T1 -> T4 -> T2',e.message)
 
     self.assertEqual(DependenciaTareaProducto.objects.count(),4)
+

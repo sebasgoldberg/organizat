@@ -19,6 +19,9 @@ from decimal import Decimal as D
 
 logger = logging.getLogger(__name__)
 
+class PedidoYaParticionado(ValidationError):
+    pass
+
 """
 Excepcione de validación de tareas reales.
 """
@@ -499,9 +502,43 @@ class PedidoPlanificable(Pedido):
     return ItemPlanificable.objects.get(
       pedido=self, producto=producto)
 
+  def get_items_producto(self, producto):
+    return ItemPlanificable.objects.filter(
+      pedido=self, producto=producto)
+
   def get_maquinas_posibles_produccion(self):
     for maquina in super(PedidoPlanificable, self).get_maquinas_posibles_produccion():
       yield MaquinaPlanificacion.fromMaquina(maquina)
+
+  def particionar(self, producto, cantidad_por_item):
+
+    items = self.itempedido_set.filter(producto=producto)
+
+    cantidad_items_producto = items.count()
+    cantidad_productos = items.aggregate(
+        cantidad_total=models.Sum('cantidad'))['cantidad_total']
+
+    cantidad_por_item_actual = cantidad_productos / cantidad_items_producto
+
+    if cantidad_por_item_actual <= cantidad_por_item:
+      raise PedidoYaParticionado(_(u'Imposible particionar ya que la cantidad de productos '+
+        'por item actual en promedio %s es menor que la solicitada %s.'))
+
+    cantidad_items_esperados = int(cantidad_productos / cantidad_por_item)
+    cantidad_ultimo_item = cantidad_productos % cantidad_por_item
+
+    for item in items:
+      item.cantidad = cantidad_por_item
+      item.save()
+      cantidad_items_esperados -= 1
+
+    while cantidad_items_esperados > 0:
+      self.itempedido_set.create(producto=producto, cantidad=cantidad_por_item)
+      cantidad_items_esperados -= 1
+
+    if cantidad_ultimo_item > 0:
+      self.itempedido_set.create(producto=producto, cantidad=cantidad_ultimo_item)
+
 
 class PedidoCronograma(models.Model):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
