@@ -147,14 +147,14 @@ class Cronograma(models.Model):
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=TZ.make_aware(
         datetime.datetime.now(), TZ.get_default_timezone()))
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
-  tiempo_minimo_intervalo = models.DecimalField(default=0,
+  tiempo_minimo_intervalo = models.DecimalField(default=60,
     max_digits=8, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
     help_text=_(u'Tiempo mínimo de cada intervalo que compone el cronograma. NO será tenido en cuenta durante la resolución del modelo lineal. Esto quiere decir que si la resolución del modelo lineal obtiene intervalos con tiempo menor al definido, estos serán incorporados al cronograma.'))
   optimizar_planificacion = models.BooleanField(default=True, verbose_name=(u'Optimizar planificación'),
     help_text=_(u'Una vez obtenida la planificación intenta optimizarla un poco más.'))
   estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
     choices=ESTADOS_CRONOGRAMAS, default=ESTADO_CRONOGRAMA_INVALIDO)
-  tolerancia = models.DecimalField(default=0.001,
+  tolerancia = models.DecimalField(default=0.005,
     max_digits=3, decimal_places=3, verbose_name=_(u'Tolerancia a errores de planificación.'), 
     help_text=_(u'Tolerancia a errores de planificación. Indica el factor de tolerancia a los errores durante la planificación. Por ejemplo, un valor de 0.02 para un item de un pedido con cantidad 100, indica que puede haber un error de planificación de 2 unidades.'))
 
@@ -598,6 +598,13 @@ class PedidoPlanificable(Pedido):
 
     cantidad_items_esperados = int(cantidad_productos / cantidad_por_item)
     cantidad_ultimo_item = cantidad_productos % cantidad_por_item
+
+    logger.debug(('Se particiona pedido %(pedido)s en %(cant_items)s '+
+        'items de %(cant_productos)s.') % {
+          'pedido': self,
+          'cant_items': cantidad_items_esperados,
+          'cant_productos': cantidad_por_item,
+          })
 
     for item in items:
       item.cantidad = cantidad_por_item
