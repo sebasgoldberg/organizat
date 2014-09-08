@@ -105,4 +105,6 @@ class Hueco(object):
 
     return resultado
 
+  def get_segundos(self):
+    return self.tiempo.total_seconds()
 

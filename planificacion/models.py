@@ -16,6 +16,8 @@ import logging
 from utils import Hueco
 import calendario.models
 from decimal import Decimal as D
+from django.db.models import Min, Max
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +162,45 @@ class Cronograma(models.Model):
     ordering = ['-id']
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
+
+  def estimar_tiempo_fabricacion_producto(self, producto):
+    """
+    Obtiene la estimacion del tiempo para producir una unidad 
+    de producto con las mismas máquinas de self.
+    La estimación es devuelta en segundos.
+    """
+ 
+    pedido = PedidoPlanificable.objects.create()
+    pedido.add_item(producto,1)
+
+    # Se utiliza una fecha de inicio sin sentido 1/1/1
+    cronograma = pedido.crear_cronograma(fecha_inicio=TZ.make_aware(
+        datetime.datetime(1901,1,1), TZ.get_default_timezone()))
+
+    # Eliminamos las máquinas del nuevo cronograma 
+    # que no se encuentran en el cronograma actual.
+    for maquinacronograma in cronograma.maquinacronograma_set.all():
+      if not self.has_maquina(maquinacronograma.maquina):
+        maquinacronograma.delete()
+
+    cronograma.planificar()
+
+    planificacion_desde = cronograma.get_intervalos(
+        ).aggregate(Min('fecha_desde'))['fecha_desde__min']
+    planificacion_hasta = cronograma.get_intervalos(
+        ).aggregate(Max('fecha_hasta'))['fecha_hasta__max']
+
+    calendario = CalendarioProduccion.get_instance()
+
+    tiempo_efectivo_produccion = 0
+    for hueco in calendario.get_huecos(desde=planificacion_desde,
+        hasta=planificacion_hasta):
+      tiempo_efectivo_produccion += hueco.get_segundos()
+
+    cronograma.delete()
+    pedido.delete()
+
+    return tiempo_efectivo_produccion
 
   def crear_intervalo(self, maquina, tarea, item,
     fecha_desde, tiempo_intervalo):
@@ -409,7 +450,6 @@ class Cronograma(models.Model):
       desde = desde + un_anyo
 
   def get_ultima_fecha(self, maquina):
-    from django.db.models import Max
     ultima_fecha = self.get_intervalos_propios_y_activos(
       maquina).aggregate(Max('fecha_desde'))['fecha_desde__max']
     if not ultima_fecha:
@@ -502,9 +542,10 @@ class PedidoPlanificable(Pedido):
     return PedidoCronograma.objects.get(
         pedido=self).cronograma
 
-  def crear_cronograma(self):
+  def crear_cronograma(self, fecha_inicio=TZ.make_aware(
+        datetime.datetime.now(), TZ.get_default_timezone())):
     cronograma = Cronograma.objects.create(descripcion=
-        _(u'Planificación del pedido #%s') % self.id)
+        _(u'Planificación del pedido #%s') % self.id, fecha_inicio=fecha_inicio)
     cronograma.add_pedido(self)
     return cronograma
 
@@ -570,6 +611,10 @@ class PedidoPlanificable(Pedido):
     if cantidad_ultimo_item > 0:
       self.itempedido_set.create(producto=producto, cantidad=cantidad_ultimo_item)
 
+  def get_cantidad_producto(self, producto):
+    return self.get_items_producto(producto).aggregate(
+        cantidad_total=models.Sum('cantidad'))['cantidad_total']
+
   def particionar_optimizando(self, producto,
       tiempo_de_realizacion_item_en_horas,
       cronograma=None):
@@ -582,16 +627,10 @@ class PedidoPlanificable(Pedido):
           producto)
         )
 
-    cantidad_producto = self.get_cantidad_producto(producto)
-
-    duracion_fabricacion_total_estimada = (
-        cantidad_producto * 
-        tiempo_fabricacion_producto_estimado )
-
     cantidad_producto_por_item = int( math.ceil(
-        float(duracion_fabricacion_total_estimada) /
-        float(tiempo_de_realizacion_item_en_horas * 3600) ) )
-    
+        Decimal(tiempo_de_realizacion_item_en_horas * 3600) /
+        Decimal(tiempo_fabricacion_producto_estimado) ) )
+
     self.particionar(producto, cantidad_producto_por_item)
 
 

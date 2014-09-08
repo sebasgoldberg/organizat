@@ -44,7 +44,7 @@ def validar_particion_producto(testcase, pedido, producto, cant_producto,
         elif item.cantidad == cant_producto_restante:
             cant_items_con_cant_restante += 1
         else:
-            self.fail("La cantidad %s para el item %s es incorrecta." % (
+            testcase.fail("La cantidad %s para el item %s es incorrecta." % (
                 item.cantidad, item))
 
     testcase.assertEqual(cant_items_con_cantidad_exacta,
