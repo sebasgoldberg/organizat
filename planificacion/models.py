@@ -502,13 +502,17 @@ class PedidoPlanificable(Pedido):
     return PedidoCronograma.objects.get(
         pedido=self).cronograma
 
+  def crear_cronograma(self):
+    cronograma = Cronograma.objects.create(descripcion=
+        _(u'Planificación del pedido #%s') % self.id)
+    cronograma.add_pedido(self)
+    return cronograma
+
   def planificar(self):
     try:
       cronograma = self.get_cronograma()
     except PedidoCronograma.DoesNotExist:
-      cronograma = Cronograma.objects.create(descripcion=
-          _(u'Planificación del pedido #%s') % self.id)
-      cronograma.add_pedido(self)
+      cronograma = self.crear_cronograma()
     cronograma.planificar()
 
   def get_items(self):
@@ -565,6 +569,30 @@ class PedidoPlanificable(Pedido):
 
     if cantidad_ultimo_item > 0:
       self.itempedido_set.create(producto=producto, cantidad=cantidad_ultimo_item)
+
+  def particionar_optimizando(self, producto,
+      tiempo_de_realizacion_item_en_horas,
+      cronograma=None):
+
+    if cronograma is None:
+      cronograma = self.get_cronograma()
+
+    tiempo_fabricacion_producto_estimado = (
+        cronograma.estimar_tiempo_fabricacion_producto(
+          producto)
+        )
+
+    cantidad_producto = self.get_cantidad_producto(producto)
+
+    duracion_fabricacion_total_estimada = (
+        cantidad_producto * 
+        tiempo_fabricacion_producto_estimado )
+
+    cantidad_producto_por_item = int( math.ceil(
+        float(duracion_fabricacion_total_estimada) /
+        float(tiempo_de_realizacion_item_en_horas * 3600) ) )
+    
+    self.particionar(producto, cantidad_producto_por_item)
 
 
 class PedidoCronograma(models.Model):
