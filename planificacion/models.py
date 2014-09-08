@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 class PedidoYaParticionado(ValidationError):
     pass
 
+class ProductoConPlanificacionExistente(ValidationError):
+    pass
+
 """
 Excepcione de validación de tareas reales.
 """
@@ -139,7 +142,8 @@ class Cronograma(models.Model):
   """
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
   fecha_inicio = models.DateTimeField(
-    verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=datetime.datetime.now())
+    verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=TZ.make_aware(
+        datetime.datetime.now(), TZ.get_default_timezone()))
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
   tiempo_minimo_intervalo = models.DecimalField(default=0,
     max_digits=8, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
@@ -493,6 +497,19 @@ class PedidoPlanificable(Pedido):
   
   class Meta:
     proxy=True
+  
+  def get_cronograma(self):
+    return PedidoCronograma.objects.get(
+        pedido=self).cronograma
+
+  def planificar(self):
+    try:
+      cronograma = self.get_cronograma()
+    except PedidoCronograma.DoesNotExist:
+      cronograma = Cronograma.objects.create(descripcion=
+          _(u'Planificación del pedido #%s') % self.id)
+      cronograma.add_pedido(self)
+    cronograma.planificar()
 
   def get_items(self):
     for i in ItemPlanificable.objects.filter(pedido=self):
@@ -510,7 +527,17 @@ class PedidoPlanificable(Pedido):
     for maquina in super(PedidoPlanificable, self).get_maquinas_posibles_produccion():
       yield MaquinaPlanificacion.fromMaquina(maquina)
 
+  def get_cronogramas(self):
+    for pc in self.pedidocronograma_set.all():
+      yield pc.cronograma
+
   def particionar(self, producto, cantidad_por_item):
+
+    for item in self.get_items_producto(producto):
+      if item.intervalocronograma_set.exists():
+        raise ProductoConPlanificacionExistente(_(
+          u'El item %s se encuentra asociado a uno o '+
+          u'varios intervalos de planificación') % item)
 
     items = self.itempedido_set.filter(producto=producto)
 

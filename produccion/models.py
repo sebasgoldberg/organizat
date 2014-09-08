@@ -123,7 +123,12 @@ class Producto(models.Model):
     verbose_name_plural = _(u"Productos")
 
   def __unicode__(self):
-    return self.descripcion
+    if self.descripcion:
+      return self.descripcion
+    return _(u'Producto #%s') % self.id
+
+  def add_tarea(self,tarea):
+    return TareaProducto.objects.create(tarea=tarea, producto=self)
 
   def get_tareas(self):
     return [ x.tarea for x in self.tareaproducto_set.all() ]
