@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 C_100_ANYOS_EN_MINUTOS = 52560000
 
-class ModeloLinealNoResuelto(Exception):
+class ModeloLinealNoResuelto(ValidationError):
   pass
 
 class PlanificadorLinealContinuo(PlanificadorStrategy):
@@ -77,6 +77,12 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
       if maquina in self.get_grupo_maquinas_planificado():
         yield maquina
 
+  def get_cantidad_no_planificada(self, item, tarea):
+    cantidad = D(item.get_cantidad_no_planificada(tarea))
+    if cantidad < self.cronograma.get_tolerancia(item.cantidad):
+      return 0
+    return cantidad
+
   def def_cumplir_cantidad_producir(self):
 
     T_MTI = self.tiempo_maquina_tarea_item
@@ -88,7 +94,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             T_MTI[maquina.id][tarea.id][item.id] /\
             D(tarea.get_tiempo(maquina,item.producto))
             for maquina in self.get_maquinas_tarea_producto(tarea, item.producto)
-            ]) - D(item.get_cantidad_no_planificada(tarea))\
+            ]) - self.get_cantidad_no_planificada(item, tarea)\
             == 0, "La suma del tiempo de produccion en maquinas para tarea %s, item %s, debe corresponderse con la cantidad de tarea a producir" % (
               tarea.id, item.id)
 
@@ -165,7 +171,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
     self.definir_restricciones()
 
-    #self.modelo.writeLP("/tmp/djprod.lp")
+    self.modelo.writeLP("/tmp/djprod.lp")
 
   def is_modelo_resuelto(self):
     return (self.modelo and self.modelo.status == LpStatusOptimal)

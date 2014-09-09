@@ -142,7 +142,7 @@ class Cronograma(models.Model):
   - intervalo_tiempo no puede ser modificado en caso que existan instancias
   de IntervaloCronograma.
   """
-  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
+  descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'))
   fecha_inicio = models.DateTimeField(
     verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=TZ.make_aware(
         datetime.datetime.now(), TZ.get_default_timezone()))
