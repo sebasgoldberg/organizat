@@ -183,12 +183,13 @@ class ParticionadoDependiendoDeEstadoTestCase(TestCase):
         pedido = PedidoPlanificable.objects.create()
         pedido.add_item(producto,100)
 
-        pedido.planificar()
+        pedido.crear_cronograma(_particionar_pedidos=False).planificar()
 
         self.assertRaises(
                 ProductoConPlanificacionExistente,
                 pedido.particionar,
                 producto=producto, cantidad_por_item=12)
+
 
 class ParticionadoOptimizadoTestCase(TestCase):
 
@@ -210,4 +211,28 @@ class ParticionadoOptimizadoTestCase(TestCase):
                 cronograma=pedido.crear_cronograma())
 
         validar_particion_producto(self ,pedido, producto, 100, 40)
+
+    def test_particionado_pedidos_cronograma(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        producto2 = Producto.objects.create(descripcion='P2')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=60)
+        tarea2 = Tarea.objects.create(descripcion='T2', tiempo=30)
+        maquina = Maquina.objects.create()
+
+        maquina.add_tarea(tarea1)
+        maquina.add_tarea(tarea2)
+        producto1.add_tarea(tarea1)
+        producto2.add_tarea(tarea2)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,100)
+        pedido.add_item(producto2,100)
+
+        cronograma = pedido.crear_cronograma()
+
+        cronograma.particionar_pedidos()
+
+        validar_particion_producto(self ,pedido, producto1, 100, 40)
+        validar_particion_producto(self ,pedido, producto2, 100, 80)
 

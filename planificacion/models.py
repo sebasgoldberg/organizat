@@ -157,6 +157,16 @@ class Cronograma(models.Model):
   tolerancia = models.DecimalField(default=0.005,
     max_digits=3, decimal_places=3, verbose_name=_(u'Tolerancia a errores de planificación.'), 
     help_text=_(u'Tolerancia a errores de planificación. Indica el factor de tolerancia a los errores durante la planificación. Por ejemplo, un valor de 0.02 para un item de un pedido con cantidad 100, indica que puede haber un error de planificación de 2 unidades.'))
+  _particionar_pedidos = models.BooleanField(default=True, verbose_name=(u'Particionar pedidos'),
+    help_text=_(u'Seleccionando esta opción se estimará cuanto demora la fabricación de cada producto. '+
+      u'Luego en función de la estimación se calculará el ideal de la cantidad de productos por item para '+
+      u'aproximarse al tiempo de producción por item indicado.'))
+  tiempo_produccion_por_item = models.DecimalField(default=40, max_digits=8, decimal_places=2,
+      verbose_name=_(u'Tiempo de producción por item (horas)'), 
+      help_text=_(u'Indica el tiempo de producción esperado por item en horas. Sirve para '+
+        u'subdividir en forma automatica en varios items los productos de un pedido de forma de '+
+        u'poder organizar mejor los lotes de producción y reducir notablemente los tiempos '+
+        u'de planificación'))
 
   class Meta:
     ordering = ['-id']
@@ -175,7 +185,8 @@ class Cronograma(models.Model):
 
     # Se utiliza una fecha de inicio sin sentido 1/1/1
     cronograma = pedido.crear_cronograma(fecha_inicio=TZ.make_aware(
-        datetime.datetime(1901,1,1), TZ.get_default_timezone()))
+        datetime.datetime(9990,1,1), TZ.get_default_timezone()),
+        _particionar_pedidos=False, tiempo_minimo_intervalo=30)
 
     # Eliminamos las máquinas del nuevo cronograma 
     # que no se encuentran en el cronograma actual.
@@ -272,6 +283,14 @@ class Cronograma(models.Model):
   def is_finalizado(self):
     return self.estado == ESTADO_CRONOGRAMA_FINALIZADO
 
+  def particionar_pedidos(self):
+    if not self._particionar_pedidos:
+      return
+    for pedido in self.get_pedidos():
+      pedido.particionar_productos_optimizando(
+          tiempo_de_realizacion_item_en_horas=self.tiempo_produccion_por_item,
+          cronograma=self)
+
   @transaction.atomic
   def planificar(self):
     """
@@ -284,6 +303,7 @@ class Cronograma(models.Model):
       raise EstadoCronogramaError(_(u'El cronograma %s no se puede '+
         u'planificar ya que no se encuentra en un estado invalido.') % self)
     IntervaloCronograma.objects.filter(cronograma=self).delete()
+    self.particionar_pedidos()
     planificador = CLASES_ESTRATEGIAS[self.estrategia](self)
     planificador.planificar()
     self.estado = ESTADO_CRONOGRAMA_VALIDO
@@ -543,9 +563,10 @@ class PedidoPlanificable(Pedido):
         pedido=self).cronograma
 
   def crear_cronograma(self, fecha_inicio=TZ.make_aware(
-        datetime.datetime.now(), TZ.get_default_timezone())):
+        datetime.datetime.now(), TZ.get_default_timezone()), **kwargs):
     cronograma = Cronograma.objects.create(descripcion=
-        _(u'Planificación del pedido #%s') % self.id, fecha_inicio=fecha_inicio)
+        _(u'Planificación del pedido #%s') % self.id, fecha_inicio=fecha_inicio,
+        **kwargs)
     cronograma.add_pedido(self)
     return cronograma
 
@@ -621,6 +642,18 @@ class PedidoPlanificable(Pedido):
   def get_cantidad_producto(self, producto):
     return self.get_items_producto(producto).aggregate(
         cantidad_total=models.Sum('cantidad'))['cantidad_total']
+
+  def particionar_productos_optimizando(self,
+      tiempo_de_realizacion_item_en_horas, cronograma=None):
+    for producto in self.get_productos():
+      try:
+        self.particionar_optimizando(producto,
+            tiempo_de_realizacion_item_en_horas,
+            cronograma)
+      except PedidoYaParticionado:
+        pass
+      except ProductoConPlanificacionExistente:
+        pass
 
   def particionar_optimizando(self, producto,
       tiempo_de_realizacion_item_en_horas,
