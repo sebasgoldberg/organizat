@@ -136,6 +136,13 @@ class MaquinaPlanificacion(Maquina):
     maquina.__class__ = MaquinaPlanificacion
     return maquina
 
+  def get_intervalos_activos(self):
+    return IntervaloCronograma.get_intervalos_activos(
+        ).filter(maquina=self) 
+
+  def get_intervalos(self):
+    return IntervaloCronograma.objects.filter(maquina=self) 
+
 class Cronograma(models.Model):
   """
   Validar:
@@ -482,6 +489,10 @@ class Cronograma(models.Model):
       tarea=tarea,producto=producto,pedido=pedido,cantidad_tarea=cantidad_tarea)
     intervalo.clean()
     intervalo.save()
+
+  def remove_maquina(self, maquina):
+    return self.maquinacronograma_set.filter(
+        maquina=maquina).delete()
 
   def add_maquina(self, maquina):
     return self.maquinacronograma_set.create(maquina=maquina)

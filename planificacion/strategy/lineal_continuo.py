@@ -49,18 +49,40 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             tiempo_otra_maquina >= 0, "La maquina %s es mayor a la maquina %s." % (maquina.id, otra_maquina.id)
     self.modelo += lpSum(self.is_maximo_tiempo_maquina.values()) == 1, "Existira un solo maximo" 
 
+  def get_tiempo_intervalos_activos_y_finalizados(self, maquina):
+    """
+    Obtiene la suma de los tiempos de intervalos activos y
+    finalizados a partir de la fecha de inicio del cronograma.
+    El tiempo devuelto es en minutos.
+    """
+    intervalos = maquina.get_intervalos_activos(
+        ).filter(
+            fecha_hasta__gt=self.cronograma.fecha_inicio)
+
+    tiempo = D(0)
+
+    for i in intervalos:
+      if i.fecha_desde < self.cronograma.fecha_inicio:
+        tiempo += D((i.fecha_hasta - 
+            self.cronograma.fecha_inicio).seconds())/D(60)
+      else:
+        tiempo += D(i.tiempo_intervalo)
+
+    return tiempo
+
   def def_tiempo_insumido_maquinas(self):
 
     T_MTI = self.tiempo_maquina_tarea_item
 
     for maquina in self.get_grupo_maquinas_planificado():
-      self.modelo += lpSum([
+      self.modelo += ( lpSum([
         T_MTI[maquina.id][tarea.id][item.id]
           for pedido in self.cronograma.get_pedidos()
             for item in pedido.get_items()
-              for tarea in item.producto.get_tareas_maquina(maquina) ]) - \
-        self.tiempos_maquinas[maquina.id] == 0,\
-          "Tiempo de la maquina %s" % maquina.id
+              for tarea in item.producto.get_tareas_maquina(maquina) ]) -
+        self.tiempos_maquinas[maquina.id] + 
+        self.get_tiempo_intervalos_activos_y_finalizados(maquina) == 0,
+          "Tiempo de la maquina %s" % maquina.id )
 
   def get_tareas_producto_segun_grupo_maquinas(self, producto):
 
@@ -95,8 +117,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
             D(tarea.get_tiempo(maquina,item.producto))
             for maquina in self.get_maquinas_tarea_producto(tarea, item.producto)
             ]) - self.get_cantidad_no_planificada(item, tarea)\
-            == 0, "La suma del tiempo de produccion en maquinas para tarea %s, item %s, debe corresponderse con la cantidad de tarea a producir" % (
-              tarea.id, item.id)
+            == 0, "La suma del tiempo de produccion en maquinas para tarea %s, item %s, debe corresponderse con la cantidad de tarea a producir" % (tarea.id, item.id)
 
   def definir_restricciones(self):
 
