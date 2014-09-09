@@ -315,3 +315,19 @@ class CalendarioTestCase(TestCase):
 
     calendario.add_excepcion_no_laborable(DT(2014,2,1),T(6),T(11))
 
+  def test_multiples_excepciones_no_laborables(self):
+
+    calendario = Calendario.objects.create()
+
+    calendario.add_intervalos_laborables(
+      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
+        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
+      hora_desde=T(8), hora_hasta=T(12))
+
+    calendario.add_intervalos_laborables(
+      dias_laborables=[DiaSemana.LUNES,DiaSemana.MARTES,
+        DiaSemana.MIERCOLES,DiaSemana.JUEVES,DiaSemana.VIERNES],
+      hora_desde=T(13),hora_hasta=T(17))
+
+    calendario.add_excepcion_no_laborable(DT(2014,8,5),T(0),T(23))
+    calendario.add_excepcion_no_laborable(DT(2014,9,16),T(0),T(23))

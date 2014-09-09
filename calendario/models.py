@@ -320,22 +320,28 @@ class ExcepcionLaborable(models.Model):
     if self.hora_desde >= self.hora_hasta:
       raise HoraDesdeMayorHoraHasta()
 
-    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+    excepciones = self.calendario.excepcionlaborable_set.filter(
+        fecha=self.fecha)
+
+    if self.id is not None:
+      excepciones = excepciones.exclude(id=self.id)
+
+    if excepciones.filter(
       hora_desde__lte=self.hora_desde, 
       hora_hasta__gte=self.hora_desde).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+    if excepciones.filter(
       hora_desde__lte=self.hora_hasta, 
       hora_hasta__gte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+    if excepciones.filter(
       hora_desde__gte=self.hora_desde, 
       hora_desde__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
 
-    if self.calendario.excepcionlaborable_set.filter(fecha=self.fecha,
+    if excepciones.filter(
       hora_hasta__gte=self.hora_desde, 
       hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
