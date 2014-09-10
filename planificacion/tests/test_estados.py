@@ -1,5 +1,6 @@
 # coding=utf-8
 from .base import *
+from planificacion.signals import *
 
 class ActivacionCronogramaTestCase(PlanificadorTestCase):
 
