@@ -500,6 +500,10 @@ class Cronograma(PlanificacionBaseModel):
     return self.maquinacronograma_set.filter(
         maquina=maquina).delete()
 
+  def remove_pedido(self, pedido):
+    return self.pedidocronograma_set.filter(
+        pedido=pedido).delete()
+
   def add_maquina(self, maquina):
     return self.maquinacronograma_set.create(maquina=maquina)
 

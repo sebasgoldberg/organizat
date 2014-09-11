@@ -1,7 +1,9 @@
 # coding=utf-8
 from django.db.models import signals
 from produccion.models import ItemPedido
-from planificacion.models import IntervaloCronograma, MaquinaCronograma
+from planificacion.models import (IntervaloCronograma, 
+    MaquinaCronograma,
+    PedidoCronograma)
 from calendario.models import ExcepcionLaborable
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
@@ -197,6 +199,35 @@ def validar_modificar_maquina_cronograma(sender, instance,
 
 
 #----------------------------------------------------------------------
+# Validaciones de Pedidos Cronogramas
+#----------------------------------------------------------------------
+class PedidoYaUtilizadoEnPlanificacion(ValidationError):
+  pass
+
+def validar_eliminar_pedido_cronograma(sender, instance,
+    *args, **kwargs):
+  # En caso que exista algún intervalo que tenga alguna referencia a la
+  # máquina, no se debería modificar ni borrar.
+  if instance.cronograma.intervalocronograma_set.filter(
+      pedido=instance.pedido).exists():
+    raise PedidoYaUtilizadoEnPlanificacion(_(
+      u'El pedido que se intenta modificar/borrar presenta '+
+      u'intervalos planificados.'))
+
+def validar_modificar_pedido_cronograma(sender, instance,
+    *args, **kwargs):
+
+  if instance.id is None:
+    return
+
+  pc = PedidoCronograma.objects.get(pk=instance.id)
+
+  if not mismos_valores_instancia(pc, instance):
+    validar_eliminar_pedido_cronograma(sender, pc,
+        *args, **kwargs)
+
+
+#----------------------------------------------------------------------
 # Conexiones a las señales
 #----------------------------------------------------------------------
 
@@ -225,4 +256,12 @@ clean_performed.connect(validar_modificar_maquina_cronograma,
 
 signals.pre_delete.connect(validar_eliminar_maquina_cronograma,
     MaquinaCronograma)
+
+
+# PedidoCronograma
+clean_performed.connect(validar_modificar_pedido_cronograma,
+    PedidoCronograma)
+
+signals.pre_delete.connect(validar_eliminar_pedido_cronograma,
+    PedidoCronograma)
 
