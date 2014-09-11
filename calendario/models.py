@@ -8,6 +8,11 @@ from datetime import datetime as DT
 from datetime import timedelta as TD
 from datetime import time as T
 from django.utils import timezone as TZ
+from cleansignal.models import CleanSignal
+
+class CalendarioBaseModel(CleanSignal, models.Model):
+  class Meta:
+    abstract = True
 
 class SolapamientoIntervalosLaborales(ValidationError):
 
@@ -51,7 +56,7 @@ def datetime_desde_fecha_hora(fecha, hora):
       hora.hour, hora.minute, hora.second),
     TZ.get_default_timezone())
 
-class Calendario(models.Model):
+class Calendario(CalendarioBaseModel):
 
   @staticmethod
   def get_instance():
@@ -230,14 +235,14 @@ class Calendario(models.Model):
     el.save()
     return el
 
-class IntervaloLaborable(models.Model):
+class IntervaloLaborable(CalendarioBaseModel):
   
   calendario = models.ForeignKey(Calendario, verbose_name=_(u'Calendario'))
   dia = models.IntegerField(verbose_name=_(u'Día'), choices=DIAS_SEMANA)
   hora_desde = models.TimeField(verbose_name=_(u'Hora desde'))
   hora_hasta = models.TimeField(verbose_name=_(u'Hora hasta'))
 
-  def clean(self):
+  def clean(self, *args, **kwargs):
     """
     No puede haber solapamiento en un mismo calendario.
     """
@@ -268,6 +273,8 @@ class IntervaloLaborable(models.Model):
       hora_hasta__gte=self.hora_desde, 
       hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoIntervalosLaborales()
+
+    super(IntervaloLaborable, self).clean(*args, **kwargs)
 
   def get_huecos(self, fecha):
 
@@ -304,7 +311,7 @@ class IntervaloLaborable(models.Model):
       yield Hueco(datetime_desde_fecha_hora(fecha, hora_desde),
         fecha_hasta=datetime_desde_fecha_hora(fecha, hora_hasta))
 
-class ExcepcionLaborable(models.Model):
+class ExcepcionLaborable(CalendarioBaseModel):
   
   calendario = models.ForeignKey(Calendario, verbose_name=_(u'Calendario'))
   fecha = models.DateField(
@@ -315,7 +322,7 @@ class ExcepcionLaborable(models.Model):
     help_text=_(u'Indica si la excepción es laborable o no laborable.'),
     default=False)
 
-  def clean(self):
+  def clean(self, *args, **kwargs):
 
     if self.hora_desde >= self.hora_hasta:
       raise HoraDesdeMayorHoraHasta()
@@ -345,6 +352,8 @@ class ExcepcionLaborable(models.Model):
       hora_hasta__gte=self.hora_desde, 
       hora_hasta__lte=self.hora_hasta).count()>0:
       raise SolapamientoExcepcionesLaborales()
+
+    super(ExcepcionLaborable, self).clean(*args, **kwargs)
 
   def get_fecha_desde(self):
     return datetime_desde_fecha_hora(self.fecha, self.hora_desde)
