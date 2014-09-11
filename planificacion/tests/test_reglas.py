@@ -69,3 +69,27 @@ class ReglasItemPedidoTestCase(TestCase):
 
         item.cantidad = 15
         item.save()
+
+        item.delete()
+
+    def test_borrar_item_ya_planificado(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=10)
+        maquina = Maquina.objects.create()
+
+        maquina.add_tarea(tarea1)
+        producto1.add_tarea(tarea1)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,10)
+
+        cronograma = pedido.crear_cronograma()
+
+        item = pedido.itempedido_set.first()
+
+        cronograma.planificar()
+
+        self.assertRaises(ItemYaPlanificado, item.delete)
+
+

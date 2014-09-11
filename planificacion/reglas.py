@@ -6,6 +6,10 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from cleansignal.models import clean_performed
 
+#----------------------------------------------------------------------
+# Reglas ItemPedido
+#----------------------------------------------------------------------
+
 class ItemYaPlanificado(ValidationError):
   pass
 
@@ -45,11 +49,32 @@ def validar_modificar_item_pedido(sender, instance, *args, **kwargs):
     intervalo = IntervaloCronograma.get_intervalos_no_cancelados(
         ).filter(item=item).first()
     if intervalo is not None:
-      raise ItemYaPlanificado(_(u'El item %s ya se encuentra '+
-        u'planificado en el cronograma %s.') % (
+      raise ItemYaPlanificado(_(u'El item %s se encuentra '+
+        u'planificado en el cronograma %s. Imposible modificar.') % (
           item, intervalo.cronograma))
   except IntervaloCronograma.DoesNotExist:
     pass
 
+def validar_eliminar_item_pedido(sender, instance, *args, **kwargs):
+
+  item = instance
+
+  if item.id is None:
+    return
+
+  try:
+    intervalo = IntervaloCronograma.get_intervalos_no_cancelados(
+        ).filter(item=item).first()
+    if intervalo is not None:
+      raise ItemYaPlanificado(_(u'El item %s se encuentra '+
+        u'planificado en el cronograma %s. Imposible borrar.') % (
+          item, intervalo.cronograma))
+  except IntervaloCronograma.DoesNotExist:
+    pass
+
+
 clean_performed.connect(validar_modificar_item_pedido,
+    sender=ItemPedido)
+
+signals.pre_delete.connect(validar_eliminar_item_pedido,
     sender=ItemPedido)

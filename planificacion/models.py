@@ -740,7 +740,7 @@ class IntervaloCronograma(models.Model):
     verbose_name=_(u'Fecha hasta'), null=True, blank=False)
   estado = models.IntegerField(editable=False, verbose_name=_(u'Estado'),
     choices=ESTADOS_INTERVALOS, default=0)
-  item = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.PROTECT)
+  item = models.ForeignKey(ItemPlanificable, editable=False, null=True, on_delete=models.CASCADE)
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
