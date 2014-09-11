@@ -1,8 +1,10 @@
 # coding=utf-8
-from .models import PedidoCronograma, MaquinaPlanificacion
+from .models import PedidoCronograma, MaquinaPlanificacion, ItemPlanificable
 from .dependencias import GerenciadorDependencias
 from django.db.models.signals import post_save, post_delete
 from django.db.models.signals import pre_delete
+from .reglas import *
+from django.db.models import signals
 
 
 def validar_dependencias_borrado(sender, instance, **kwargs):
@@ -26,4 +28,3 @@ def add_maquinas_posibles_to_cronograma(sender, instance, created, **kwargs):
 
 post_save.connect(add_maquinas_posibles_to_cronograma, 
   sender=PedidoCronograma)
-

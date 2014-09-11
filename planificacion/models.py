@@ -770,6 +770,11 @@ class IntervaloCronograma(models.Model):
       self.pedido = self.item.pedido
 
   @staticmethod
+  def get_intervalos_no_cancelados():
+    return IntervaloCronograma.objects.exclude(
+      estado=ESTADO_INTERVALO_CANCELADO)
+
+  @staticmethod
   def get_intervalos_activos():
     return IntervaloCronograma.objects.filter(
       estado__in=[ESTADO_INTERVALO_ACTIVO,

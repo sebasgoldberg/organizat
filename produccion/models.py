@@ -3,11 +3,16 @@ from django.db import models
 from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ValidationError
+from cleansignal.models import CleanSignal
 
 class TareaAnteriorNoExiste(Exception):
   pass
 
-class Maquina(models.Model):
+class ProduccionBaseModel(CleanSignal, models.Model):
+  class Meta:
+    abstract = True
+
+class Maquina(ProduccionBaseModel):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
 
   class Meta:
@@ -35,7 +40,7 @@ class Maquina(models.Model):
     tm.save()
     return tm
 
-class Tarea(models.Model):
+class Tarea(ProduccionBaseModel):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True)
   tiempo = models.DecimalField(
     max_digits=7, decimal_places=2, verbose_name=_(u'Tiempo (min)'), 
@@ -95,7 +100,7 @@ class Tarea(models.Model):
 
     return result
 
-class TareaMaquina(models.Model):
+class TareaMaquina(ProduccionBaseModel):
   """
   Tareas que puede realizar una máquina.
   """
@@ -113,7 +118,7 @@ class TareaMaquina(models.Model):
       'tarea': self.tarea.descripcion,
       'maquina': self.maquina.descripcion,}
 
-class Producto(models.Model):
+class Producto(ProduccionBaseModel):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'), unique=True,
       null=True, blank=False)
 
@@ -212,7 +217,7 @@ class ProductoProxyDependenciasTareas(Producto):
     verbose_name = _(u"Dependencia de tarea en producto")
     verbose_name_plural = _(u"Dependencias de tareas en productos")
 
-class TareaProducto(models.Model):
+class TareaProducto(ProduccionBaseModel):
   """
   Tareas por las que se compone un producto
   """
@@ -225,7 +230,7 @@ class TareaProducto(models.Model):
     verbose_name_plural = _(u"Tareas por productos")
     unique_together = (('producto', 'tarea'),)
 
-class TiempoRealizacionTarea(models.Model):
+class TiempoRealizacionTarea(ProduccionBaseModel):
   """
   Se completa en forma automática en función de:
   - Las tareas posibles que puede tener una máquina.
@@ -252,7 +257,7 @@ class TiempoRealizacionTarea(models.Model):
     verbose_name_plural = _(u"Tiempos de producción")
     unique_together = (('maquina', 'producto', 'tarea'),)
 
-class DependenciaTareaProducto(models.Model):
+class DependenciaTareaProducto(ProduccionBaseModel):
   """
   Indica precedencia entre tareas.
   Validar:
@@ -325,7 +330,7 @@ class DependenciaTareaProducto(models.Model):
       self.validar_dependencia_circular(visitadas,
         dependencia.tarea, nuevo_camino)
 
-class Pedido(models.Model):
+class Pedido(ProduccionBaseModel):
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'),
       null=True, blank=False)
 
@@ -368,7 +373,7 @@ class Pedido(models.Model):
   def get_item_producto(self, producto):
     return self.itempedido_set.get(producto=producto)
 
-class ItemPedido(models.Model):
+class ItemPedido(ProduccionBaseModel):
   """
   Item de un pedido.
   Validar:
