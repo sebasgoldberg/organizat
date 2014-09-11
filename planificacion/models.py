@@ -18,6 +18,11 @@ import calendario.models
 from decimal import Decimal as D
 from django.db.models import Min, Max
 import math
+from cleansignal.models import CleanSignal
+
+class PlanificacionBaseModel(CleanSignal, models.Model):
+  class Meta:
+    abstract = True
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +148,7 @@ class MaquinaPlanificacion(Maquina):
   def get_intervalos(self):
     return IntervaloCronograma.objects.filter(maquina=self) 
 
-class Cronograma(models.Model):
+class Cronograma(PlanificacionBaseModel):
   """
   Validar:
   - intervalo_tiempo no puede ser modificado en caso que existan instancias
@@ -215,6 +220,7 @@ class Cronograma(models.Model):
         hasta=planificacion_hasta):
       tiempo_efectivo_produccion += hueco.get_segundos()
 
+    cronograma.invalidar()
     cronograma.delete()
     pedido.delete()
 
@@ -517,8 +523,9 @@ class Cronograma(models.Model):
           _(u'Imposible desactivar un cronograma con intervalos con estado '+
           u'distinto de planificado.'))
 
-  def clean(self):
+  def clean(self, *args, **kwargs):
     self.validar_estado()
+    super(Cronograma, self).clean(*args, **kwargs)
 
 class ItemPlanificable(ItemPedido):
 
@@ -548,7 +555,7 @@ class ItemPlanificable(ItemPedido):
                       tarea=tarea,
                       cantidad_realizada=cantidad_tarea_real).save()
 
-class TareaItem(models.Model):
+class TareaItem(PlanificacionBaseModel):
     
     item = models.ForeignKey(ItemPlanificable, verbose_name=_(u'Item'))
     tarea = models.ForeignKey(Tarea, verbose_name=_(u'Tarea'))
@@ -685,7 +692,7 @@ class PedidoPlanificable(Pedido):
     self.particionar(producto, cantidad_producto_por_item)
 
 
-class PedidoCronograma(models.Model):
+class PedidoCronograma(PlanificacionBaseModel):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   pedido = models.ForeignKey(PedidoPlanificable, verbose_name=_(u'Pedido'), on_delete=models.PROTECT)
 
@@ -698,7 +705,7 @@ class PedidoCronograma(models.Model):
   def __unicode__(self):
     return self.pedido
 
-class MaquinaCronograma(models.Model):
+class MaquinaCronograma(PlanificacionBaseModel):
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
 
@@ -720,7 +727,7 @@ class IntervaloAnteriorNoExiste(Exception):
 class HuecoAdyacenteAnteriorNoExiste(Exception):
   pass
 
-class IntervaloCronograma(models.Model):
+class IntervaloCronograma(PlanificacionBaseModel):
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)
@@ -768,6 +775,12 @@ class IntervaloCronograma(models.Model):
       self.producto = self.item.producto
       self.item.pedido.__class__ = PedidoPlanificable
       self.pedido = self.item.pedido
+
+  @staticmethod
+  def get_intervalos_modificables():
+    return IntervaloCronograma.objects.filter(
+      estado__in=[ESTADO_INTERVALO_ACTIVO,
+        ESTADO_INTERVALO_PLANIFICADO])
 
   @staticmethod
   def get_intervalos_no_cancelados():
@@ -1103,7 +1116,7 @@ class IntervaloCronograma(models.Model):
     return self.item
 
   #@profile
-  def clean(self):
+  def clean(self, *args, **kwargs):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.item.producto)
     self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.item.pedido,cronograma=self.cronograma)
@@ -1116,6 +1129,7 @@ class IntervaloCronograma(models.Model):
     self.validar_solapamiento()
     self.validar_dependencias_guardado()
     self.validar_fecha_inicio_cronograma()
+    super(IntervaloCronograma, self).clean(*args, **kwargs)
 
   def delete(self, *args, **kwargs):
     self.validar_dependencias_borrado()

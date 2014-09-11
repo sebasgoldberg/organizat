@@ -1,7 +1,7 @@
 # coding=utf-8
 from django.db.models import signals
 from produccion.models import ItemPedido
-from planificacion.models import IntervaloCronograma
+from planificacion.models import IntervaloCronograma, MaquinaCronograma
 from calendario.models import ExcepcionLaborable
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
@@ -117,7 +117,7 @@ def validar_eliminar_excepcion_laborable(sender, instance,
 
   if excepcion.laborable:
     if existe_solapamiento_intervalos(
-        IntervaloCronograma.get_intervalos_no_cancelados(),
+        IntervaloCronograma.get_intervalos_modificables(),
         excepcion.get_fecha_desde(),
         excepcion.get_fecha_hasta()):
       raise IntervaloCalendarioConPlanificacionExistente(
@@ -152,7 +152,7 @@ def validar_agregar_excepcion_laborable(sender, instance,
 
   if not excepcion.laborable:
     if existe_solapamiento_intervalos(
-        IntervaloCronograma.get_intervalos_no_cancelados(),
+        IntervaloCronograma.get_intervalos_modificables(),
         excepcion.get_fecha_desde(),
         excepcion.get_fecha_hasta()):
       raise IntervaloCalendarioConPlanificacionExistente(
@@ -162,17 +162,53 @@ def validar_agregar_excepcion_laborable(sender, instance,
     # Toda excepción laborable debería poder ser agregada.
     pass
         
+#----------------------------------------------------------------------
+# Validaciones de Intervalos Laborables
+#----------------------------------------------------------------------
+# TODO Agregar validaciones
+
+#----------------------------------------------------------------------
+# Validaciones de Maquinas Cronogramas
+#----------------------------------------------------------------------
+class MaquinaYaUtilizadaEnPlanificacion(ValidationError):
+  pass
+
+def validar_eliminar_maquina_cronograma(sender, instance,
+    *args, **kwargs):
+  # En caso que exista algún intervalo que tenga alguna referencia a la
+  # máquina, no se debería modificar ni borrar.
+  if instance.cronograma.intervalocronograma_set.filter(
+      maquina=instance.maquina).exists():
+    raise MaquinaYaUtilizadaEnPlanificacion(_(
+      u'La máquina que se intenta modificar/borrar presenta '+
+      u'intervalos planificados.'))
+
+def validar_modificar_maquina_cronograma(sender, instance,
+    *args, **kwargs):
+
+  if instance.id is None:
+    return
+
+  mc = MaquinaCronograma.objects.get(pk=instance.id)
+
+  if not mismos_valores_instancia(mc, instance):
+    validar_eliminar_maquina_cronograma(sender, mc,
+        *args, **kwargs)
+
 
 #----------------------------------------------------------------------
 # Conexiones a las señales
 #----------------------------------------------------------------------
 
+# ItemPedido
 clean_performed.connect(validar_modificar_item_pedido,
     sender=ItemPedido)
 
 signals.pre_delete.connect(validar_eliminar_item_pedido,
     sender=ItemPedido)
 
+
+# ExcepcionLaborable
 clean_performed.connect(validar_modificar_excepcion_laborable,
     ExcepcionLaborable)
 
@@ -181,4 +217,12 @@ clean_performed.connect(validar_agregar_excepcion_laborable,
 
 signals.pre_delete.connect(validar_eliminar_excepcion_laborable,
     ExcepcionLaborable)
+
+
+# MaquinaCronograma
+clean_performed.connect(validar_modificar_maquina_cronograma,
+    MaquinaCronograma)
+
+signals.pre_delete.connect(validar_eliminar_maquina_cronograma,
+    MaquinaCronograma)
 

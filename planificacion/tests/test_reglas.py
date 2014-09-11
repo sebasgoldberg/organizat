@@ -2,7 +2,8 @@
 
 from .base import *
 from planificacion.reglas import (ItemYaPlanificado,
-    IntervaloCalendarioConPlanificacionExistente)
+    IntervaloCalendarioConPlanificacionExistente,
+    MaquinaYaUtilizadaEnPlanificacion)
 
 class ReglasItemPedidoTestCase(TestCase):
 
@@ -229,3 +230,34 @@ class ReglasExcepcionLaborableTestCase(TestCase):
             IntervaloCalendarioConPlanificacionExistente,
             excepcion.clean)
  
+class ReglasMaquinaCronogramaTestCase(TestCase):
+
+    def test_maquina_ya_utilizada(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=10)
+        maquina = Maquina.objects.create()
+
+        maquina.add_tarea(tarea1)
+        producto1.add_tarea(tarea1)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,10)
+
+        cronograma = pedido.crear_cronograma()
+
+        item = pedido.itempedido_set.first()
+
+        item.cantidad = 12
+        item.save()
+        
+        cronograma.planificar()
+
+        mc = cronograma.maquinacronograma_set.first()
+        mc.maquina = MaquinaPlanificacion.objects.create(descripcion='M2')
+        self.assertRaises(MaquinaYaUtilizadaEnPlanificacion,
+            mc.clean)
+
+        self.assertRaises(MaquinaYaUtilizadaEnPlanificacion,
+          cronograma.remove_maquina, maquina)
+
