@@ -731,7 +731,19 @@ class IntervaloAnteriorNoExiste(Exception):
 class HuecoAdyacenteAnteriorNoExiste(Exception):
   pass
 
+
+class IntervaloCronogramaManager(models.Manager):
+
+  use_for_related_fields = True
+
+  def exclude_cancelados(self):
+    return IntervaloCronograma.objects.exclude(
+      estado=ESTADO_INTERVALO_CANCELADO)
+
+
 class IntervaloCronograma(PlanificacionBaseModel):
+
+  objects = IntervaloCronogramaManager()
 
   cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'))
   maquina = models.ForeignKey(MaquinaPlanificacion, verbose_name=_(u'Máquina'), on_delete=models.PROTECT)

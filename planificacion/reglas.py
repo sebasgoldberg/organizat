@@ -42,7 +42,7 @@ def wrapper_validar_eliminar_instancia(e):
 
   def validar_eliminar_instancia(sender, instance,
       *args, **kwargs):
-    if instance.intervalocronograma_set.filter(
+    if instance.intervalocronograma_set.exclude_cancelados(
         ).exists():
       raise e 
 
@@ -197,7 +197,7 @@ def validar_agregar_excepcion_laborable(sender, instance,
   else:
     # Toda excepción laborable debería poder ser agregada.
     pass
-        
+
 #----------------------------------------------------------------------
 # Validaciones de Intervalos Laborables
 #----------------------------------------------------------------------
@@ -247,6 +247,12 @@ validar_modificar_tarea_producto = wrapper_validar_modificar_instancia(
     validar_eliminar_tarea_producto)
 
 #----------------------------------------------------------------------
+# Validaciones de Dependencias en Tareas
+#----------------------------------------------------------------------
+# TODO Agregar validaciones
+
+
+#----------------------------------------------------------------------
 # Conexiones a las señales
 #----------------------------------------------------------------------
 
@@ -291,5 +297,4 @@ clean_performed.connect(validar_modificar_tarea_producto,
 
 signals.pre_delete.connect(validar_eliminar_tarea_producto,
     TareaProducto)
-
 
