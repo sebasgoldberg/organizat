@@ -755,7 +755,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
 
   # atributos exclusivos para asegurar la consistencia de la información
   tareamaquina = models.ForeignKey(TareaMaquina, editable=False, on_delete=models.PROTECT)
-  tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.PROTECT)
+  tareaproducto = models.ForeignKey(TareaProducto, editable=False, on_delete=models.CASCADE)
   pedidocronograma = models.ForeignKey(PedidoCronograma, editable=False)
   maquinacronograma = models.ForeignKey(MaquinaCronograma, editable=False)
 

@@ -3,7 +3,8 @@ from django.db.models import signals
 from produccion.models import ItemPedido
 from planificacion.models import (IntervaloCronograma, 
     MaquinaCronograma,
-    PedidoCronograma)
+    PedidoCronograma,
+    TareaProducto)
 from calendario.models import ExcepcionLaborable
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
@@ -29,6 +30,39 @@ def is_instancia_modificada(instancia):
       u'ID definido.'))
   db_instance = instancia.__class__.objects.get(pk=instancia.id)
   return not mismos_valores_instancia(instancia, db_instance)
+
+
+#----------------------------------------------------------------------
+# Validaciones Genéricas de Instancia
+#----------------------------------------------------------------------
+class InstanciaYaUtilizadaEnPlanificacion(ValidationError):
+  pass
+
+def wrapper_validar_eliminar_instancia(e):
+
+  def validar_eliminar_instancia(sender, instance,
+      *args, **kwargs):
+    if instance.intervalocronograma_set.filter(
+        ).exists():
+      raise e 
+
+  return validar_eliminar_instancia
+
+def wrapper_validar_modificar_instancia(validar_eliminar_instancia):
+
+  def validar_modificar_instancia(sender, instance,
+      *args, **kwargs):
+
+    if instance.id is None:
+      return
+
+    db_instance = instance.__class__.objects.get(pk=instance.id)
+
+    if not mismos_valores_instancia(db_instance, instance):
+      validar_eliminar_instancia(sender, db_instance,
+          *args, **kwargs)
+
+  return validar_modificar_instancia
 
 
 #----------------------------------------------------------------------
@@ -175,27 +209,13 @@ def validar_agregar_excepcion_laborable(sender, instance,
 class MaquinaYaUtilizadaEnPlanificacion(ValidationError):
   pass
 
-def validar_eliminar_maquina_cronograma(sender, instance,
-    *args, **kwargs):
-  # En caso que exista algún intervalo que tenga alguna referencia a la
-  # máquina, no se debería modificar ni borrar.
-  if instance.cronograma.intervalocronograma_set.filter(
-      maquina=instance.maquina).exists():
-    raise MaquinaYaUtilizadaEnPlanificacion(_(
+validar_eliminar_maquina_cronograma = wrapper_validar_eliminar_instancia(
+    MaquinaYaUtilizadaEnPlanificacion(_(
       u'La máquina que se intenta modificar/borrar presenta '+
-      u'intervalos planificados.'))
+      u'intervalos planificados.')))
 
-def validar_modificar_maquina_cronograma(sender, instance,
-    *args, **kwargs):
-
-  if instance.id is None:
-    return
-
-  mc = MaquinaCronograma.objects.get(pk=instance.id)
-
-  if not mismos_valores_instancia(mc, instance):
-    validar_eliminar_maquina_cronograma(sender, mc,
-        *args, **kwargs)
+validar_modificar_maquina_cronograma = wrapper_validar_modificar_instancia(
+    validar_eliminar_maquina_cronograma)
 
 
 #----------------------------------------------------------------------
@@ -204,28 +224,27 @@ def validar_modificar_maquina_cronograma(sender, instance,
 class PedidoYaUtilizadoEnPlanificacion(ValidationError):
   pass
 
-def validar_eliminar_pedido_cronograma(sender, instance,
-    *args, **kwargs):
-  # En caso que exista algún intervalo que tenga alguna referencia a la
-  # máquina, no se debería modificar ni borrar.
-  if instance.cronograma.intervalocronograma_set.filter(
-      pedido=instance.pedido).exists():
-    raise PedidoYaUtilizadoEnPlanificacion(_(
+validar_eliminar_pedido_cronograma = wrapper_validar_eliminar_instancia(
+    PedidoYaUtilizadoEnPlanificacion(_(
       u'El pedido que se intenta modificar/borrar presenta '+
-      u'intervalos planificados.'))
+      u'intervalos planificados.')))
 
-def validar_modificar_pedido_cronograma(sender, instance,
-    *args, **kwargs):
+validar_modificar_pedido_cronograma = wrapper_validar_modificar_instancia(
+    validar_eliminar_pedido_cronograma)
 
-  if instance.id is None:
-    return
+#----------------------------------------------------------------------
+# Validaciones de Tarea Producto
+#----------------------------------------------------------------------
+class ProductoYaUtilizadoEnPlanificacion(ValidationError):
+  pass
 
-  pc = PedidoCronograma.objects.get(pk=instance.id)
+validar_eliminar_tarea_producto = wrapper_validar_eliminar_instancia(
+    ProductoYaUtilizadoEnPlanificacion(_(
+      u'La tarea del producto que se intenta modificar/borrar presenta '+
+      u'intervalos planificados.')))
 
-  if not mismos_valores_instancia(pc, instance):
-    validar_eliminar_pedido_cronograma(sender, pc,
-        *args, **kwargs)
-
+validar_modificar_tarea_producto = wrapper_validar_modificar_instancia(
+    validar_eliminar_tarea_producto)
 
 #----------------------------------------------------------------------
 # Conexiones a las señales
@@ -264,4 +283,13 @@ clean_performed.connect(validar_modificar_pedido_cronograma,
 
 signals.pre_delete.connect(validar_eliminar_pedido_cronograma,
     PedidoCronograma)
+
+
+# TareaProducto
+clean_performed.connect(validar_modificar_tarea_producto,
+    TareaProducto)
+
+signals.pre_delete.connect(validar_eliminar_tarea_producto,
+    TareaProducto)
+
 

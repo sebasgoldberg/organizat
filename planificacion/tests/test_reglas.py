@@ -4,7 +4,8 @@ from .base import *
 from planificacion.reglas import (ItemYaPlanificado,
     IntervaloCalendarioConPlanificacionExistente,
     MaquinaYaUtilizadaEnPlanificacion,
-    PedidoYaUtilizadoEnPlanificacion)
+    PedidoYaUtilizadoEnPlanificacion,
+    ProductoYaUtilizadoEnPlanificacion)
 
 class ReglasItemPedidoTestCase(TestCase):
 
@@ -293,4 +294,32 @@ class ReglasPedidoCronogramaTestCase(TestCase):
 
         self.assertRaises(PedidoYaUtilizadoEnPlanificacion,
           cronograma.remove_pedido, pedido)
+
+
+class ReglasTareaProductoTestCase(TestCase):
+
+    def test_pedido_ya_utilizado(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=10)
+        maquina = Maquina.objects.create()
+
+        maquina.add_tarea(tarea1)
+        tarea_producto = producto1.add_tarea(tarea1)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,10)
+
+        cronograma = pedido.crear_cronograma()
+
+        cronograma.planificar()
+
+        tarea_producto.tarea = Tarea.objects.create(
+            descripcion='T2', tiempo=11)
+
+        self.assertRaises(ProductoYaUtilizadoEnPlanificacion,
+            tarea_producto.clean)
+
+        self.assertRaises(ProductoYaUtilizadoEnPlanificacion,
+          tarea_producto.delete)
 
