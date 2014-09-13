@@ -258,6 +258,10 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
 
       self.definir_modelo()
 
+      # Redirige la salida a /dev/null
+      self.modelo.setSolver()
+      self.modelo.solver.msg = False
+
       self.modelo.solve()
 
       if not self.is_modelo_resuelto():

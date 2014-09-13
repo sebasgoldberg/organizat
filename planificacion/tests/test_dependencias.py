@@ -28,8 +28,6 @@ class CantidadExtraTareaAnteriorTestCase(TestCase):
 
         cronograma.planificar()
 
-        print tp1.intervalocronograma_set.all()
-
         fecha_fin_tarea1 = tp1.intervalocronograma_set.aggregate(
             Max('fecha_hasta'))['fecha_hasta__max']
         fecha_fin_tarea2 = tp2.intervalocronograma_set.aggregate(
