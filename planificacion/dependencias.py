@@ -125,17 +125,47 @@ class GerenciadorDependencias:
       raise Exception('Solo puede informar una única operación por instante')
 
     intervalos_iter=self.get_intervalos([tarea_anterior, tarea_posterior], instante_agregado, instante_borrado, instante_modificado)
-    intervalos = [i for i in intervalos_iter]
+
+    intervalos = []
+    fecha_inicio_tarea_posterior = None
+    for i in intervalos_iter:
+      if i.tarea.id == tarea_posterior.id:
+        if fecha_inicio_tarea_posterior is None:
+          fecha_inicio_tarea_posterior = i.fecha_desde
+        else:
+          fecha_inicio_tarea_posterior = min(
+              fecha_inicio_tarea_posterior,
+              i.fecha_desde)
+      intervalos.append(i)
+
     logger.debug('Se validan dependencia entre las tareas %s (anterior) y %s (posterior) utilizando los siguientes intervalos:' % (
       tarea_anterior, tarea_posterior))
     logger.debug(intervalos)
     particion_temporal = self.get_particion_ordenada_temporal(intervalos)
     logger.debug('Particion temporal utilizada: %s' % particion_temporal)
+    cantidad_tarea_anterior_maxima = False
     for t in particion_temporal:
       cantidad_tarea_posterior = self.get_cantidad_tarea_hasta(intervalos, tarea_posterior, t)
       cantidad_tarea_anterior = self.get_cantidad_tarea_hasta(intervalos, tarea_anterior, t)
       logger.debug('Cantidad tarea anterior %s hasta %s: %s' % (tarea_anterior, t, cantidad_tarea_anterior))
       logger.debug('Cantidad tarea posterior %s hasta %s: %s' % (tarea_posterior, t, cantidad_tarea_posterior))
+
+      if fecha_inicio_tarea_posterior is None:
+        pass
+      elif t < fecha_inicio_tarea_posterior:
+        pass
+      elif (abs(D(self.item.cantidad) - cantidad_tarea_anterior) > 
+          self.get_tolerancia()) and not cantidad_tarea_anterior_maxima:
+        cantidad_tarea_anterior = (
+            cantidad_tarea_anterior - 
+            self.cronograma.cantidad_extra_tarea_anterior)
+
+      if (abs(D(self.item.cantidad) - cantidad_tarea_anterior) <
+          self.get_tolerancia()) and not cantidad_tarea_anterior_maxima:
+        cantidad_tarea_anterior_maxima = True
+        cantidad_tarea_anterior = (
+            cantidad_tarea_anterior - 
+            self.cronograma.cantidad_extra_tarea_anterior)
 
       if D(cantidad_tarea_posterior) > D(cantidad_tarea_anterior):
         if abs( cantidad_tarea_posterior - D(self.item.cantidad) ) > self.get_tolerancia():
@@ -164,6 +194,7 @@ class GerenciadorDependencias:
     cota_superior = hueco.tiempo.total_seconds() - 1
     fecha_desde = hueco.fecha_desde
 
+    logger.debug('Optimizacion en hueco: %s' % hueco.__unicode__())
     # Se optimiza hasta la media hora
     while (cota_superior - cota_inferior > 0 ):
 
@@ -171,6 +202,7 @@ class GerenciadorDependencias:
 
       try:
         fecha_desde = hueco.fecha_desde + TD(seconds=int(incremento_temporal))
+        logger.debug('Fecha desde: %s' % fecha_desde)
         tiempo = min(tiempo_intervalo, (hueco.get_fecha_hasta() - fecha_desde).total_seconds() / 60)
         if tiempo <> tiempo_intervalo and tiempo < self.cronograma.tiempo_minimo_intervalo:
           break

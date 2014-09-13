@@ -179,6 +179,16 @@ class Cronograma(PlanificacionBaseModel):
         u'subdividir en forma automatica en varios items los productos de un pedido de forma de '+
         u'poder organizar mejor los lotes de producción y reducir notablemente los tiempos '+
         u'de planificación'))
+  cantidad_extra_tarea_anterior = models.DecimalField(default=0, max_digits=8, decimal_places=2,
+      verbose_name=_(u'Cantidad Extra en Tarea Anterior'), 
+      help_text=_(u'Sean A y B dos tareas, donde A depende de B (B debe producirse antes que A). '+
+          u'Este parámetro indica, si queremos planificar B, a partir de que instante '+
+          u'puede planificarse en función de la cantidad que ya está producida de A. '+
+          u'Por ejemplo, si esta cantidad es 2 y se quiere producir 50 de A y 50 de B, '+
+          u'si hasta el instanet t1 tenemos planificado A(12) y B(10), y en hasta el instante '+
+          u't2 tenemos planificado A(20) y B(10), entonces entre t1 y t2, podremos planificar '+
+          u'una cantidad de 8 para B.'))
+
 
   class Meta:
     ordering = ['-id']
@@ -788,9 +798,10 @@ class IntervaloCronograma(PlanificacionBaseModel):
 
   def __init__(self, *args, **kwargs):
       super(IntervaloCronograma, self).__init__(*args,**kwargs)
-      self.producto = self.item.producto
-      self.item.pedido.__class__ = PedidoPlanificable
-      self.pedido = self.item.pedido
+      if self.item is not None:
+          self.producto = self.item.producto
+          self.item.pedido.__class__ = PedidoPlanificable
+          self.pedido = self.item.pedido
 
   @staticmethod
   def get_intervalos_modificables():

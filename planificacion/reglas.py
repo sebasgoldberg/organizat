@@ -42,7 +42,7 @@ def wrapper_validar_eliminar_instancia(e):
 
   def validar_eliminar_instancia(sender, instance,
       *args, **kwargs):
-    if instance.intervalocronograma_set.exclude_cancelados(
+    if instance.intervalocronograma_set.filter(
         ).exists():
       raise e 
 
