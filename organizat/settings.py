@@ -44,7 +44,9 @@ INSTALLED_APPS = (
     'produccion',
     'planificacion',
     'calendario',
+    'costos',
 )
+
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

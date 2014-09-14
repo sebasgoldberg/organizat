@@ -78,6 +78,30 @@ class CustomIndexDashboard(Dashboard):
             ]
         ))
 
+        # append a group for "Administration" & "Applications"
+        self.children.append(modules.Group(
+            _('Costos'),
+            column=1,
+            collapsible=True,
+            children = [
+                modules.ModelList(
+                    column=1,
+                    collapsible=False,
+                    models=(
+                      'costos.models.CostoMaquina',
+                      ),
+                ),
+                modules.ModelList(
+                    column=1,
+                    collapsible=False,
+                    models=(
+                      'costos.models.CostoCronograma',
+                      ),
+                ),
+            ]
+        ))
+
+
         # append an app list module for "Administration"
         self.children.append(modules.ModelList(
             _('Administracion de usuarios y permisos'),

@@ -20,6 +20,9 @@ from django.db.models import Min, Max
 import math
 from cleansignal.models import CleanSignal
 
+import django.dispatch
+cronograma_planificado = django.dispatch.Signal(providing_args=["instance", ])
+
 class PlanificacionBaseModel(CleanSignal, models.Model):
   class Meta:
     abstract = True
@@ -332,6 +335,7 @@ class Cronograma(PlanificacionBaseModel):
     self.estado = ESTADO_CRONOGRAMA_VALIDO
     self.clean()
     self.save()
+    cronograma_planificado.send(sender=self.__class__, instance=self)
 
   @transaction.atomic
   def invalidar(self, forzar=False):
@@ -870,6 +874,12 @@ class IntervaloCronograma(PlanificacionBaseModel):
       return 0
     else:
       return total
+
+  def get_duracion(self):
+    """
+    Obtiene un objeto datetime.timedelta
+    """
+    return self.fecha_hasta - self.fecha_desde
 
   def finalizar(self, cantidad_tarea_real=None):
     if cantidad_tarea_real is not None:
