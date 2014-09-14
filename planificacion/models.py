@@ -792,9 +792,10 @@ class IntervaloCronograma(PlanificacionBaseModel):
     unique_together = (('cronograma', 'maquina', 'fecha_desde'),)
 
   def __unicode__(self):
-    return '#%s(%s, %s, %s, cant: %s, %s, %s)' % (self.id,
+    return '[#%s] [%s] [%s] [%s] [cant: %s] [%s]-[%s]' % (self.id,
       self.maquina.descripcion, self.tarea.descripcion, self.item,
-      self.cantidad_tarea, self.get_fecha_desde(), self.get_fecha_hasta())
+      self.cantidad_tarea, self.get_fecha_desde().strftime('%Y-%m-%d %H:%M'),
+      self.get_fecha_hasta().strftime('%Y-%m-%d %H:%M'))
 
   def __init__(self, *args, **kwargs):
       super(IntervaloCronograma, self).__init__(*args,**kwargs)

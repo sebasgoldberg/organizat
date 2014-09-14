@@ -247,8 +247,8 @@ class GerenciadorDependencias:
             fecha_hasta__gt=hueco.fecha_desde).count() == 0 ):
           raise ValidationError(
             ugettext_lazy((u'No se ha podido completar la planificación para el item %s. '+
-              u'Seguramente puede solucionar este error, aumentando la opción '+
-              u'tiempo mínimo del intervalo en la configuración del cronograma.')) % self.item)
+              u'Seguramente puede solucionar este error, modificando la '+
+              u'configuración del cronograma.')) % self.item)
         if tiempo <= 0:
           break
 

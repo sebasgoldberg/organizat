@@ -48,7 +48,7 @@
           end: new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
           {% endwith %}
           allDay: false,
-          color: get_rgb_color({{intervalo.maquina.id}},{{intervalo.pedido.id}},{{intervalo.producto.id}},{%if intervalo.in_maquina_cuello_botella%}true{% else %}false{% endif %})
+          color: get_rgb_color({{intervalo.maquina.id}},{{intervalo.tarea.id}},{{intervalo.item.id}},{%if intervalo.in_maquina_cuello_botella%}true{% else %}false{% endif %})
         }{% if not forloop.last %},{% endif %}
         {% endfor %}
         ]
