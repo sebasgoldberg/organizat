@@ -26,6 +26,8 @@ def crear_costo_intervalo(sender, instance, created, raw, using,
     if instance.costointervalo_set.all().exists():
         return
     costomaq = instance.maquina.costomaquina_set.first()
+    if costomaq is None:
+        return
     costo = (D(instance.get_duracion().total_seconds() / 3600) *
         costomaq.costo_por_hora)
     instance.costointervalo_set.create(costo=costo)
@@ -38,7 +40,8 @@ def asignar_costo_cronograma(sender, instance, *args, **kwargs):
         costocrono = instance.costocronograma_set.create()
     costocrono.costo = 0
     for i in instance.get_intervalos():
-        costocrono.costo += i.costointervalo_set.first().costo
+        for ci in i.costointervalo_set.all():
+            costocrono.costo += ci.costo
     costocrono.clean()
     costocrono.save()
 
