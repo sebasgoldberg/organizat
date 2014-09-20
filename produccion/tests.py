@@ -217,3 +217,42 @@ class DependenciaTareaProductoTestCase(TestCase):
 
     self.assertEqual(DependenciaTareaProducto.objects.count(),4)
 
+class DependenciasTestCase(TestCase):
+
+  def test_no_hay_dependencia_circular(self):
+
+    armado = Tarea.objects.create(descripcion='Armado', tiempo=1)
+    grafica_lat = Tarea.objects.create(descripcion='Grafica Lateral', tiempo=1)
+    grafica_cen = Tarea.objects.create(descripcion='Grafica Cenefas', tiempo=1)
+    embalaje = Tarea.objects.create(descripcion='Embalaje', tiempo=1)
+    pintura = Tarea.objects.create(descripcion='Pintura', tiempo=1)
+    soldado = Tarea.objects.create(descripcion='Soldado', tiempo=1)
+
+    heineken = Producto.objects.create(descripcion='Heineken')
+
+    heineken.add_tarea(armado)
+    heineken.add_tarea(grafica_lat)
+    heineken.add_tarea(grafica_cen)
+    heineken.add_tarea(embalaje)
+    heineken.add_tarea(pintura)
+    heineken.add_tarea(soldado)
+
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=grafica_lat, tarea=armado)
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=grafica_cen, tarea=armado)
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=armado, tarea=embalaje)
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=pintura, tarea=grafica_lat)
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=pintura, tarea=grafica_cen)
+
+    heineken.add_dependencia_tareas(
+        tarea_anterior=soldado, tarea=pintura)
+
