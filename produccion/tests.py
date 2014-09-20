@@ -217,8 +217,6 @@ class DependenciaTareaProductoTestCase(TestCase):
 
     self.assertEqual(DependenciaTareaProducto.objects.count(),4)
 
-class DependenciasTestCase(TestCase):
-
   def test_no_hay_dependencia_circular(self):
 
     armado = Tarea.objects.create(descripcion='Armado', tiempo=1)

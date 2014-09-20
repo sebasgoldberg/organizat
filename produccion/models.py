@@ -326,8 +326,7 @@ class DependenciaTareaProducto(ProduccionBaseModel):
       if dependencia.tarea.id in visitadas:
         nuevo_camino = '%s -> %s' % (nuevo_camino, dependencia.tarea.descripcion)
         raise ValidationError(_(u'Dependencia circular detectada: %s') % nuevo_camino)
-      visitadas.append(tarea_anterior.id)
-      self.validar_dependencia_circular(visitadas,
+      self.validar_dependencia_circular(visitadas + [tarea_anterior.id],
         dependencia.tarea, nuevo_camino)
 
 class Pedido(ProduccionBaseModel):
