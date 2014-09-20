@@ -37,7 +37,8 @@ class ExecuteIntervaloCronogramaMethodView(ExecuteMethodView):
 
 def calendario_cronograma(request, id_cronograma):
   cronograma = Cronograma.objects.get(id=id_cronograma)
-  intervalos = cronograma.intervalocronograma_set.all()
+  intervalos = IntervaloCronograma.get_intervalos_no_cancelados(
+      ).filter(cronograma=cronograma)
   fecha_inicio = cronograma.fecha_inicio
   return render(request,
     'planificacion/cronograma/calendario.html',
