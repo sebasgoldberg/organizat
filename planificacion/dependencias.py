@@ -223,7 +223,11 @@ class GerenciadorDependencias:
   #@profile
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
 
-    while tiempo > 0:
+    tiempo_tarea_maquina = tarea.get_tiempo(maquina,self.item.producto)
+    tiempo_total_tarea_item_en_maquina = tiempo_tarea_maquina * self.item.cantidad
+    tolerancia = self.get_tolerancia(tiempo_total_tarea_item_en_maquina)
+
+    while tiempo > tolerancia:
       for hueco in self.cronograma.get_huecos(maquina):
         logger.debug(_('Se intenta agregar en hueco %s.') % hueco.__unicode__())
         tiempo_intervalo = min(tiempo, hueco.tiempo.total_seconds() / 60)
@@ -252,5 +256,5 @@ class GerenciadorDependencias:
         if tiempo <= 0:
           break
 
-    assert tiempo == 0
+    assert tiempo <= tolerancia
 
