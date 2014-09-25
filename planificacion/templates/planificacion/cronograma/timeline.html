@@ -1,0 +1,165 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<head>
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8">
+	<title>Timeline View Demo - dhtmlxScheduler</title>
+	<meta name="description" content="This demo shows a JavaScript event calendar in Timeline View where the users can manage and track the ongoing tasks or projects.">
+	<meta name="keywords" content="javascript, scheduler, event calendar, events calendar, event, calendar, ajax, google-like">
+</head>
+	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.js?v=4.1' type="text/javascript" charset="utf-8"></script>
+	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_timeline.js?v=4.1' type="text/javascript" charset="utf-8"></script>
+  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_units.js?v=4.1" type="text/javascript" charset="utf-8"></script>
+
+	
+	
+  <link rel="stylesheet" href="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.css?v=4.1" type="text/css" title="no title" charset="utf-8">
+
+<style type="text/css" media="screen">
+	html, body{
+		margin:0px;
+		padding:0px;
+		height:100%;
+		overflow:hidden;
+	}	
+	.one_line{
+		white-space:nowrap;
+		overflow:hidden;
+		padding-top:5px; padding-left:5px;
+		text-align:left !important;
+	}
+</style>
+
+<script type="text/javascript" charset="utf-8">
+
+  function get_color_range(value){
+    return (value*24)%192;
+    }
+
+  function get_rgb_color(r,g,b,cuello_botella){
+    if (cuello_botella)
+      return 'rgb(255,0,0)';
+    return 'rgb('+get_color_range(r)+','+get_color_range(g)+','+get_color_range(b)+')'
+    }
+
+	function init() {
+		window.resizeTo(950,700)
+		modSchedHeight();
+		
+		scheduler.locale.labels.timeline_tab = "Timeline"
+    scheduler.locale.labels.unit_tab = "Maquinas"
+    //scheduler.config.multi_day = true;
+		scheduler.locale.labels.section_custom="Section";
+		//scheduler.config.fix_tab_position = false;
+		//scheduler.config.details_on_create=true;
+		//scheduler.config.details_on_dblclick=true;
+		scheduler.config.xml_date="%Y-%m-%d %H:%i";
+    //scheduler.config.readonly=true;
+    scheduler.config.readonly_form=true;
+
+    //block all modifications
+    scheduler.attachEvent("onBeforeDrag",function(){return false;})
+    scheduler.attachEvent("onClick",function(id, e){
+      return false;
+      })
+    scheduler.config.details_on_dblclick = true;
+    scheduler.config.dblclick_create = false;
+
+		scheduler.config.first_hour = 6
+		scheduler.config.last_hour = 23
+		//===============
+		//Configuration
+		//===============
+		var sections=[
+      {% for maquina in maquinas %}
+        {key:{{maquina.id}}, label:"{{maquina.descripcion}}"},
+      {% endfor %}
+		];
+		
+		scheduler.createTimelineView({
+			name:	"timeline",
+			x_unit:	"minute",
+			x_date:	"%H:%i",
+			x_step:	60,
+			x_size: 12,
+			x_start: 8,
+			x_length:	24,
+			y_unit:	sections,
+			y_property:	"section_id",
+			render:"bar"
+		});
+
+    scheduler.createUnitsView("unit","section_id",sections);
+		
+		//===============
+		//Data loading
+		//===============
+		scheduler.config.lightbox.sections=[	
+			{name:"description", height:130, map_to:"text", type:"textarea" , focus:true},
+			{name:"custom", height:23, type:"select", options:sections, map_to:"section_id" },
+			{name:"time", height:72, type:"time", map_to:"auto"}
+		]
+		
+		scheduler.init('scheduler_here',new Date(),"timeline");
+		scheduler.parse([
+      {%for intervalo in intervalos%}
+        {
+          {% with fd=intervalo.get_fecha_desde fh=intervalo.get_fecha_hasta %}
+            start_date: new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
+            end_date: new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
+          {% endwith %}
+          text:"#{{intervalo.pedido.id}}#{{intervalo.item.id}}:{{intervalo.tarea}}({{intervalo.item.producto}}):{{intervalo.cantidad_tarea}}",
+          section_id:{{intervalo.maquina.id}},
+          //color: get_rgb_color({{intervalo.maquina.id}},{{intervalo.tarea.id}},{{intervalo.item.id}},false),
+          color: get_rgb_color(128,{{intervalo.tarea.id}},{{intervalo.item.id}},false),
+        },
+      {% endfor %}
+		],"json");
+	}
+</script>
+
+<body onload="init();"  onresize="modSchedHeight()">
+	
+	
+	
+	
+	
+	<!-- info block 
+		href-prev
+		href-next
+		title
+		desc-short
+		desc-long
+-->
+    <style>
+        a img{
+            border: none;
+        }
+        li{
+            list-style: none;
+        }
+    </style>
+	<script>
+		function modSchedHeight(){
+			var headHeight = 100;
+			var sch = document.getElementById("scheduler_here");
+			sch.style.height = (parseInt(document.body.offsetHeight)-headHeight)+"px";
+		}
+	</script>
+	<div id="scheduler_here" class="dhx_cal_container" style='width:100%; height:100%;'>
+		<div class="dhx_cal_navline">
+			<div class="dhx_cal_prev_button">&nbsp;</div>
+			<div class="dhx_cal_next_button">&nbsp;</div>
+			<div class="dhx_cal_today_button"></div>
+			<div class="dhx_cal_date"></div>
+			<div class="dhx_cal_tab" name="day_tab" style="left:30px;"></div>
+      <div class="dhx_cal_tab" name="week_tab" style="left:105px;"></div>
+      <div class="dhx_cal_tab" name="unit_tab" style="left:180px;"></div>
+      <div class="dhx_cal_tab" name="month_tab" style="left:255px;"></div>
+			<div class="dhx_cal_tab" name="timeline_tab" style="left:330px;"></div>
+		</div>
+		<div class="dhx_cal_header">
+		</div>
+		<div class="dhx_cal_data">
+		</div>		
+	</div>
+</body>

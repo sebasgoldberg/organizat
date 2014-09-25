@@ -6,6 +6,8 @@ from django.utils.translation import ugettext as _
 from django.core.exceptions import ValidationError
 from django.views.generic import View
 from datetime import datetime as DT
+from produccion.models import Maquina
+import datetime
 
 class ExecuteMethodView(View):
   _class = None
@@ -46,9 +48,20 @@ def calendario_cronograma(request, id_cronograma):
     'intervalos': intervalos,})
 
 def calendario_activo(request):
-  intervalos = IntervaloCronograma.get_intervalos_activos()
-  fecha_inicio = DT.now()
-  return render(request,
-    'planificacion/cronograma/calendario.html',
+    intervalos = IntervaloCronograma.get_intervalos_activos(
+            ).filter(fecha_desde__gte=datetime.date.today())
+    fecha_inicio = DT.now()
+    #maquinas = Maquina.objects.filter(intervalo)
+
+    maquinas = set()
+    for i in intervalos:
+        if i.maquina not in maquinas:
+            maquinas.add(i.maquina)
+
+    return render(request,
+#'planificacion/cronograma/calendario.html',
+#'planificacion/cronograma/scheduler.html',
+    'planificacion/cronograma/timeline.html',
     {'fecha_inicio': fecha_inicio,
-    'intervalos': intervalos,})
+    'intervalos': intervalos,
+    'maquinas': maquinas})
