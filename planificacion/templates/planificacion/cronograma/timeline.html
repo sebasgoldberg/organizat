@@ -99,7 +99,9 @@
 			{name:"time", height:72, type:"time", map_to:"auto"}
 		]
 		
-		scheduler.init('scheduler_here',new Date(),"timeline");
+    {%with f=fecha_inicio%}
+      scheduler.init('scheduler_here',new Date({{f.year}},{{f.month}}-1,{{f.day}}),"timeline");
+    {%endwith%}
 		scheduler.parse([
       {%for intervalo in intervalos%}
         {

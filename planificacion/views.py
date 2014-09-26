@@ -37,21 +37,8 @@ class ExecuteIntervaloCronogramaMethodView(ExecuteMethodView):
   def redirect(self, instance):
     return redirect('/admin/planificacion/intervalocronograma/%s/' % instance.id)
 
-def calendario_cronograma(request, id_cronograma):
-  cronograma = Cronograma.objects.get(id=id_cronograma)
-  intervalos = IntervaloCronograma.get_intervalos_no_cancelados(
-      ).filter(cronograma=cronograma)
-  fecha_inicio = cronograma.fecha_inicio
-  return render(request,
-    'planificacion/cronograma/calendario.html',
-    {'fecha_inicio': fecha_inicio,
-    'intervalos': intervalos,})
 
-def calendario_activo(request):
-    intervalos = IntervaloCronograma.get_intervalos_activos(
-            ).filter(fecha_desde__gte=datetime.date.today())
-    fecha_inicio = DT.now()
-    #maquinas = Maquina.objects.filter(intervalo)
+def vista_timeline(request, intervalos, fecha_inicio=DT.now()):
 
     maquinas = set()
     for i in intervalos:
@@ -65,3 +52,15 @@ def calendario_activo(request):
     {'fecha_inicio': fecha_inicio,
     'intervalos': intervalos,
     'maquinas': maquinas})
+
+def calendario_cronograma(request, id_cronograma):
+  cronograma = Cronograma.objects.get(id=id_cronograma)
+  intervalos = IntervaloCronograma.get_intervalos_no_cancelados(
+      ).filter(cronograma=cronograma)
+  fecha_inicio = cronograma.fecha_inicio
+  return vista_timeline(request, intervalos, fecha_inicio=fecha_inicio)
+
+def calendario_activo(request):
+    intervalos = IntervaloCronograma.get_intervalos_activos(
+            ).filter(fecha_desde__gte=datetime.date.today())
+    return vista_timeline(request, intervalos)
