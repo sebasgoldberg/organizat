@@ -1,3 +1,4 @@
+{% load i18n %}
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <head>
@@ -6,13 +7,24 @@
 	<meta name="description" content="This demo shows a JavaScript event calendar in Timeline View where the users can manage and track the ongoing tasks or projects.">
 	<meta name="keywords" content="javascript, scheduler, event calendar, events calendar, event, calendar, ajax, google-like">
 </head>
-	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.js?v=4.1' type="text/javascript" charset="utf-8"></script>
-	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_timeline.js?v=4.1' type="text/javascript" charset="utf-8"></script>
-  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_units.js?v=4.1" type="text/javascript" charset="utf-8"></script>
+	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.js' type="text/javascript" charset="utf-8"></script>
+	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_timeline.js' type="text/javascript" charset="utf-8"></script>
+  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_units.js" type="text/javascript" charset="utf-8"></script>
+  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_minical.js" type="text/javascript" charset="utf-8"></script>
 
 	
+  <script src="/static/jquery.js" type="text/javascript" charset="utf-8"></script>
+
+  {%comment%}
+  <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.css">
+  <link rel="stylesheet" href="/static/bootstrap/css/bootstrap-theme.css">
+  {%endcomment%}
+  <script src="/static/bootstrap/js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
 	
-  <link rel="stylesheet" href="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.css?v=4.1" type="text/css" title="no title" charset="utf-8">
+  <link rel="stylesheet" href="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.css" type="text/css" title="no title" charset="utf-8">
+
+  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_quick_info.js"></script>
+  <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/locale/locale_es.js" charset="utf-8"></script>
 
 <style type="text/css" media="screen">
 	html, body{
@@ -42,11 +54,11 @@
     }
 
 	function init() {
-		window.resizeTo(950,700)
-		modSchedHeight();
-		
-		scheduler.locale.labels.timeline_tab = "Timeline"
-    scheduler.locale.labels.unit_tab = "Maquinas"
+		//window.resizeTo(950,700)
+		//modSchedHeight();
+
+    scheduler.locale.labels.timeline_tab = "{% trans "Línea Tmp" %}";
+    scheduler.locale.labels.unit_tab = "{% trans "Calendario" %}";
     //scheduler.config.multi_day = true;
 		scheduler.locale.labels.section_custom="Section";
 		//scheduler.config.fix_tab_position = false;
@@ -58,7 +70,30 @@
 
     //block all modifications
     scheduler.attachEvent("onBeforeDrag",function(){return false;})
+
+    // -------------------------------------------------------
+    // Quick info
+    // -------------------------------------------------------
+    scheduler.templates.quick_info_content = function(start, end, ev){ 
+           return ev.details || ev.text;;
+           };
+    scheduler.config.quick_info_detached = true;
+    scheduler.config.icons_select = ['icon_ic_cancelar'];
+    scheduler.locale.labels.icon_ic_cancelar = "{% trans "Cancelar" %}";
+    scheduler._click.buttons.ic_cancelar = function(id){
+      alert(id);
+    };
+
     scheduler.attachEvent("onClick",function(id, e){
+
+      (function($){
+        schEvent = scheduler.getEvent(id);
+        $('#detalle-intervalo').html('<h1>Intervalo '+schEvent.intervalo.id+'</h1>');
+      })(jQuery);
+
+      return false;
+      })
+    scheduler.attachEvent("onDblClick",function(id, e){
       return false;
       })
     scheduler.config.details_on_dblclick = true;
@@ -105,6 +140,14 @@
 		scheduler.parse([
       {%for intervalo in intervalos%}
         {
+          intervalo:{
+            id: {{ intervalo.id }},
+            pedido: '{{ intervalo.pedido}}',
+            item: '{{ intervalo.item}}',
+            maquina: '{{ intervalo.maquina}}',
+            tarea: '{{ intervalo.tarea}}',
+            cantidad: '{{ intervalo.cantidad}}',
+          },
           {% with fd=intervalo.get_fecha_desde fh=intervalo.get_fecha_hasta %}
             start_date: new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
             end_date: new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
@@ -119,7 +162,11 @@
 	}
 </script>
 
-<body onload="init();"  onresize="modSchedHeight()">
+<body onload="init();"  
+{%comment%}
+onresize="modSchedHeight()"
+{%endcomment%}
+>
 	
 	
 	
@@ -140,6 +187,7 @@
             list-style: none;
         }
     </style>
+  {%comment%}
 	<script>
 		function modSchedHeight(){
 			var headHeight = 100;
@@ -147,21 +195,47 @@
 			sch.style.height = (parseInt(document.body.offsetHeight)-headHeight)+"px";
 		}
 	</script>
+  {%endcomment%}
 	<div id="scheduler_here" class="dhx_cal_container" style='width:100%; height:100%;'>
 		<div class="dhx_cal_navline">
 			<div class="dhx_cal_prev_button">&nbsp;</div>
 			<div class="dhx_cal_next_button">&nbsp;</div>
 			<div class="dhx_cal_today_button"></div>
 			<div class="dhx_cal_date"></div>
+      <div class="dhx_minical_icon" id="dhx_minical_icon" 
+            onclick="show_minical()">&nbsp;</div>
+      {%comment%}
 			<div class="dhx_cal_tab" name="day_tab" style="left:30px;"></div>
       <div class="dhx_cal_tab" name="week_tab" style="left:105px;"></div>
-      <div class="dhx_cal_tab" name="unit_tab" style="left:180px;"></div>
+      {%endcomment%}
       <div class="dhx_cal_tab" name="month_tab" style="left:255px;"></div>
-			<div class="dhx_cal_tab" name="timeline_tab" style="left:330px;"></div>
+      <div class="dhx_cal_tab" name="unit_tab"></div>
+			<div class="dhx_cal_tab" name="timeline_tab"></div>
 		</div>
 		<div class="dhx_cal_header">
 		</div>
 		<div class="dhx_cal_data">
 		</div>		
 	</div>
+
+  <div id='detalle-intervalo'>
+    </div>
+
+	<script>
+    function show_minical(){
+      if (scheduler.isCalendarVisible()){
+        scheduler.destroyCalendar();
+        } else {
+        scheduler.renderCalendar({
+          position:"dhx_minical_icon",
+          date:scheduler._date,
+          navigation:true,
+          handler:function(date,calendar){
+            scheduler.setCurrentView(date);
+            scheduler.destroyCalendar()
+          }
+        });
+      }
+    }
+    </script>
 </body>

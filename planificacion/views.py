@@ -8,6 +8,7 @@ from django.views.generic import View
 from datetime import datetime as DT
 from produccion.models import Maquina
 import datetime
+from django.db.models import Min
 
 class ExecuteMethodView(View):
   _class = None
@@ -38,7 +39,13 @@ class ExecuteIntervaloCronogramaMethodView(ExecuteMethodView):
     return redirect('/admin/planificacion/intervalocronograma/%s/' % instance.id)
 
 
-def vista_timeline(request, intervalos, fecha_inicio=DT.now()):
+def vista_timeline(request, intervalos, fecha_inicio=None):
+
+    if fecha_inicio is None:
+      fecha_inicio = intervalos.aggregate(Min('fecha_desde'))['fecha_desde__min']
+
+    if fecha_inicio is None:
+      fecha_inicio = DT.now()
 
     maquinas = set()
     for i in intervalos:
@@ -58,7 +65,7 @@ def calendario_cronograma(request, id_cronograma):
   intervalos = IntervaloCronograma.get_intervalos_no_cancelados(
       ).filter(cronograma=cronograma)
   fecha_inicio = cronograma.fecha_inicio
-  return vista_timeline(request, intervalos, fecha_inicio=fecha_inicio)
+  return vista_timeline(request, intervalos)
 
 def calendario_activo(request):
     intervalos = IntervaloCronograma.get_intervalos_activos(
