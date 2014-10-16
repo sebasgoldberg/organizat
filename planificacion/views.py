@@ -71,3 +71,21 @@ def calendario_activo(request):
     intervalos = IntervaloCronograma.get_intervalos_activos(
             ).filter(fecha_desde__gte=datetime.date.today())
     return vista_timeline(request, intervalos)
+
+from django.http import HttpResponse
+import json
+def rest_cancelar_intervalo(request, pk):
+    intervalo = IntervaloCronograma.objects.get(pk=pk)
+    try:
+        ids_intervalos_cancelados = [ x.id for x in intervalo.get_intervalos_dependientes()]
+        ids_intervalos_cancelados.insert(0, intervalo.id)
+        intervalo.cancelar()
+        return HttpResponse(json.dumps(ids_intervalos_cancelados))
+    except Exception as e:
+        errores = [
+                _(u'Ha ocurrido un error al intentar cancelar el intervalo %s.') % intervalo,
+                e.message, ]
+        return HttpResponse(
+                json.dumps(errores),
+                status=400)
+

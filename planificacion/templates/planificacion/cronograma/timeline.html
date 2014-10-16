@@ -7,6 +7,8 @@
 	<meta name="description" content="This demo shows a JavaScript event calendar in Timeline View where the users can manage and track the ongoing tasks or projects.">
 	<meta name="keywords" content="javascript, scheduler, event calendar, events calendar, event, calendar, ajax, google-like">
 </head>
+    <link rel="STYLESHEET" type="text/css" href="/static/dhtmlx/suite/codebase/dhtmlx.css">
+    <script src="/static/dhtmlx/suite/codebase/dhtmlx.js" type="text/javascript"></script>
 	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/dhtmlxscheduler.js' type="text/javascript" charset="utf-8"></script>
 	<script src='/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_timeline.js' type="text/javascript" charset="utf-8"></script>
   <script src="/static/dhtmlxScheduler_v4.1.0/dhtmlxScheduler_v4.1.0/codebase/ext/dhtmlxscheduler_units.js" type="text/javascript" charset="utf-8"></script>
@@ -80,23 +82,61 @@
     scheduler.config.quick_info_detached = true;
     scheduler.config.icons_select = ['icon_ic_cancelar'];
     scheduler.locale.labels.icon_ic_cancelar = "{% trans "Cancelar" %}";
+
     scheduler._click.buttons.ic_cancelar = function(id){
-      alert(id);
+        dhtmlx.message({
+            type:"confirm-warning", 
+            text:'{% trans "¿Está seguro que desea cancelar el intervalo seleccionado y todos los intervalos dependientes?" %}',
+            callback: function(result){
+                if (!result)
+                    return;
+                schEvent = scheduler.getEvent(id);
+                schEvent.intervalo.cancelar({
+
+                    success: function(data){
+                        var idsIntervalosCancelados = jQuery.parseJSON(data);
+                        for(i=0; i<idsIntervalosCancelados.length; i++){
+                            event_id = scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
+                            scheduler.deleteEvent(event_id);
+                        }
+                        dhtmlx.message({text:"Exito", expire: -1});
+                    },
+
+                    error: function(data){
+                        var errores = jQuery.parseJSON(data.responseText);
+                        for (i=0; i<errores.length; i++){
+                            mensaje = errores[i];
+                            dhtmlx.message({ type:"error", text:mensaje, expire: -1});
+                            }
+                    },
+
+                    });
+                }
+            });
     };
 
+    scheduler.getEventIdFromIntervaloId = function(intervaloId){
+        return this.eventIdFromIntervaloId[intervaloId];
+    };
+
+    scheduler.initializeEventIntervaloMap = function(){
+        this.eventIdFromIntervaloId = {};
+        var events = this.getEvents();
+        for (i=0; i<events.length; i++){
+            var _event = events[i];
+            scheduler.eventIdFromIntervaloId[_event.intervalo.id] = _event.id;
+        }
+    }
+
     scheduler.attachEvent("onClick",function(id, e){
-
-      (function($){
-        schEvent = scheduler.getEvent(id);
-        $('#detalle-intervalo').html('<h1>Intervalo '+schEvent.intervalo.id+'</h1>');
-      })(jQuery);
-
       return false;
       })
+
     scheduler.attachEvent("onDblClick",function(id, e){
       return false;
       })
-    scheduler.config.details_on_dblclick = true;
+
+    scheduler.config.details_on_dblclick = false;
     scheduler.config.dblclick_create = false;
 
 		scheduler.config.first_hour = 6
@@ -147,6 +187,14 @@
             maquina: '{{ intervalo.maquina}}',
             tarea: '{{ intervalo.tarea}}',
             cantidad: '{{ intervalo.cantidad}}',
+            cancelar: function(settings){
+              (function($){
+                $.get(
+                  "{% url 'cancelar_intervalo' intervalo.id %}",
+                  settings.success
+                  ).fail(settings.error);
+              })(jQuery);
+            },
           },
           {% with fd=intervalo.get_fecha_desde fh=intervalo.get_fecha_hasta %}
             start_date: new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
@@ -159,6 +207,8 @@
         },
       {% endfor %}
 		],"json");
+
+      scheduler.initializeEventIntervaloMap();
 	}
 </script>
 
@@ -172,13 +222,6 @@ onresize="modSchedHeight()"
 	
 	
 	
-	<!-- info block 
-		href-prev
-		href-next
-		title
-		desc-short
-		desc-long
--->
     <style>
         a img{
             border: none;
@@ -239,3 +282,4 @@ onresize="modSchedHeight()"
     }
     </script>
 </body>
+
