@@ -920,17 +920,26 @@ class IntervaloCronograma(PlanificacionBaseModel):
 
   @transaction.atomic
   def cancelar(self, propagar=True):
+    """
+    Cancela el intervalo.
+    Si propagar == True entonces cancela también los intervalos dependientes.
+    Se verificará self.cancelado() == True
+    """
+    intervalos_cancelados = []
     if not self.is_activo():
       raise EstadoIntervaloCronogramaError(
         _(u'El intevalo %s no puede ser cancelado. El mismo no se encuentra activo.') % self)
     if propagar:
       for intervalo in reversed([ i for i in self.get_intervalos_dependientes() ]):
         intervalo.cancelar(propagar=False)
+        intervalos_cancelados.append(intervalo)
     self.cantidad_tarea_real = 0
     self.estado = ESTADO_INTERVALO_CANCELADO
     self.clean()
     self.save()
     logger.info(_('Intervalo CANCELADO: %s') % self)
+    intervalos_cancelados.append(self)
+    return intervalos_cancelados
 
   def in_maquina_cuello_botella(self):
     return self.cronograma.is_maquina_cuello_botella(self.maquina)

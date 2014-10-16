@@ -77,15 +77,19 @@ import json
 def rest_cancelar_intervalo(request, pk):
     intervalo = IntervaloCronograma.objects.get(pk=pk)
     try:
-        ids_intervalos_cancelados = [ x.id for x in intervalo.get_intervalos_dependientes()]
-        ids_intervalos_cancelados.insert(0, intervalo.id)
-        intervalo.cancelar()
-        return HttpResponse(json.dumps(ids_intervalos_cancelados))
+        intervalos_cancelados = intervalo.cancelar()
+        ids_intervalos_cancelados = [ x.id for x in intervalos_cancelados]
+
+        return HttpResponse(json.dumps({
+            'ids_intervalos_cancelados': ids_intervalos_cancelados,
+            'mensajes': [ _(u'Se han cancelado %s intervalos en forma exitosa.'
+                ) % len(intervalos_cancelados), ],
+            }))
     except Exception as e:
         errores = [
                 _(u'Ha ocurrido un error al intentar cancelar el intervalo %s.') % intervalo,
                 e.message, ]
         return HttpResponse(
-                json.dumps(errores),
+                json.dumps({'mensajes': errores}),
                 status=400)
 

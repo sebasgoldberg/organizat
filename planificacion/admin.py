@@ -13,7 +13,8 @@ class MaquinaCronogramaInline(admin.TabularInline):
 class CronogramaAdmin(admin.ModelAdmin):
   readonly_fields=['id','estado']
   inlines=[PedidoCronogramaInline,MaquinaCronogramaInline]
-  list_display=['id','descripcion', 'fecha_inicio', 'estrategia']
+  list_display=['id','descripcion', 'fecha_inicio', 'estado']
+  list_filter = ['estado', ]
   list_display_links = ('id', 'descripcion')
   search_fields=['descripcion']
   list_per_page = 40
