@@ -1,4 +1,4 @@
-function crearScheduler(maquinas, fechaInicio, intervalos) {
+function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerId) {
 
     scheduler.locale.labels.timeline_tab = gettext("Línea Tmp");
     scheduler.locale.labels.unit_tab = gettext("Calendario");
@@ -14,7 +14,7 @@ function crearScheduler(maquinas, fechaInicio, intervalos) {
     // Quick info
     // -------------------------------------------------------
     scheduler.templates.quick_info_content = function(start, end, ev){ 
-        return ev.details || ev.text;;
+        return ev.intervalo.quick_info_content()
     };
     scheduler.config.quick_info_detached = true;
 
@@ -87,7 +87,7 @@ function crearScheduler(maquinas, fechaInicio, intervalos) {
         {name:"time", height:72, type:"time", map_to:"auto"}
     ]
 
-    scheduler.init('scheduler_here',fechaInicio,"timeline");
+    scheduler.init(containerId,fechaInicio,"timeline");
 
     events = [];
     for (i=0; i<intervalos.length; i++){

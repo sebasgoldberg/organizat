@@ -1,6 +1,7 @@
 {% load i18n %}
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
 <head>
 	<meta http-equiv="Content-type" content="text/html; charset=utf-8">
 	<title>Timeline View Demo - dhtmlxScheduler</title>
@@ -32,6 +33,15 @@
 
     <script type="text/javascript" src="/static/planificacion/js/intervalo.js"></script>
     <script type="text/javascript" src="/static/planificacion/js/scheduler.js"></script>
+
+    <style type="text/css" media="screen">
+        .hidden-templates{
+            display: none;
+        }
+        #quick-info-content ul{
+            list-style: none;
+        }
+    </style>
 </head>
 
 <script>
@@ -60,6 +70,7 @@
                         },
                         {
                             id: '{{ intervalo.item.id }}',
+                            descripcion:'{{intervalo.item.producto.descripcion}}',
                         },
                         {
                             id:{{intervalo.producto.id}},
@@ -78,30 +89,17 @@
                             new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
                             new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
                         {% endwith %}
-                        "{% url 'cancelar_intervalo' intervalo.id %}"
+                        "{% url 'cancelar_intervalo' intervalo.id %}",
+                        scheduler
                         ));
         {%endfor%}
 
-        crearScheduler(maquinas, fechaInicio, intervalos)
+        crearScheduler(scheduler, maquinas, fechaInicio, intervalos, 'scheduler_here')
 
     }
-
 </script>
 	
 <body onload="init();">
-	
-	
-	
-	
-	
-    <style>
-        a img{
-            border: none;
-        }
-        li{
-            list-style: none;
-        }
-    </style>
 
 	<div id="scheduler_here" class="dhx_cal_container" style='width:100%; height:100%;'>
 		<div class="dhx_cal_navline">
@@ -109,14 +107,10 @@
 			<div class="dhx_cal_next_button">&nbsp;</div>
 			<div class="dhx_cal_today_button"></div>
 			<div class="dhx_cal_date"></div>
-      <div class="dhx_minical_icon" id="dhx_minical_icon" 
-            onclick="show_minical()">&nbsp;</div>
-      {%comment%}
-			<div class="dhx_cal_tab" name="day_tab" style="left:30px;"></div>
-      <div class="dhx_cal_tab" name="week_tab" style="left:105px;"></div>
-      {%endcomment%}
-      <div class="dhx_cal_tab" name="month_tab" style="left:255px;"></div>
-      <div class="dhx_cal_tab" name="unit_tab"></div>
+            <div class="dhx_minical_icon" id="dhx_minical_icon" 
+                onclick="show_minical()">&nbsp;</div>
+            <div class="dhx_cal_tab" name="month_tab" style="left:255px;"></div>
+            <div class="dhx_cal_tab" name="unit_tab"></div>
 			<div class="dhx_cal_tab" name="timeline_tab"></div>
 		</div>
 		<div class="dhx_cal_header">
@@ -125,25 +119,40 @@
 		</div>		
 	</div>
 
-  <div id='detalle-intervalo'>
+	<script>
+        function show_minical(){
+            if (scheduler.isCalendarVisible()){
+                scheduler.destroyCalendar();
+            } else {
+                scheduler.renderCalendar({
+                    position:"dhx_minical_icon",
+                    date:scheduler._date,
+                    navigation:true,
+                    handler:function(date,calendar){
+                        scheduler.setCurrentView(date);
+                        scheduler.destroyCalendar()
+                    }
+                });
+            }
+        }
+    </script>
+
+    <div id="hidden-templates">
+        <div class='template-wrapper'>
+            <div id='quick-info-content'>
+                <ul>
+                    <li class='id'><strong>{% trans "ID" %}: </strong><span class=value></span></li>
+                    <li class='pedido'><strong>{% trans "Pedido" %}: </strong><span class=value></span></li>
+                    <li class='item'><strong>{% trans "Item" %}: </strong><span class=value></span></li>
+                    <li class='maquina'><strong>{% trans "Máquina" %}: </strong><span class=value></span></li>
+                    <li class='tarea'><strong>{% trans "Tarea" %}: </strong><span class=value></span></li>
+                    <li class='producto'><strong>{% trans "Producto" %}: </strong><span class=value></span></li>
+                    <li class='cantidad'><strong>{% trans "Cantidad" %}: </strong><span class=value></span></li>
+                </ul>
+            </div>
+        </div>
     </div>
 
-	<script>
-    function show_minical(){
-      if (scheduler.isCalendarVisible()){
-        scheduler.destroyCalendar();
-        } else {
-        scheduler.renderCalendar({
-          position:"dhx_minical_icon",
-          date:scheduler._date,
-          navigation:true,
-          handler:function(date,calendar){
-            scheduler.setCurrentView(date);
-            scheduler.destroyCalendar()
-          }
-        });
-      }
-    }
-    </script>
 </body>
 
+</html>

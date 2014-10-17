@@ -12,7 +12,7 @@ function get_rgb_color(r,g,b,cuello_botella){
     return 'rgb('+get_color_range(r)+','+get_color_range(g)+','+get_color_range(b)+')'
 }
 
-function Intervalo(id, pedido, item, producto, maquina, tarea, cantidad, fechaDesde, fechaHasta, urlCancelar){
+function Intervalo(id, pedido, item, producto, maquina, tarea, cantidad, fechaDesde, fechaHasta, urlCancelar, scheduler){
     this.id = id;
     this.pedido = pedido;
     this.item = item;
@@ -23,6 +23,7 @@ function Intervalo(id, pedido, item, producto, maquina, tarea, cantidad, fechaDe
     this.fechaDesde = fechaDesde;
     this.fechaHasta = fechaHasta;
     this.urlCancelar = urlCancelar;
+    this.scheduler = scheduler;
 
     this.getDescripcion = function(){
         return '#'+intervalo.pedido.id+'#'+
@@ -31,6 +32,22 @@ function Intervalo(id, pedido, item, producto, maquina, tarea, cantidad, fechaDe
             intervalo.producto.descripcion+'):'+
             intervalo.cantidad.toString();
     };
+
+    this.quick_info_content = function(){
+        thisIntervalo = this;
+        $qic = jQuery('#quick-info-content');
+        $qic.find('li').each(function(){
+            $this = jQuery(this);
+            attr = $this.attr('class');
+            $span = $this.find('span');
+            if (typeof thisIntervalo[attr] === 'object'){
+                $span.html('#'+thisIntervalo[attr].id+' - '+thisIntervalo[attr].descripcion);
+            }
+            else
+                $span.html(thisIntervalo[attr]);
+        });
+        return $qic.parent().html()
+    }
 
     this.cancelar = function(){
         var thisIntervalo = this;
@@ -49,8 +66,8 @@ function Intervalo(id, pedido, item, producto, maquina, tarea, cantidad, fechaDe
                             var respuesta = $.parseJSON(data);
                             var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
                             for(i=0; i<idsIntervalosCancelados.length; i++){
-                                event_id = scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
-                                scheduler.deleteEvent(event_id);
+                                event_id = thisIntervalo.scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
+                                thisIntervalo.scheduler.deleteEvent(event_id);
                             }
                             for (i=0; i<respuesta.mensajes.length; i++){
                                 mensaje = respuesta.mensajes[i];
