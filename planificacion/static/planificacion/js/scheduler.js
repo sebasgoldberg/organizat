@@ -19,14 +19,24 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
     scheduler.config.quick_info_detached = true;
 
     /**
-     * Botón cancelar
+     * Botón "Finalizar"
      */
-    scheduler.config.icons_select = ['icon_ic_cancelar'];
+    scheduler.config.icons_select = ['icon_ic_finalizar', 'icon_ic_cancelar'];
+    scheduler.locale.labels.icon_ic_finalizar = gettext("Finalizar");
+    scheduler._click.buttons.ic_finalizar = function(id){
+        schEvent = scheduler.getEvent(id);
+        schEvent.intervalo.finalizar();
+    };
+
+    /**
+     * Botón "Cancelar"
+     */
     scheduler.locale.labels.icon_ic_cancelar = gettext("Cancelar");
     scheduler._click.buttons.ic_cancelar = function(id){
         schEvent = scheduler.getEvent(id);
         schEvent.intervalo.cancelar();
     };
+
 
     scheduler.getEventIdFromIntervaloId = function(intervaloId){
         return this.eventIdFromIntervaloId[intervaloId];
@@ -98,7 +108,7 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
             end_date: intervalo.fechaHasta,
             text:intervalo.getDescripcion(),
             section_id:intervalo.maquina.id,
-            color: get_rgb_color(128,intervalo.tarea.id,intervalo.item.id,false),
+            color: intervalo.getColor(),
         });
     }
 

@@ -31,6 +31,7 @@
 
     <script type="text/javascript" src="{% url 'django.views.i18n.javascript_catalog' %}"></script>
 
+    <script type="text/javascript" src="/static/planificacion/js/message.js"></script>
     <script type="text/javascript" src="/static/planificacion/js/intervalo.js"></script>
     <script type="text/javascript" src="/static/planificacion/js/scheduler.js"></script>
 
@@ -62,7 +63,7 @@
         intervalos = []
         {%for intervalo in intervalos%}
             intervalos.push(
-                    new Intervalo(
+                    new planificacion.Intervalo(
                         {{ intervalo.id }},
                         {
                             id:{{intervalo.pedido.id}},
@@ -90,6 +91,7 @@
                             new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
                         {% endwith %}
                         "{% url 'cancelar_intervalo' intervalo.id %}",
+                        "{% url 'planificacion.rest.finalizar_intervalo' intervalo.id %}",
                         scheduler
                         ));
         {%endfor%}

@@ -74,6 +74,7 @@ def calendario_activo(request):
 
 from django.http import HttpResponse
 import json
+
 def rest_cancelar_intervalo(request, pk):
     intervalo = IntervaloCronograma.objects.get(pk=pk)
     try:
@@ -82,12 +83,32 @@ def rest_cancelar_intervalo(request, pk):
 
         return HttpResponse(json.dumps({
             'ids_intervalos_cancelados': ids_intervalos_cancelados,
-            'mensajes': [ _(u'Se han cancelado %s intervalos en forma exitosa.'
+            'mensajes': [ _(u'Se ha(n) cancelado %s intervalo(s) en forma exitosa.'
                 ) % len(intervalos_cancelados), ],
             }))
     except Exception as e:
         errores = [
                 _(u'Ha ocurrido un error al intentar cancelar el intervalo %s.') % intervalo,
+                e.message, ]
+        return HttpResponse(
+                json.dumps({'mensajes': errores}),
+                status=400)
+
+def rest_finalizar_intervalo(request, pk):
+    intervalo = IntervaloCronograma.objects.get(pk=pk)
+    try:
+        intervalo.finalizar()
+
+        ids_intervalos_finalizados = [ intervalo.id ]
+
+        return HttpResponse(json.dumps({
+            'ids_intervalos_finalizados': ids_intervalos_finalizados,
+            'mensajes': [ _(u'Se ha(n) finalizado %s intervalo(s) en forma exitosa.'
+                ) % len(ids_intervalos_finalizados), ],
+            }))
+    except Exception as e:
+        errores = [
+                _(u'Ha ocurrido un error al intentar finalizar el intervalo %s.') % intervalo,
                 e.message, ]
         return HttpResponse(
                 json.dumps({'mensajes': errores}),
