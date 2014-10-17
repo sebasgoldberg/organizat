@@ -80,44 +80,12 @@
            return ev.details || ev.text;;
            };
     scheduler.config.quick_info_detached = true;
+
     scheduler.config.icons_select = ['icon_ic_cancelar'];
     scheduler.locale.labels.icon_ic_cancelar = "{% trans "Cancelar" %}";
-
     scheduler._click.buttons.ic_cancelar = function(id){
-        dhtmlx.message({
-            type:"confirm-warning", 
-            text:'{% trans "¿Está seguro que desea cancelar el intervalo seleccionado y todos los intervalos dependientes?" %}',
-            callback: function(result){
-                if (!result)
-                    return;
-                dhtmlx.message({text:'{% trans "Cancelando intervalos..." %}', expire: -1});
-                schEvent = scheduler.getEvent(id);
-                schEvent.intervalo.cancelar({
-
-                    success: function(data){
-                        var respuesta = jQuery.parseJSON(data);
-                        var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
-                        for(i=0; i<idsIntervalosCancelados.length; i++){
-                            event_id = scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
-                            scheduler.deleteEvent(event_id);
-                        }
-                        for (i=0; i<respuesta.mensajes.length; i++){
-                            mensaje = respuesta.mensajes[i];
-                            dhtmlx.message({text:mensaje, expire: -1});
-                        }
-                    },
-
-                    error: function(data){
-                        var errores = jQuery.parseJSON(data.responseText).mensajes;
-                        for (i=0; i<errores.length; i++){
-                            mensaje = errores[i];
-                            dhtmlx.message({ type:"error", text:mensaje, expire: -1});
-                            }
-                    },
-
-                    });
-                }
-            });
+        schEvent = scheduler.getEvent(id);
+        schEvent.intervalo.cancelar();
     };
 
     scheduler.getEventIdFromIntervaloId = function(intervaloId){
@@ -194,16 +162,48 @@
             cantidad: '{{ intervalo.cantidad}}',
             cancelar: function(settings){
                 (function($){
-                    $.get(
-                        "{% url 'cancelar_intervalo' intervalo.id %}",
-                        function(data){
-                            settings.success(data);
+
+                    dhtmlx.message({
+                        type:"confirm-warning", 
+                        text:'{% trans "¿Está seguro que desea cancelar el intervalo seleccionado y todos los intervalos dependientes?" %}',
+                        callback: function(result){
+                            if (!result)
+                                return;
+                            dhtmlx.message({text:'{% trans "Cancelando intervalos..." %}', expire: -1});
+                            $.get(
+                                "{% url 'cancelar_intervalo' intervalo.id %}",
+                                function(data){
+                                    var respuesta = jQuery.parseJSON(data);
+                                    var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
+                                    for(i=0; i<idsIntervalosCancelados.length; i++){
+                                        event_id = scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
+                                        scheduler.deleteEvent(event_id);
+                                        }
+                                    for (i=0; i<respuesta.mensajes.length; i++){
+                                        mensaje = respuesta.mensajes[i];
+                                        dhtmlx.message({text:mensaje, expire: -1});
+                                        }
+                                    }
+                                ).fail(
+                                    function(data){
+                                        if (!data.responseText){
+                                            dhtmlx.message({
+                                                type:"error",
+                                                text:'{% trans "Ha ocurrido un error al intentar realizar la operación" %}',
+                                                expire: -1});
+                                            return;
+                                        }
+                                        var errores = jQuery.parseJSON(data.responseText).mensajes;
+                                        for (i=0; i<errores.length; i++){
+                                            mensaje = errores[i];
+                                            dhtmlx.message({ type:"error", text:mensaje, expire: -1});
+                                            }
+                                        }
+                                    );
+
                             }
-                        ).fail(
-                            function(data){
-                                settings.error(data)
-                                }
-                            );
+                        });
+
                 })(jQuery);
             },
           },
