@@ -91,47 +91,39 @@ var planificacion = {};
 
         this.cancelar = function(){
             var thisIntervalo = this;
-            dhtmlx.message({
-                type:"confirm-warning", 
-                text:gettext('¿Está seguro que desea cancelar el intervalo seleccionado y todos los intervalos dependientes?'),
-                callback: function(result){
-                    if (!result)
-                        return;
-                    dhtmlx.message({text:gettext("Cancelando intervalos..."), expire: -1});
-                    $.get(
-                        thisIntervalo.urlCancelar,
-                        function(data){
-                            var respuesta = $.parseJSON(data);
-                            var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
-                            for(i=0; i<idsIntervalosCancelados.length; i++){
-                                event_id = thisIntervalo.scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
-                                thisIntervalo.scheduler.deleteEvent(event_id);
-                            }
-                            for (i=0; i<respuesta.mensajes.length; i++){
-                                mensaje = respuesta.mensajes[i];
-                                dhtmlx.message({text:mensaje, expire: -1});
-                            }
-                        }
-                    ).fail(
-                        function(data){
-                            if (!data.responseText){
-                                dhtmlx.message({
-                                    type:"error",
-                                    text:gettext('Ha ocurrido un error al intentar realizar la operación'),
-                                    expire: -1});
-                                return;
-                            }
-                            var errores = $.parseJSON(data.responseText).mensajes;
-                            for (i=0; i<errores.length; i++){
-                                mensaje = errores[i];
-                                dhtmlx.message({ type:"error", text:mensaje, expire: -1});
-                            }
-                        }
-                    );
+            message.check_continue(
+                    gettext('¿Está seguro que desea cancelar el intervalo seleccionado y todos los intervalos dependientes?'),
+                    function(){
+                        thisIntervalo.doCancelar();
+                    });
+        }
 
+        this.doCancelar = function(){
+            thisIntervalo = this;
+            message.info([gettext("Cancelando intervalos...")]);
+            $.get(
+                thisIntervalo.urlCancelar,
+                function(data){
+                    var respuesta = $.parseJSON(data);
+                    var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
+                    for(i=0; i<idsIntervalosCancelados.length; i++){
+                        event_id = thisIntervalo.scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
+                        thisIntervalo.scheduler.deleteEvent(event_id);
+                    }
+                    message.info(respuesta.mensajes);
                 }
-            });
-        };
+            ).fail(
+                function(data){
+                    if (!data.responseText){
+                        message.error([gettext('Ha ocurrido un error al intentar realizar la operación')]);
+                        return;
+                    }
+                    var errores = $.parseJSON(data.responseText).mensajes;
+                    message.error(errores);
+                }
+            );
+        }
+
     }
 
     planificacion.Intervalo = Intervalo;
