@@ -65,6 +65,7 @@
             intervalos.push(
                     new planificacion.Intervalo(
                         {{ intervalo.id }},
+                        new planificacion.Cronograma({{intervalo.cronograma.id}}, "{% url 'admin:planificacion_cronograma_change' intervalo.cronograma.id %}"),
                         {
                             id:{{intervalo.pedido.id}},
                             descripcion:'{{ intervalo.pedido.descripcion}}',
@@ -90,6 +91,7 @@
                             new Date({{fd.year}}, {{fd.month}}-1, {{fd.day}}, {{fd.hour}}, {{fd.minute}}),
                             new Date({{fh.year}}, {{fh.month}}-1, {{fh.day}}, {{fh.hour}}, {{fh.minute}}),
                         {% endwith %}
+                        '{{intervalo.get_descripcion_estado}}',
                         "{% url 'cancelar_intervalo' intervalo.id %}",
                         "{% url 'planificacion.rest.finalizar_intervalo' intervalo.id %}",
                         scheduler
@@ -150,6 +152,7 @@
                     <li class='tarea'><strong>{% trans "Tarea" %}: </strong><span class=value></span></li>
                     <li class='producto'><strong>{% trans "Producto" %}: </strong><span class=value></span></li>
                     <li class='cantidad'><strong>{% trans "Cantidad" %}: </strong><span class=value></span></li>
+                    <li class='estado'><strong>{% trans "Estado" %}: </strong><span class=value></span></li>
                 </ul>
             </div>
         </div>

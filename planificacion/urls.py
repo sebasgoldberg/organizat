@@ -35,6 +35,7 @@ urlpatterns = patterns('planificacion.views',
 
     url(r'^calendario/cronograma/(\d+)/$', 'calendario_cronograma'),
     url(r'^calendario/activo/$', 'calendario_activo'),
+    url(r'^calendario/$', 'calendario'),
 
     url(r'^rest/intervalo/cancelar/(?P<pk>\d+)/$', 'rest_cancelar_intervalo', name='cancelar_intervalo'),
     url(r'^rest/intervalo/finalizar/(?P<pk>\d+)/$', 'rest_finalizar_intervalo', name='planificacion.rest.finalizar_intervalo'),

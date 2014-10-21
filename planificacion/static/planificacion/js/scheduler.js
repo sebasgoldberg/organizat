@@ -17,11 +17,13 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
         return ev.intervalo.quick_info_content()
     };
     scheduler.config.quick_info_detached = true;
+    scheduler.config.icons_select = ['icon_ic_finalizar',
+        'icon_ic_cancelar',
+        'icon_ic_ver_cronograma', ];
 
     /**
      * Botón "Finalizar"
      */
-    scheduler.config.icons_select = ['icon_ic_finalizar', 'icon_ic_cancelar'];
     scheduler.locale.labels.icon_ic_finalizar = gettext("Finalizar");
     scheduler._click.buttons.ic_finalizar = function(id){
         schEvent = scheduler.getEvent(id);
@@ -36,6 +38,16 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
         schEvent = scheduler.getEvent(id);
         schEvent.intervalo.cancelar();
     };
+
+    /**
+     * Botón "Ver cronograma"
+     */
+    scheduler.locale.labels.icon_ic_ver_cronograma = gettext("Ver cronograma");
+    scheduler._click.buttons.ic_ver_cronograma = function(id){
+        schEvent = scheduler.getEvent(id);
+        schEvent.intervalo.verCronograma();
+    };
+
 
 
     scheduler.getEventIdFromIntervaloId = function(intervaloId){

@@ -106,11 +106,13 @@ ESTADO_INTERVALO_FINALIZADO=2
 ESTADO_INTERVALO_CANCELADO=3
 
 ESTADOS_INTERVALOS=(
-  (ESTADO_INTERVALO_PLANIFICADO,_(u'Planificado')),
-  (ESTADO_INTERVALO_ACTIVO,_(u'Activo')),
-  (ESTADO_INTERVALO_FINALIZADO,_(u'Finalizado')),
-  (ESTADO_INTERVALO_CANCELADO,_(u'Cancelado')),
+  (ESTADO_INTERVALO_PLANIFICADO,ugettext(u'Planificado')),
+  (ESTADO_INTERVALO_ACTIVO,ugettext(u'Activo')),
+  (ESTADO_INTERVALO_FINALIZADO,ugettext(u'Finalizado')),
+  (ESTADO_INTERVALO_CANCELADO,ugettext(u'Cancelado')),
 )
+
+DICT_ESTADO_INTERVALO = dict(ESTADOS_INTERVALOS)
 
 class PedidoYaDistribuido(ValidationError):
   pass
@@ -874,6 +876,9 @@ class IntervaloCronograma(PlanificacionBaseModel):
       return 0
     else:
       return total
+
+  def get_descripcion_estado(self):
+      return DICT_ESTADO_INTERVALO[self.estado]
 
   def get_duracion(self):
     """

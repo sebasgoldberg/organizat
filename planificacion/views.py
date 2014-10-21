@@ -9,6 +9,7 @@ from datetime import datetime as DT
 from produccion.models import Maquina
 import datetime
 from django.db.models import Min
+from datetime import timedelta as TD
 
 class ExecuteMethodView(View):
   _class = None
@@ -72,6 +73,12 @@ def calendario_activo(request):
             ).filter(fecha_desde__gte=datetime.date.today())
     return vista_timeline(request, intervalos)
 
+def calendario(request):
+    intervalos = IntervaloCronograma.objects.filter(
+            fecha_desde__gte=datetime.date.today()-TD(days=7))
+    return vista_timeline(request, intervalos)
+
+
 from django.http import HttpResponse
 import json
 
@@ -99,12 +106,14 @@ def rest_finalizar_intervalo(request, pk):
     try:
         intervalo.finalizar()
 
-        ids_intervalos_finalizados = [ intervalo.id ]
+        intervalos_finalizados = [ {
+            'id': intervalo.id,
+            'estado': intervalo.get_descripcion_estado() }, ]
 
         return HttpResponse(json.dumps({
-            'ids_intervalos_finalizados': ids_intervalos_finalizados,
+            'intervalos_finalizados': intervalos_finalizados,
             'mensajes': [ _(u'Se ha(n) finalizado %s intervalo(s) en forma exitosa.'
-                ) % len(ids_intervalos_finalizados), ],
+                ) % len(intervalos_finalizados), ],
             }))
     except Exception as e:
         errores = [
