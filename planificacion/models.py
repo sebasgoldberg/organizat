@@ -893,13 +893,14 @@ class IntervaloCronograma(PlanificacionBaseModel):
     """
     return self.fecha_hasta - self.fecha_desde
 
+  @transaction.atomic
   def finalizar(self, cantidad_tarea_real=None):
     if cantidad_tarea_real is not None:
       self.cantidad_tarea_real = cantidad_tarea_real
     elif self.cantidad_tarea_real == 0:
       self.cantidad_tarea_real = self.cantidad_tarea
     self.estado = ESTADO_INTERVALO_FINALIZADO
-    self.clean()
+    self.clean(validar_dependencias=False)
 
     self.save()
 
@@ -1102,6 +1103,9 @@ class IntervaloCronograma(PlanificacionBaseModel):
             if tarea.id == self.tarea.id:
               cantidades_reales_tareas[tarea.id] += self.cantidad_tarea_real
           if tarea_anterior is not None:
+            logger.debug('Cantidad tarea anterior: %s (%s); Cantidad tarea dependiente: %s (%s).' %
+                      (cantidades_reales_tareas[tarea_anterior.id], tarea_anterior,
+                      cantidades_reales_tareas[tarea.id], tarea))
             if (cantidades_reales_tareas[tarea.id] - cantidades_reales_tareas[tarea_anterior.id] >
                     self.cronograma.get_tolerancia(cantidades_reales_tareas[tarea.id]) ):
               raise TareaRealNoRespetaDependencias(_(u'La cantidad real %s de la tarea %s '+
@@ -1175,7 +1179,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
     return self.item
 
   #@profile
-  def clean(self, *args, **kwargs):
+  def clean(self, validar_dependencias=True, *args, **kwargs):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.item.producto)
     self.pedidocronograma = PedidoCronograma.objects.get(pedido=self.item.pedido,cronograma=self.cronograma)
@@ -1186,7 +1190,8 @@ class IntervaloCronograma(PlanificacionBaseModel):
     self.validar_estado()
     self.validar_cantidad_real()
     self.validar_solapamiento()
-    self.validar_dependencias_guardado()
+    if validar_dependencias:
+        self.validar_dependencias_guardado()
     self.validar_fecha_inicio_cronograma()
     super(IntervaloCronograma, self).clean(*args, **kwargs)
 

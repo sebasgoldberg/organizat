@@ -472,3 +472,80 @@ class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
     intervalo.cancelar()
 
 
+class CleanLuegoDeFinalizacionIncompletaTestCase(PlanificadorTestCase):
+
+    def test_clean_luego_de_finalizacion_incompleta(self):
+        """
+        Sean 2 intervalos i11, i12, i21 e i22, asociados a dos tareas
+        distintas, donde i2k depende de i1k, todos con una cantidad de
+        tarea a realizar x(i) donde x(i22) > x(i12).
+
+        Si finalizamos i11 con una cantidad y(i11) < x(i11), entonces
+        al finalizar i21 con una cantidad y(i11), tenemos para algún
+        instante t que la cantidad de x(i22)+y(i21) = x(i22)+y(i11)
+        es mayor que la cantidad de x(i12)+y(i11). Luego fallará la
+        validación de dependencia.
+
+        Una solución a este inconveniente es no validar todas las
+        dependencias cuando se finalice un intervalo. Solo habría que
+        validar que la cantidad que se está finalizando no supere las
+        cantidades de dependencias ya finalizadas.
+
+        En la prueba siguiente:
+            Primer Lunes de 8 a 10
+                i11:[T1;20]
+            Segundo Lunes de 8 a 10
+                i12:[T1;10]
+                i21:[T2;10]
+            Tercer Lunes de 8 a 10
+                i22:[T2;20]
+
+        Finalizamos i11 con 10
+        Luego finalizamos i21 con 10 -> Si se verifican las dependencias
+        ocurrirá que la cantidad planificada de T2 (20 en i22) supera
+        la cantidad planificada de T1 (10 en i12).
+        Esto no debería ser un error, simplemente al finalizar se debe 
+        verificar que si finalizamos i12 con el total y luego i22 con el
+        total, no debe permitirlo ya que sino la cantidad real de T2
+        superaría a T1, y esto físicamente no puede ocurrir.
+        """
+
+        calendario = CalendarioProduccion.get_instance()
+        calendario.add_intervalos_laborables(
+            dias_laborables=[DiaSemana.LUNES], hora_desde=T(8), hora_hasta=T(10))
+
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=6)
+        tarea2 = Tarea.objects.create(descripcion='T2', tiempo=6)
+        maquina1 = MaquinaPlanificacion.objects.create(descripcion='M1')
+
+        maquina1.add_tarea(tarea1)
+        maquina1.add_tarea(tarea2)
+
+        producto1.add_tarea(tarea1)
+        producto1.add_tarea(tarea2)
+        producto1.add_dependencia_tareas(tarea1, tarea2)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,30)
+
+        cronograma = pedido.crear_cronograma()
+        cronograma.planificar()
+        cronograma.activar()
+
+        max_cantidad = maquina1.get_intervalos().filter(tarea=tarea1).aggregate(
+            cantidad_tarea=models.Max('cantidad_tarea'))['cantidad_tarea']
+        i11 = maquina1.get_intervalos().get(tarea=tarea1, cantidad_tarea=max_cantidad)
+        i11.finalizar(cantidad_tarea_real=i11.cantidad_tarea/2)
+
+        min_cantidad = maquina1.get_intervalos().filter(tarea=tarea2).aggregate(
+            cantidad_tarea=models.Min('cantidad_tarea'))['cantidad_tarea']
+        i21 = maquina1.get_intervalos().get(tarea=tarea2, cantidad_tarea=min_cantidad)
+        i21.finalizar(cantidad_tarea_real=(i11.cantidad_tarea/2))
+
+        i12 = maquina1.get_intervalos().get(tarea=tarea1, estado=ESTADO_INTERVALO_ACTIVO)
+        i12.finalizar()
+
+        i22 = maquina1.get_intervalos().get(tarea=tarea2, estado=ESTADO_INTERVALO_ACTIVO)
+        self.assertRaises(TareaRealNoRespetaDependencias, i22.finalizar)

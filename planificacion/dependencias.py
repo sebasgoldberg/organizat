@@ -156,23 +156,35 @@ class GerenciadorDependencias:
 
       if fecha_inicio_tarea_posterior is None:
         pass
+        logger.debug('Fecha de Inicio de tarea posterior no definida.')
       elif t < fecha_inicio_tarea_posterior:
+        logger.debug('Instante %s menor a fecha de inicio de tarea posterior %s.' % (t, fecha_inicio_tarea_posterior))
         pass
+      # Si la cantidad de tarea anterior difiere de la cantidad del item y todavía no
+      # se alcanzó el máximo
       elif (abs(D(self.item.cantidad) - cantidad_tarea_anterior) > 
           self.get_tolerancia()) and not cantidad_tarea_anterior_maxima:
+        # Decrementamos la tarea anterior en la cantidad extra.
         cantidad_tarea_anterior = (
             cantidad_tarea_anterior - 
             self.cronograma.cantidad_extra_tarea_anterior)
 
+      # Si la cantidad de tarea anterior es igual a la cantidad del item y todavía no
+      # se alcanzó el máximo
       if (abs(D(self.item.cantidad) - cantidad_tarea_anterior) <
           self.get_tolerancia()) and not cantidad_tarea_anterior_maxima:
+        # Indicamos que ya se alcanzó el máximo.
         cantidad_tarea_anterior_maxima = True
+        # Decrementamos la tarea anterior en la cantidad extra.
         cantidad_tarea_anterior = (
             cantidad_tarea_anterior - 
             self.cronograma.cantidad_extra_tarea_anterior)
 
+      # En caso que la cantidad de tarea posterior supere a la anterior...
       if D(cantidad_tarea_posterior) > D(cantidad_tarea_anterior):
-        if abs( cantidad_tarea_posterior - D(self.item.cantidad) ) > self.get_tolerancia():
+        # Si la cantidad del item difiere de la cantidad de tarea posterior...
+        if ( abs( cantidad_tarea_posterior - D(self.item.cantidad) ) > self.get_tolerancia() or
+            abs( cantidad_tarea_anterior - D(self.item.cantidad) ) > self.get_tolerancia() ):
           if cantidad_tarea_posterior - cantidad_tarea_anterior > self.get_tolerancia(cantidad_tarea_anterior):
             e = ValidationError(
               "La cantidad %s de tarea %s es mayor que la cantidad %s de la tarea %s de la cual depende en el instante %s" %\
