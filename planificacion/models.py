@@ -433,6 +433,13 @@ class Cronograma(PlanificacionBaseModel):
       if maquina.produce(tarea, producto):
         yield maquina
 
+  def get_intervalos_activos_y_planificados(self):
+
+    return IntervaloCronograma.objects.filter(
+      cronograma=self).filter(estado__in=[
+          ESTADO_INTERVALO_PLANIFICADO, ESTADO_INTERVALO_ACTIVO
+          ])
+
   def get_intervalos_propios_no_cancelados(self):
 
     return IntervaloCronograma.objects.filter(

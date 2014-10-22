@@ -59,7 +59,7 @@ class GerenciadorDependencias:
   def get_intervalos(self, tareas, instante_agregado=None, instante_borrado=None, instante_modificado=None):
 
     intervalos_set = (
-      self.cronograma.get_intervalos_propios_no_cancelados() |
+      self.cronograma.get_intervalos_activos_y_planificados() |
       self.cronograma.get_intervalos_activos_otros_cronogramas() )
 
     intervalos_set = intervalos_set.filter(
@@ -100,18 +100,22 @@ class GerenciadorDependencias:
 
   #@profile
   def get_cantidad_tarea_hasta(self, intervalos, tarea, fecha):
+    logger.debug('-> get_cantidad_tarea_hasta: %s' % tarea)
     cantidad_tarea = 0
     for intervalo in self.get_intervalos_anteriores(intervalos, tarea, fecha):
+      logger.debug('---> Se suma intervalo: %s' % intervalo)
       if intervalo.get_fecha_hasta() <= fecha:
         cantidad_tarea += D(intervalo.cantidad_tarea)
       else:
         tiempo = (fecha - intervalo.fecha_desde).total_seconds()
         cantidad_tarea += D(tiempo) / D(intervalo.get_tiempo_tarea() * 60)
+        logger.debug('Cantidad tarea %s recalculada %s:' % (tarea, cantidad_tarea))
 
     # Se suma la cantidad de tarea real de intervalos que ya se
     # encuentran finalizados.
     cantidad_realizada = self.item.get_cantidad_realizada(tarea)
 
+    logger.debug('Cantidad tarea %s: activa(%s) + realizada(%s):' % (tarea, cantidad_tarea, cantidad_realizada))
     return D(cantidad_tarea) + D(cantidad_realizada)
 
   #@profile
