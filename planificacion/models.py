@@ -358,14 +358,23 @@ class Cronograma(PlanificacionBaseModel):
     self.save()
 
   @transaction.atomic
+  def do_activar(self):
+    self.estado = ESTADO_CRONOGRAMA_ACTIVO
+    self.save()
+    self.activar_intervalos()
+
+  @transaction.atomic
   def activar(self):
     if not self.is_valido():
       raise EstadoCronogramaError(_(u'El cronograma %s no puede ser '
         u'activado. Para poder ser activado debe encontrarse en un estado válido.') % self)
-    self.estado = ESTADO_CRONOGRAMA_ACTIVO
-    self.save()
-    self.activar_intervalos()
-    Cronograma.invalidar_cronogramas_validos()
+    try:
+        self.do_activar()
+    except ValidationError:
+        self.estado = ESTADO_CRONOGRAMA_VALIDO
+        self.invalidar()
+        self.planificar()
+        self.do_activar()
 
   @transaction.atomic
   def desactivar(self):
@@ -948,7 +957,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
         intervalos_cancelados.append(intervalo)
     self.cantidad_tarea_real = 0
     self.estado = ESTADO_INTERVALO_CANCELADO
-    self.clean()
+    self.clean(validar_dependencias=False)
     self.save()
     logger.info(_('Intervalo CANCELADO: %s') % self)
     intervalos_cancelados.append(self)

@@ -48,13 +48,10 @@ class ActivacionCronogramaTestCase(PlanificadorTestCase):
     self.c2.activar()
 
     self.c1 = Cronograma.objects.get(descripcion="Crono pedidos B y C")
-    self.assertFalse(self.c1.is_valido())
+    self.assertTrue(self.c1.is_valido())
 
-    self.assertRaises(EstadoCronogramaError, self.c1.activar)
-    self.assertTrue(self.c1.is_invalido())
-
-    self.c1.planificar()
     self.c1.activar()
+    self.assertTrue(self.c1.is_activo())
 
     self.validar_no_existe_solapamiento()
 
@@ -549,3 +546,60 @@ class CleanLuegoDeFinalizacionIncompletaTestCase(PlanificadorTestCase):
 
         i22 = maquina1.get_intervalos().get(tarea=tarea2, estado=ESTADO_INTERVALO_ACTIVO)
         self.assertRaises(TareaRealNoRespetaDependencias, i22.finalizar)
+
+    def test_activar_luego_de_cancelar_replanificar_y_finalizar(self):
+        """
+        Al activar siempre habría que replanificar, de forma de evitar
+        que ocurran situaciones como la siguiente:
+        Sean c1 y c2 dos cronogramas asociados al mismo pedido p con
+        un único item.
+        Se planifica y activa c1 y se generan los intervalos i11..i1n.
+        Supongamos que cancelamos i1(n/2) (y todas sus dependencias).
+        Se planifica c2.
+        Se finaliza i11 con una cantidad y11 < x11 (x11 es la cantidad
+        planificada en i11)
+        Activamos c2, pero esto generará un error, ya que para algún
+        instante t (por ejemplo cuando finalice el intervalo), las
+        tareas que dependan de la tarea de i11, la superarán en una
+        cantidad x11-y11.
+        """
+
+        calendario = CalendarioProduccion.get_instance()
+        calendario.add_intervalos_laborables(
+            dias_laborables=[DiaSemana.LUNES], hora_desde=T(8), hora_hasta=T(10))
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=6)
+        tarea2 = Tarea.objects.create(descripcion='T2', tiempo=6)
+        maquina1 = MaquinaPlanificacion.objects.create(descripcion='M1')
+
+        maquina1.add_tarea(tarea1)
+        maquina1.add_tarea(tarea2)
+
+        producto1.add_tarea(tarea1)
+        producto1.add_tarea(tarea2)
+        producto1.add_dependencia_tareas(tarea1, tarea2)
+
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,30)
+
+        cronograma1 = pedido.crear_cronograma()
+        cronograma1.planificar()
+        cronograma1.activar()
+
+        max_fecha = maquina1.get_intervalos().filter(tarea=tarea1).aggregate(
+            fecha_desde=models.Max('fecha_desde'))['fecha_desde']
+        i_t1_max = maquina1.get_intervalos().get(tarea=tarea1, fecha_desde=max_fecha)
+        i_t1_max.cancelar()
+
+        min_fecha = maquina1.get_intervalos().filter(tarea=tarea1).aggregate(
+            fecha_desde=models.Min('fecha_desde'))['fecha_desde']
+        i_t1_min = maquina1.get_intervalos().get(tarea=tarea1, fecha_desde=min_fecha)
+
+        cronograma2 = pedido.crear_cronograma()
+        cronograma2.planificar()
+
+        i_t1_min.finalizar(cantidad_tarea_real=(i_t1_min.cantidad_tarea/2))
+
+        cronograma2.activar()
+
