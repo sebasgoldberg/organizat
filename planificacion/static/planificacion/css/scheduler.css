@@ -1,3 +1,16 @@
+.hidden-templates{
+    display: none;
+}
+
+#quick-info-content ul{
+    list-style: none;
+}
+
 .item_selected{
     border: solid 2px red;
 }
+
+html, body{
+    height:100%;
+    overflow:hidden;
+}	

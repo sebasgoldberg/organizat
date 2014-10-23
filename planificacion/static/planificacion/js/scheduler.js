@@ -3,7 +3,7 @@ if (!planificacion)
 
 (function($){
 
-    function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerId) {
+    function crearScheduler(scheduler, maquinas, fechaInicio, intervalos) {
 
         scheduler.locale.labels.timeline_tab = gettext("Línea Tmp");
         scheduler.locale.labels.unit_tab = gettext("Calendario");
@@ -100,6 +100,31 @@ if (!planificacion)
             return false;
             });
 
+        scheduler.showMiniCal = function(){
+            if (this.isCalendarVisible()){
+                this.destroyCalendar();
+            } else {
+                this.renderCalendar({
+                    position:"dhx_minical_icon",
+                    date:scheduler._date,
+                    navigation:true,
+                    handler:function(date,calendar){
+                        this.setCurrentView(date);
+                        this.destroyCalendar()
+                    }
+                });
+            }
+        }
+
+        scheduler.registerMinical = function(){
+            thisScheduler = this;
+            $('#dhx_minical_icon').click(function(){
+                thisScheduler.showMiniCal();
+            })
+        };
+
+        scheduler.registerMinical();
+
         scheduler.attachEvent("onViewChange", function (new_mode , new_date){
             this.refreshItemSelected();
         });
@@ -146,8 +171,6 @@ if (!planificacion)
             {name:"time", height:72, type:"time", map_to:"auto"}
         ]
 
-        scheduler.init(containerId,fechaInicio,"timeline");
-
         events = [];
         for (i=0; i<intervalos.length; i++){
             intervalo = intervalos[i];
@@ -166,6 +189,48 @@ if (!planificacion)
         scheduler.initializeEventIntervaloMap();
     }
 
-    planificacion.crearScheduler = crearScheduler;
+
+    TimeLineConsole = function(scheduler, maquinas, fechaInicio, intervalos, container){
+
+        thisTimeLineConsole = this;
+
+        this.scheduler = scheduler;
+
+        crearScheduler(this.scheduler, maquinas, fechaInicio, intervalos);
+
+        this.myLayout = new dhtmlXLayoutObject({
+            parent: container,
+            pattern: "4U",
+            cells: [
+                {id: 'a', text: gettext('Pedido')},
+                {id: 'b', text: gettext('Items Pedido')},
+                {id: 'c', text: gettext('Estado de Avance Item')},
+                {id: "d", text: gettext('Línea de Tiempo'), height: 500}]
+            });
+
+        this.updateResize = function(pannelsIds){
+            for (var i=0; i<pannelsIds.length; i++){
+                if (pannelsIds[i] === "d"){
+                    this.scheduler.refreshItemSelected();
+                    return;
+                }
+            }
+        }
+
+        this.myLayout.attachEvent("onPanelResizeFinish", function(ids){
+            thisTimeLineConsole.updateResize(ids)
+        });
+
+        this.myLayout.attachEvent("onExpand", function(id){
+            thisTimeLineConsole.updateResize([id])
+            });
+
+        this.myLayout.cells("d").attachScheduler(fechaInicio, "timeline", 'scheduler_here');
+
+    }
+
+
+
+    planificacion.TimeLineConsole = TimeLineConsole;
 
 })(jQuery);
