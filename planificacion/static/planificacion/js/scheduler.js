@@ -49,7 +49,6 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
     };
 
 
-
     scheduler.getEventIdFromIntervaloId = function(intervaloId){
         return this.eventIdFromIntervaloId[intervaloId];
     };
@@ -62,6 +61,15 @@ function crearScheduler(scheduler, maquinas, fechaInicio, intervalos, containerI
             scheduler.eventIdFromIntervaloId[_event.intervalo.id] = _event.id;
         }
     };
+
+    scheduler.updateEventFromIntervaloData = function(intervaloData){
+        event_id = this.getEventIdFromIntervaloId(intervalo.id);
+        _event = this.getEvent(event_id);
+        _event.intervalo.estado = intervalo.estado;
+        _event.text = _event.intervalo.getDescripcion();
+        _event.color = _event.intervalo.getColor();
+        this.updateEvent(event_id);
+    }
 
     scheduler.attachEvent("onClick",function(id, e){
       return false;

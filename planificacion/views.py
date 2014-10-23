@@ -85,11 +85,14 @@ import json
 def rest_cancelar_intervalo(request, pk):
     intervalo = IntervaloCronograma.objects.get(pk=pk)
     try:
-        intervalos_cancelados = intervalo.cancelar()
-        ids_intervalos_cancelados = [ x.id for x in intervalos_cancelados]
+
+        intervalos_cancelados = [ {
+            'id': intervalo.id,
+            'estado': intervalo.get_descripcion_estado() } 
+            for intervalo in intervalo.cancelar()]
 
         return HttpResponse(json.dumps({
-            'ids_intervalos_cancelados': ids_intervalos_cancelados,
+            'intervalos_cancelados': intervalos_cancelados,
             'mensajes': [ _(u'Se ha(n) cancelado %s intervalo(s) en forma exitosa.'
                 ) % len(intervalos_cancelados), ],
             }))

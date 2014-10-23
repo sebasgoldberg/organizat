@@ -85,6 +85,10 @@ var planificacion = {};
                     });
         }
 
+        this.updateFromData = function(data){
+            this.scheduler.updateEventFromIntervaloData(intervalo);
+        }
+
         this.doFinalizar = function(){
             thisIntervalo = this;
             message.info([gettext("Finalizando intervalo...")]);
@@ -96,12 +100,7 @@ var planificacion = {};
                     message.info(respuesta.mensajes);
                     for (var i=0; i<respuesta.intervalos_finalizados.length; i++){
                         intervalo = respuesta.intervalos_finalizados[i];
-                        event_id = thisIntervalo.scheduler.getEventIdFromIntervaloId(intervalo.id);
-                        _event = thisIntervalo.scheduler.getEvent(event_id);
-                        _event.intervalo.estado = intervalo.estado;
-                        _event.text = _event.intervalo.getDescripcion();
-                        _event.color = _event.intervalo.getColor();
-                        thisIntervalo.scheduler.updateEvent(event_id);
+                        thisIntervalo.updateFromData(intervalo);
                     }
                 }
             ).fail(
@@ -132,10 +131,11 @@ var planificacion = {};
                 thisIntervalo.urlCancelar,
                 function(data){
                     var respuesta = $.parseJSON(data);
-                    var idsIntervalosCancelados = respuesta.ids_intervalos_cancelados;
-                    for(i=0; i<idsIntervalosCancelados.length; i++){
-                        event_id = thisIntervalo.scheduler.getEventIdFromIntervaloId(idsIntervalosCancelados[i]);
-                        thisIntervalo.scheduler.deleteEvent(event_id);
+                    var intervalosCancelados = respuesta.intervalos_cancelados;
+                    for(i=0; i<intervalosCancelados.length; i++){
+                        intervalo = intervalosCancelados[i];
+                        thisIntervalo.updateFromData(intervalo);
+                        //thisIntervalo.scheduler.deleteEvent(event_id);
                     }
                     message.info(respuesta.mensajes);
                 }
