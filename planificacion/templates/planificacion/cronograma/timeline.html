@@ -34,6 +34,7 @@
     <script type="text/javascript" src="/static/planificacion/js/message.js"></script>
     <script type="text/javascript" src="/static/planificacion/js/intervalo.js"></script>
     <script type="text/javascript" src="/static/planificacion/js/scheduler.js"></script>
+    <link rel="stylesheet" href="/static/planificacion/css/scheduler.css" type="text/css" title="no title" charset="utf-8">
 
     <style type="text/css" media="screen">
         .hidden-templates{
@@ -98,7 +99,7 @@
                         ));
         {%endfor%}
 
-        crearScheduler(scheduler, maquinas, fechaInicio, intervalos, 'scheduler_here')
+        planificacion.crearScheduler(scheduler, maquinas, fechaInicio, intervalos, 'scheduler_here')
 
     }
 </script>

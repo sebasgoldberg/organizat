@@ -2,7 +2,8 @@
  * Obtención del color de los intervalos.
  */
 
-var planificacion = {};
+if (!planificacion)
+    var planificacion = {};
 
 (function($){
 
