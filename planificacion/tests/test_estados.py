@@ -603,3 +603,90 @@ class CleanLuegoDeFinalizacionIncompletaTestCase(PlanificadorTestCase):
 
         cronograma2.activar()
 
+class EstadoPedidoTestCase(PlanificadorTestCase):
+
+    def test_estado_pedido_vacio(self):
+        
+        pedido = PedidoPlanificable.objects.create()
+        self.assertEqual(pedido.indice_planificacion(),0)
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+    def test_estado_pedido_producto_sin_tareas(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        pedido = PedidoPlanificable.objects.create()
+        pedido.add_item(producto1,30)
+        self.assertEqual(pedido.indice_planificacion(),0)
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+    def test_indices_con_cancelamiento(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=6)
+        tarea2 = Tarea.objects.create(descripcion='T2', tiempo=6)
+        maquina1 = MaquinaPlanificacion.objects.create(descripcion='M1')
+
+        maquina1.add_tarea(tarea1)
+        maquina1.add_tarea(tarea2)
+
+        producto1.add_tarea(tarea1)
+        producto1.add_tarea(tarea2)
+
+        pedido = PedidoPlanificable.objects.create()
+        item = pedido.add_item(producto1,30)
+
+        self.assertEqual(pedido.indice_planificacion(),0)
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+        pedido.planificar_y_activar()
+
+        self.assertLess(abs(pedido.indice_planificacion()-1),pedido.get_tolerancia())
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+        intervalo = IntervaloCronograma.objects.first()
+        intervalo.cancelar()
+
+        self.assertLess(abs(pedido.indice_planificacion()-1+
+            D(intervalo.cantidad_tarea)/D(2*item.cantidad)),pedido.get_tolerancia())
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+        pedido.planificar_y_activar()
+
+        self.assertLess(abs(pedido.indice_planificacion()-1),pedido.get_tolerancia())
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+    def test_indices_con_finalizacion(self):
+
+        producto1 = Producto.objects.create(descripcion='P1')
+        tarea1 = Tarea.objects.create(descripcion='T1', tiempo=6)
+        tarea2 = Tarea.objects.create(descripcion='T2', tiempo=6)
+        maquina1 = MaquinaPlanificacion.objects.create(descripcion='M1')
+
+        maquina1.add_tarea(tarea1)
+        maquina1.add_tarea(tarea2)
+
+        producto1.add_tarea(tarea1)
+        producto1.add_tarea(tarea2)
+
+        pedido = PedidoPlanificable.objects.create()
+        item = pedido.add_item(producto1,30)
+
+        self.assertEqual(pedido.indice_planificacion(),0)
+        self.assertEqual(pedido.indice_finalizacion(),0)
+
+        pedido.planificar_y_activar()
+
+        intervalo = IntervaloCronograma.objects.first()
+        intervalo.finalizar(cantidad_tarea_real=10)
+
+        self.assertLessEqual(abs(pedido.indice_planificacion()-D(0.5)),
+            pedido.get_tolerancia())
+        self.assertLessEqual(pedido.indice_finalizacion()-D(1)/D(6),
+            pedido.get_tolerancia())
+
+        pedido.planificar_y_activar()
+
+        self.assertLessEqual(abs(pedido.indice_planificacion()-D(5)/D(6)),
+            pedido.get_tolerancia())
+        self.assertLessEqual(pedido.indice_finalizacion()-D(1)/D(6),
+            pedido.get_tolerancia())

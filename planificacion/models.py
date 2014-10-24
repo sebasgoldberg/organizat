@@ -567,13 +567,33 @@ class ItemPlanificable(ItemPedido):
 
     class Meta:
         proxy=True
-    
+
+    def indice_planificacion(self):
+        cantidades_planificadas_tareas = [
+                self.get_cantidad_planificada(tarea) for tarea in self.producto.get_tareas() ]
+        if len(cantidades_planificadas_tareas) == 0:
+            return 0
+        return ( D(sum(cantidades_planificadas_tareas)) /
+                (D(len(cantidades_planificadas_tareas))*D(self.cantidad)) )
+
+    def indice_finalizacion(self):
+        cantidades_finalizadas_tareas = [
+                self.get_cantidad_realizada(tarea) for tarea in self.producto.get_tareas() ]
+        if len(cantidades_finalizadas_tareas) == 0:
+            return 0
+        return ( D(sum(cantidades_finalizadas_tareas)) /
+                (D(len(cantidades_finalizadas_tareas))*D(self.cantidad)) )
+
     def get_cantidad_planificada(self, tarea):
+        """
+        Obtiene la cantidad de tarea planificada (ACTIVA) para el item
+        en cuestion.
+        """
         return IntervaloCronograma.get_cantidad_planificada(self, tarea)
-    
+
     def get_cantidad_realizada(self, tarea, ids_intervalos_excluir=[]):
         return IntervaloCronograma.get_cantidad_realizada(self, tarea, ids_intervalos_excluir)
-    
+
     def get_cantidad_no_planificada(self, tarea):
         return (self.cantidad - self.get_cantidad_realizada(tarea)
                 - self.get_cantidad_planificada(tarea))
@@ -611,7 +631,34 @@ class PedidoPlanificable(Pedido):
   
   class Meta:
     proxy=True
-  
+
+  def porcentaje_planificado(self):
+      return self.indice_planificacion()*100
+
+  def porcentaje_finalizado(self):
+      return self.indice_finalizacion()*100
+
+  def indice_planificacion(self):
+      porcentajes_items = [ i.indice_planificacion() for i in self.get_items() ]
+      if len(porcentajes_items) == 0:
+          return 0
+      return D(sum(porcentajes_items))/D(len(porcentajes_items))
+
+  def indice_finalizacion(self):
+      porcentajes_items = [ i.indice_finalizacion() for i in self.get_items() ]
+      if len(porcentajes_items) == 0:
+          return 0
+      return D(sum(porcentajes_items))/D(len(porcentajes_items))
+
+  @transaction.atomic
+  def planificar_y_activar(self):
+      cronograma = self.crear_cronograma()
+      cronograma.planificar()
+      cronograma.activar()
+
+  def get_tolerancia(self):
+      return 0.005
+
   def get_cronograma(self):
     return PedidoCronograma.objects.get(
         pedido=self).cronograma
@@ -845,6 +892,10 @@ class IntervaloCronograma(PlanificacionBaseModel):
 
   @staticmethod
   def get_cantidad_planificada(item, tarea):
+    """
+    Obtiene la cantidad de tarea planificada (ACTIVA) para el item
+    en cuestion.
+    """
     total = IntervaloCronograma.objects.filter(
       tarea=tarea,
       item=item,

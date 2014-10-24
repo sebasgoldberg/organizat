@@ -48,10 +48,8 @@
                     id: {{pedido.id}},
                     descripcion: "{{pedido.descripcion}}",
                     estado: "{{pedido.descripcion_estado}}",
-                    //porcentaje_planificado: {{pedido.porcentaje_planificado}},
-                    //porcentaje_finalizado: {{pedido.porcentaje_finalizado}},
-                    porcentaje_planificado: 99.99,
-                    porcentaje_finalizado: 99.99,
+                    porcentaje_planificado: '{{pedido.porcentaje_planificado|floatformat:2}}',
+                    porcentaje_finalizado: '{{pedido.porcentaje_finalizado|floatformat:2}}',
                 }
             {% endfor %}
             ];
