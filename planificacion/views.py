@@ -49,9 +49,12 @@ def vista_timeline(request, intervalos, fecha_inicio=None):
       fecha_inicio = DT.now()
 
     maquinas = set()
+    pedidos = set()
     for i in intervalos:
         if i.maquina not in maquinas:
             maquinas.add(i.maquina)
+        if i.pedido not in pedidos:
+            pedidos.add(i.pedido)
 
     return render(request,
 #'planificacion/cronograma/calendario.html',
@@ -59,7 +62,9 @@ def vista_timeline(request, intervalos, fecha_inicio=None):
     'planificacion/cronograma/timeline.html',
     {'fecha_inicio': fecha_inicio,
     'intervalos': intervalos,
-    'maquinas': maquinas})
+    'maquinas': maquinas,
+    'pedidos': pedidos,
+    })
 
 def calendario_cronograma(request, id_cronograma):
   cronograma = Cronograma.objects.get(id=id_cronograma)

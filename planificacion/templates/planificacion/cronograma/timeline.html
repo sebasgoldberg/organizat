@@ -42,6 +42,19 @@
             {% endfor %}
         ];
 
+        var pedidos = [
+            {% for pedido in pedidos %}
+                {
+                    id: {{pedido.id}},
+                    descripcion: "{{pedido.descripcion}}",
+                    estado: "{{pedido.descripcion_estado}}",
+                    //porcentaje_planificado: {{pedido.porcentaje_planificado}},
+                    //porcentaje_finalizado: {{pedido.porcentaje_finalizado}},
+                    porcentaje_planificado: 99.99,
+                    porcentaje_finalizado: 99.99,
+                }
+            {% endfor %}
+            ];
 
         {%with f=fecha_inicio%}
             fechaInicio = new Date({{f.year}},{{f.month}}-1,{{f.day}});
@@ -85,7 +98,7 @@
                         ));
         {%endfor%}
 
-        new TimeLineConsole(scheduler, maquinas, fechaInicio, intervalos, document.body);
+        new TimeLineConsole(scheduler, maquinas, fechaInicio, intervalos, pedidos, document.body);
 
     }
 </script>

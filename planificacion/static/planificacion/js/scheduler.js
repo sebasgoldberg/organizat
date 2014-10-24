@@ -3,6 +3,7 @@ if (!planificacion)
 
 (function($){
 
+
     function crearScheduler(scheduler, maquinas, fechaInicio, intervalos) {
 
         scheduler.locale.labels.timeline_tab = gettext("Línea Tmp");
@@ -189,43 +190,94 @@ if (!planificacion)
         scheduler.initializeEventIntervaloMap();
     }
 
+    const CELL = {
+        PEDIDOS: 'a',
+        ITEMS: 'b',
+        ESTADO: 'c',
+        TIMELINE: 'd',
+    };
 
-    TimeLineConsole = function(scheduler, maquinas, fechaInicio, intervalos, container){
+    GridPedidos = function(pedidos, grid){
+
+        this.init = function(pedidos, grid){
+            this.grid = grid;
+            this.pedidos = pedidos;
+            this.grid.setImagePath("./codebase/imgs/"); // TODO Verificar si está OK el path
+            this.grid.setHeader(
+                    gettext('ID')+','+
+                    gettext('Descripcion')+','+
+                    gettext('Estado')+','+
+                    gettext('% Planificado')+','+
+                    gettext('% Finalizado'));
+            this.grid.setInitWidths("50,150,100,100,100");
+            this.grid.setColAlign("right,left,left,right,right");
+            this.grid.setColTypes("ro,ro,ro,ro,ro");
+            this.grid.setColSorting("int,str,str,float,float");
+            this.grid.init();
+            for (var i=0; i<pedidos.length; i++)
+                pedido = pedidos[i]
+                this.grid.addRow(pedido.id,
+                        this.pedidoToLine(pedido));
+        };
+
+        this.pedidoToLine = function(pedido){
+            return [
+                    pedido.id,
+                    pedido.descripcion,
+                    pedido.estado,
+                    pedido.porcentaje_planificado,
+                    pedido.porcentaje_finalizado,
+                    ];
+        };
+
+        this.init(pedidos, grid);
+    };
+
+    TimeLineConsole = function(scheduler, maquinas, fechaInicio, intervalos, pedidos, container){
 
         thisTimeLineConsole = this;
 
         this.scheduler = scheduler;
-
-        crearScheduler(this.scheduler, maquinas, fechaInicio, intervalos);
-
-        this.myLayout = new dhtmlXLayoutObject({
+        this.layout = new dhtmlXLayoutObject({
             parent: container,
             pattern: "4U",
             cells: [
-                {id: 'a', text: gettext('Pedido')},
-                {id: 'b', text: gettext('Items Pedido')},
-                {id: 'c', text: gettext('Estado de Avance Item')},
-                {id: "d", text: gettext('Línea de Tiempo'), height: 500}]
+                {id: CELL.PEDIDOS, text: gettext('Pedido')},
+                {id: CELL.ITEMS, text: gettext('Items Pedido')},
+                {id: CELL.ESTADO, text: gettext('Estado de Avance Item')},
+                {id: CELL.TIMELINE, text: gettext('Línea de Tiempo'), height: 500}]
             });
+
+        this.createGridPedidos = function(pedidos){
+
+            this.gridPedidos = new GridPedidos(pedidos,
+                    this.layout.cells(CELL.PEDIDOS).attachGrid());
+
+        };
+
+
+        crearScheduler(this.scheduler, maquinas, fechaInicio, intervalos);
 
         this.updateResize = function(pannelsIds){
             for (var i=0; i<pannelsIds.length; i++){
-                if (pannelsIds[i] === "d"){
+                if (pannelsIds[i] === CELL.TIMELINE){
                     this.scheduler.refreshItemSelected();
                     return;
                 }
             }
         }
 
-        this.myLayout.attachEvent("onPanelResizeFinish", function(ids){
+        this.layout.attachEvent("onPanelResizeFinish", function(ids){
             thisTimeLineConsole.updateResize(ids)
         });
 
-        this.myLayout.attachEvent("onExpand", function(id){
+        this.layout.attachEvent("onExpand", function(id){
             thisTimeLineConsole.updateResize([id])
             });
 
-        this.myLayout.cells("d").attachScheduler(fechaInicio, "timeline", 'scheduler_here');
+        this.layout.cells(CELL.TIMELINE).attachScheduler(fechaInicio, "timeline", 'scheduler_here');
+
+        this.createGridPedidos(pedidos);
 
     }
 
