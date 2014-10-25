@@ -214,10 +214,11 @@ if (!planificacion)
             this.grid.setColTypes("ro,ro,ro,ro,ro");
             this.grid.setColSorting("int,str,str,float,float");
             this.grid.init();
-            for (var i=0; i<pedidos.length; i++)
+            for (var i=0; i<pedidos.length; i++){
                 pedido = pedidos[i]
                 this.grid.addRow(pedido.id,
                         this.pedidoToLine(pedido));
+            }
         };
 
         this.pedidoToLine = function(pedido){
@@ -242,7 +243,7 @@ if (!planificacion)
             parent: container,
             pattern: "4U",
             cells: [
-                {id: CELL.PEDIDOS, text: gettext('Pedido')},
+                {id: CELL.PEDIDOS, text: gettext('Pedido'), width: 500},
                 {id: CELL.ITEMS, text: gettext('Items Pedido')},
                 {id: CELL.ESTADO, text: gettext('Estado de Avance Item')},
                 {id: CELL.TIMELINE, text: gettext('Línea de Tiempo'), height: 500}]
