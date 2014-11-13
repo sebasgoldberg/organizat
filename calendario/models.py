@@ -208,6 +208,18 @@ class Calendario(CalendarioBaseModel):
       for h in self.get_huecos_no_24x7(desde, hasta, tiempo_total):
         yield h
 
+  def contiene_hueco_completo(self, desde, hasta):
+      """
+      Indica si existe un único hueco en el calendario definido por las 
+      fechas desde y hasta.
+      """
+      for hueco in self.get_huecos(desde, hasta=hasta):
+          if (hueco.fecha_desde == desde and 
+                  hueco.get_fecha_hasta() == hasta):
+              return True
+          return False
+      return False
+
   @transaction.atomic
   def add_intervalos_laborables(self, dias_laborables, hora_desde, hora_hasta):
     for dia in dias_laborables:

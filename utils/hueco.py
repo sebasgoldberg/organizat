@@ -24,6 +24,9 @@ class Hueco(object):
   def __unicode__(self):
     return u'(%s,%s)' % (self.fecha_desde, self.get_fecha_hasta())
 
+  def __str__(self):
+    return u'(%s,%s)' % (self.fecha_desde, self.get_fecha_hasta())
+
   def get_fecha_hasta(self):
     return self.fecha_desde + self.tiempo
 

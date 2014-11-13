@@ -97,3 +97,15 @@ class StandsTestCase(PlanificadorTestCase):
         """
         self.verificar_cantidad_planificada(cronograma)
 
+        """
+        Se verifica que los intervalos planificados se encuentren dentro
+        del calendario definido.
+        """
+        self.verificar_calendario(cronograma)
+
+        """
+        Se verifica que se respeten las dependencias entre las tareas.
+        Básicamente la cantidad de tarea dependiente no puede superar
+        en cantidad a la tarea de la cual depende.
+        """
+        self.verificar_dependencias(cronograma)
