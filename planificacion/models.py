@@ -663,8 +663,11 @@ class PedidoPlanificable(Pedido):
     return PedidoCronograma.objects.get(
         pedido=self).cronograma
 
-  def crear_cronograma(self, fecha_inicio=TZ.make_aware(
-        datetime.datetime.now(), TZ.get_default_timezone()), **kwargs):
+  def crear_cronograma(self, fecha_inicio=None, **kwargs):
+    if fecha_inicio is None:
+        now = TZ.make_aware(datetime.datetime.now(),
+                TZ.get_default_timezone())
+        fecha_inicio = now - TD(microseconds=now.microsecond) + TD(seconds=1)
     cronograma = Cronograma.objects.create(descripcion=
         _(u'Planificación del pedido #%s') % self.id, fecha_inicio=fecha_inicio,
         **kwargs)
