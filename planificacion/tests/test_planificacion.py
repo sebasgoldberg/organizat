@@ -140,7 +140,7 @@ class IntervaloCronogramaTestCase(TestCase):
     D3.add_item(P1,300)
 
     cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
-      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),tiempo_minimo_intervalo=0)
+      fecha_inicio=utc.localize(datetime.datetime(2014,1,1,0,0,0)),tiempo_minimo_intervalo=0)
 
     cronograma.clean()
     cronograma.save()
@@ -208,7 +208,7 @@ class TareaDependienteTestCase(TestCase):
     D1.add_item(P1,100)
 
     cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
-      fecha_inicio=datetime.datetime(2014,1,1,0,0,0), tiempo_minimo_intervalo=0)
+      fecha_inicio=utc.localize(datetime.datetime(2014,1,1,0,0,0)), tiempo_minimo_intervalo=0)
 
     cronograma.clean()
     cronograma.save()
@@ -406,7 +406,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
     D1.add_item(P1,100)
 
     cronograma = Cronograma(descripcion='CRON1', estrategia=2, 
-      fecha_inicio=datetime.datetime(2014,1,1,0,0,0),)
+      fecha_inicio=utc.localize(datetime.datetime(2014,1,1,0,0,0)),)
 
     cronograma.clean()
     cronograma.save()

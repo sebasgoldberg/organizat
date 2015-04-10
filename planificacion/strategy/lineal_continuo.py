@@ -64,7 +64,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
     for i in intervalos:
       if i.fecha_desde < self.cronograma.fecha_inicio:
         tiempo += D((i.fecha_hasta - 
-            self.cronograma.fecha_inicio).seconds())/D(60)
+            self.cronograma.fecha_inicio).total_seconds())/D(60)
       else:
         tiempo += D(i.tiempo_intervalo)
 
