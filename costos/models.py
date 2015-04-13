@@ -5,7 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from planificacion.models import IntervaloCronograma, Cronograma
 from produccion.models import Maquina
 
-class CostoBaseModel(CleanSignal, models.Model):
+class CostoBaseModel(CleanSignal):
   class Meta:
     abstract = True
 
@@ -27,14 +27,14 @@ class CostoMaquina(CostoBaseModel):
 
 class CostoIntervalo(CostoModel):
 
-  intervalo = models.ForeignKey(IntervaloCronograma, verbose_name=_(u'Intervalo'),
-      editable=False, unique=True)
+  intervalo = models.OneToOneField(IntervaloCronograma, verbose_name=_(u'Intervalo'),
+      editable=False)
 
 
 class CostoCronograma(CostoModel):
 
-  cronograma = models.ForeignKey(Cronograma, verbose_name=_(u'Cronograma'),
-      editable=False, unique=True)
+  cronograma = models.OneToOneField(Cronograma, verbose_name=_(u'Cronograma'),
+      editable=False)
 
 
 import costos.signals

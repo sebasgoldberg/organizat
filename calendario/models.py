@@ -1,6 +1,6 @@
 # coding=utf-8
 from django.db import models
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 from utils import Hueco
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -10,9 +10,10 @@ from datetime import time as T
 from django.utils import timezone as TZ
 from cleansignal.models import CleanSignal
 
-class CalendarioBaseModel(CleanSignal, models.Model):
+class CalendarioBaseModel(CleanSignal):
   class Meta:
     abstract = True
+    app_label = 'calendario'
 
 class SolapamientoIntervalosLaborales(ValidationError):
 

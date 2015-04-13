@@ -12,8 +12,8 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-from django.utils.translation import ugettext
-from django.utils.translation import ugettext_lazy as _
+#from django.utils.translation import ugettext
+#from django.utils.translation import ugettext_lazy as _
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
@@ -40,7 +40,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'south',
+    #'south',
+    'cleansignal',
     'produccion',
     'planificacion',
     'calendario',
@@ -102,11 +103,11 @@ STATICFILES_DIRS = (
   '/var/www/static/',
   )
 
-GRAPPELLI_ADMIN_TITLE = _('DjProd')
+GRAPPELLI_ADMIN_TITLE = 'DjProd'
 GRAPPELLI_INDEX_DASHBOARD = 'organizat.dashboard.CustomIndexDashboard'
 
-SKIP_SOUTH_TESTS = True # To disable South's own unit tests
-SOUTH_TESTS_MIGRATE = False # To disable migrations and use syncdb instead
+#SKIP_SOUTH_TESTS = True # To disable South's own unit tests
+#SOUTH_TESTS_MIGRATE = False # To disable migrations and use syncdb instead
 
 LOGGING = {
   'version': 1,

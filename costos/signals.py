@@ -2,7 +2,7 @@
 from decimal import Decimal as D
 from django.db.models import signals
 from produccion.models import Maquina
-from costos.models import CostoMaquina
+from costos.models import CostoMaquina, CostoIntervalo, CostoCronograma
 from planificacion.models import (
         IntervaloCronograma,
         Cronograma)
@@ -23,27 +23,35 @@ def crear_costo_intervalo(sender, instance, created, raw, using,
         update_fields, *args, **kwargs):
     if raw:
         return
-    if instance.costointervalo_set.all().exists():
+    try:
+        instance.costointervalo
         return
+    except CostoIntervalo.DoesNotExist:
+        pass
     costomaq = instance.maquina.costomaquina_set.first()
     if costomaq is None:
         return
     costo = (D(instance.get_duracion().total_seconds() / 3600) *
         costomaq.costo_por_hora)
-    instance.costointervalo_set.create(costo=costo)
+    instance.costointervalo = CostoIntervalo.objects.create(
+            costo=costo, intervalo=instance)
 
 
 def asignar_costo_cronograma(sender, instance, *args, **kwargs):
-    if instance.costocronograma_set.exists():
-        costocrono = instance.costocronograma_set.first()
-    else:
-        costocrono = instance.costocronograma_set.create()
-    costocrono.costo = 0
+    try:
+        instance.costocronograma
+    except CostoCronograma.DoesNotExist:
+        instance.costocronograma = CostoCronograma.objects.create(
+                cronograma=instance)
+
+    instance.costocronograma.costo = 0
     for i in instance.get_intervalos():
-        for ci in i.costointervalo_set.all():
-            costocrono.costo += ci.costo
-    costocrono.clean()
-    costocrono.save()
+        try:
+            instance.costocronograma.costo += i.costointervalo.costo
+        except CostoIntervalo.DoesNotExist:
+            pass
+    instance.costocronograma.clean()
+    instance.costocronograma.save()
 
 
 signals.post_save.connect(crear_maquina_costo)

@@ -1,179 +1,194 @@
 # -*- coding: utf-8 -*-
-from south.utils import datetime_utils as datetime
-from south.db import db
-from south.v2 import SchemaMigration
-from django.db import models
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+import datetime
+from django.utils.timezone import utc
+import django.db.models.deletion
 
 
-class Migration(SchemaMigration):
+class Migration(migrations.Migration):
 
-    def forwards(self, orm):
-        # Adding model 'Cronograma'
-        db.create_table(u'planificacion_cronograma', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('descripcion', self.gf('django.db.models.fields.CharField')(unique=True, max_length=100)),
-            ('fecha_inicio', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime(2014, 5, 28, 0, 0), null=True, blank=True)),
-            ('estrategia', self.gf('django.db.models.fields.IntegerField')(default=2)),
-            ('tiempo_minimo_intervalo', self.gf('django.db.models.fields.DecimalField')(default=0, max_digits=7, decimal_places=2)),
-            ('optimizar_planificacion', self.gf('django.db.models.fields.BooleanField')(default=True)),
-            ('estado', self.gf('django.db.models.fields.IntegerField')(default=0)),
-        ))
-        db.send_create_signal(u'planificacion', ['Cronograma'])
+    dependencies = [
+        ('produccion', '0001_initial'),
+    ]
 
-        # Adding model 'PedidoCronograma'
-        db.create_table(u'planificacion_pedidocronograma', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('cronograma', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['planificacion.Cronograma'])),
-            ('pedido', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Pedido'], on_delete=models.PROTECT)),
-        ))
-        db.send_create_signal(u'planificacion', ['PedidoCronograma'])
-
-        # Adding unique constraint on 'PedidoCronograma', fields ['cronograma', 'pedido']
-        db.create_unique(u'planificacion_pedidocronograma', ['cronograma_id', 'pedido_id'])
-
-        # Adding model 'MaquinaCronograma'
-        db.create_table(u'planificacion_maquinacronograma', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('cronograma', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['planificacion.Cronograma'])),
-            ('maquina', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Maquina'], on_delete=models.PROTECT)),
-        ))
-        db.send_create_signal(u'planificacion', ['MaquinaCronograma'])
-
-        # Adding unique constraint on 'MaquinaCronograma', fields ['cronograma', 'maquina']
-        db.create_unique(u'planificacion_maquinacronograma', ['cronograma_id', 'maquina_id'])
-
-        # Adding model 'IntervaloCronograma'
-        db.create_table(u'planificacion_intervalocronograma', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('cronograma', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['planificacion.Cronograma'])),
-            ('maquina', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Maquina'], on_delete=models.PROTECT)),
-            ('tarea', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Tarea'], on_delete=models.PROTECT)),
-            ('producto', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Producto'], on_delete=models.PROTECT)),
-            ('pedido', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.Pedido'], on_delete=models.PROTECT)),
-            ('cantidad_tarea', self.gf('django.db.models.fields.DecimalField')(default=0, max_digits=7, decimal_places=2)),
-            ('cantidad_tarea_real', self.gf('django.db.models.fields.DecimalField')(default=0, max_digits=7, decimal_places=2)),
-            ('tiempo_intervalo', self.gf('django.db.models.fields.DecimalField')(max_digits=7, decimal_places=2)),
-            ('fecha_desde', self.gf('django.db.models.fields.DateTimeField')()),
-            ('fecha_hasta', self.gf('django.db.models.fields.DateTimeField')(null=True)),
-            ('estado', self.gf('django.db.models.fields.IntegerField')(default=0)),
-            ('tareamaquina', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.TareaMaquina'], on_delete=models.PROTECT)),
-            ('tareaproducto', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.TareaProducto'], on_delete=models.PROTECT)),
-            ('itempedido', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['produccion.ItemPedido'], on_delete=models.PROTECT)),
-            ('pedidocronograma', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['planificacion.PedidoCronograma'])),
-            ('maquinacronograma', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['planificacion.MaquinaCronograma'])),
-        ))
-        db.send_create_signal(u'planificacion', ['IntervaloCronograma'])
-
-        # Adding unique constraint on 'IntervaloCronograma', fields ['cronograma', 'maquina', 'fecha_desde']
-        db.create_unique(u'planificacion_intervalocronograma', ['cronograma_id', 'maquina_id', 'fecha_desde'])
-
-
-    def backwards(self, orm):
-        # Removing unique constraint on 'IntervaloCronograma', fields ['cronograma', 'maquina', 'fecha_desde']
-        db.delete_unique(u'planificacion_intervalocronograma', ['cronograma_id', 'maquina_id', 'fecha_desde'])
-
-        # Removing unique constraint on 'MaquinaCronograma', fields ['cronograma', 'maquina']
-        db.delete_unique(u'planificacion_maquinacronograma', ['cronograma_id', 'maquina_id'])
-
-        # Removing unique constraint on 'PedidoCronograma', fields ['cronograma', 'pedido']
-        db.delete_unique(u'planificacion_pedidocronograma', ['cronograma_id', 'pedido_id'])
-
-        # Deleting model 'Cronograma'
-        db.delete_table(u'planificacion_cronograma')
-
-        # Deleting model 'PedidoCronograma'
-        db.delete_table(u'planificacion_pedidocronograma')
-
-        # Deleting model 'MaquinaCronograma'
-        db.delete_table(u'planificacion_maquinacronograma')
-
-        # Deleting model 'IntervaloCronograma'
-        db.delete_table(u'planificacion_intervalocronograma')
-
-
-    models = {
-        u'planificacion.cronograma': {
-            'Meta': {'ordering': "['-id']", 'object_name': 'Cronograma'},
-            'descripcion': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            'estado': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'estrategia': ('django.db.models.fields.IntegerField', [], {'default': '2'}),
-            'fecha_inicio': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2014, 5, 28, 0, 0)', 'null': 'True', 'blank': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'optimizar_planificacion': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'tiempo_minimo_intervalo': ('django.db.models.fields.DecimalField', [], {'default': '0', 'max_digits': '7', 'decimal_places': '2'})
-        },
-        u'planificacion.intervalocronograma': {
-            'Meta': {'ordering': "['-cronograma__id', 'fecha_desde']", 'unique_together': "(('cronograma', 'maquina', 'fecha_desde'),)", 'object_name': 'IntervaloCronograma'},
-            'cantidad_tarea': ('django.db.models.fields.DecimalField', [], {'default': '0', 'max_digits': '7', 'decimal_places': '2'}),
-            'cantidad_tarea_real': ('django.db.models.fields.DecimalField', [], {'default': '0', 'max_digits': '7', 'decimal_places': '2'}),
-            'cronograma': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['planificacion.Cronograma']"}),
-            'estado': ('django.db.models.fields.IntegerField', [], {'default': '0'}),
-            'fecha_desde': ('django.db.models.fields.DateTimeField', [], {}),
-            'fecha_hasta': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'itempedido': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.ItemPedido']", 'on_delete': 'models.PROTECT'}),
-            'maquina': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Maquina']", 'on_delete': 'models.PROTECT'}),
-            'maquinacronograma': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['planificacion.MaquinaCronograma']"}),
-            'pedido': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Pedido']", 'on_delete': 'models.PROTECT'}),
-            'pedidocronograma': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['planificacion.PedidoCronograma']"}),
-            'producto': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Producto']", 'on_delete': 'models.PROTECT'}),
-            'tarea': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Tarea']", 'on_delete': 'models.PROTECT'}),
-            'tareamaquina': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.TareaMaquina']", 'on_delete': 'models.PROTECT'}),
-            'tareaproducto': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.TareaProducto']", 'on_delete': 'models.PROTECT'}),
-            'tiempo_intervalo': ('django.db.models.fields.DecimalField', [], {'max_digits': '7', 'decimal_places': '2'})
-        },
-        u'planificacion.maquinacronograma': {
-            'Meta': {'ordering': "['maquina__descripcion']", 'unique_together': "(('cronograma', 'maquina'),)", 'object_name': 'MaquinaCronograma'},
-            'cronograma': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['planificacion.Cronograma']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'maquina': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Maquina']", 'on_delete': 'models.PROTECT'})
-        },
-        u'planificacion.pedidocronograma': {
-            'Meta': {'ordering': "['pedido__descripcion']", 'unique_together': "(('cronograma', 'pedido'),)", 'object_name': 'PedidoCronograma'},
-            'cronograma': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['planificacion.Cronograma']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'pedido': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Pedido']", 'on_delete': 'models.PROTECT'})
-        },
-        u'produccion.itempedido': {
-            'Meta': {'ordering': "['-pedido__id', 'producto__descripcion']", 'unique_together': "(('pedido', 'producto'),)", 'object_name': 'ItemPedido'},
-            'cantidad': ('django.db.models.fields.DecimalField', [], {'max_digits': '7', 'decimal_places': '2'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'pedido': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Pedido']"}),
-            'producto': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Producto']", 'on_delete': 'models.PROTECT'})
-        },
-        u'produccion.maquina': {
-            'Meta': {'ordering': "['descripcion']", 'object_name': 'Maquina'},
-            'descripcion': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        },
-        u'produccion.pedido': {
-            'Meta': {'ordering': "['-id']", 'object_name': 'Pedido'},
-            'descripcion': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        },
-        u'produccion.producto': {
-            'Meta': {'ordering': "['descripcion']", 'object_name': 'Producto'},
-            'descripcion': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        },
-        u'produccion.tarea': {
-            'Meta': {'ordering': "['descripcion']", 'object_name': 'Tarea'},
-            'descripcion': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '100'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'tiempo': ('django.db.models.fields.DecimalField', [], {'max_digits': '7', 'decimal_places': '2'})
-        },
-        u'produccion.tareamaquina': {
-            'Meta': {'ordering': "['maquina__descripcion', 'tarea__descripcion']", 'unique_together': "(('maquina', 'tarea'),)", 'object_name': 'TareaMaquina'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'maquina': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Maquina']"}),
-            'tarea': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Tarea']"})
-        },
-        u'produccion.tareaproducto': {
-            'Meta': {'ordering': "['producto__descripcion', 'tarea__descripcion']", 'unique_together': "(('producto', 'tarea'),)", 'object_name': 'TareaProducto'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'producto': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Producto']"}),
-            'tarea': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['produccion.Tarea']"})
-        }
-    }
-
-    complete_apps = ['planificacion']
+    operations = [
+        migrations.CreateModel(
+            name='Cronograma',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('descripcion', models.CharField(max_length=100, verbose_name='Descripci\xf3n')),
+                ('fecha_inicio', models.DateTimeField(default=datetime.datetime(2015, 4, 10, 20, 4, 18, 381828, tzinfo=utc), null=True, verbose_name='Fecha de inicio', blank=True)),
+                ('estrategia', models.IntegerField(default=2, verbose_name='Estrategia de planificaci\xf3n', choices=[(2, 'PLM (Modelo Tiempo Cont\xednuo) + Heur\xedstica basada en dependencias')])),
+                ('tiempo_minimo_intervalo', models.DecimalField(default=60, help_text='Tiempo m\xednimo de cada intervalo que compone el cronograma. NO ser\xe1 tenido en cuenta durante la resoluci\xf3n del modelo lineal. Esto quiere decir que si la resoluci\xf3n del modelo lineal obtiene intervalos con tiempo menor al definido, estos ser\xe1n incorporados al cronograma.', verbose_name='Tiempo m\xednimo de cada intervalo (min)', max_digits=8, decimal_places=2)),
+                ('optimizar_planificacion', models.BooleanField(default=True, help_text='Una vez obtenida la planificaci\xf3n intenta optimizarla un poco m\xe1s.', verbose_name='Optimizar planificaci\xf3n')),
+                ('estado', models.IntegerField(default=0, verbose_name='Estado', editable=False, choices=[(0, 'Inv\xe1lido'), (1, 'V\xe1lido'), (2, 'Activo'), (3, 'Finalizado'), (4, 'Cancelado')])),
+                ('tolerancia', models.DecimalField(default=0.005, help_text='Tolerancia a errores de planificaci\xf3n. Indica el factor de tolerancia a los errores durante la planificaci\xf3n. Por ejemplo, un valor de 0.02 para un item de un pedido con cantidad 100, indica que puede haber un error de planificaci\xf3n de 2 unidades.', verbose_name='Tolerancia a errores de planificaci\xf3n.', max_digits=3, decimal_places=3)),
+                ('_particionar_pedidos', models.BooleanField(default=True, help_text='Seleccionando esta opci\xf3n se estimar\xe1 cuanto demora la fabricaci\xf3n de cada producto. Luego en funci\xf3n de la estimaci\xf3n se calcular\xe1 el ideal de la cantidad de productos por item para aproximarse al tiempo de producci\xf3n por item indicado.', verbose_name='Particionar pedidos')),
+                ('tiempo_produccion_por_item', models.DecimalField(default=40, help_text='Indica el tiempo de producci\xf3n esperado por item en horas. Sirve para subdividir en forma automatica en varios items los productos de un pedido de forma de poder organizar mejor los lotes de producci\xf3n y reducir notablemente los tiempos de planificaci\xf3n', verbose_name='Tiempo de producci\xf3n por item (horas)', max_digits=8, decimal_places=2)),
+                ('cantidad_extra_tarea_anterior', models.DecimalField(default=0, help_text='Sean A y B dos tareas, donde A depende de B (B debe producirse antes que A). Este par\xe1metro indica, si queremos planificar B, a partir de que instante puede planificarse en funci\xf3n de la cantidad que ya est\xe1 producida de A. Por ejemplo, si esta cantidad es 2 y se quiere producir 50 de A y 50 de B, si hasta el instanet t1 tenemos planificado A(12) y B(10), y en hasta el instante t2 tenemos planificado A(20) y B(10), entonces entre t1 y t2, podremos planificar una cantidad de 8 para B.', verbose_name='Cantidad Extra en Tarea Anterior', max_digits=8, decimal_places=2)),
+            ],
+            options={
+                'ordering': ['-id'],
+                'verbose_name': 'Cronograma',
+                'verbose_name_plural': 'Cronogramas',
+            },
+        ),
+        migrations.CreateModel(
+            name='IntervaloCronograma',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('cantidad_tarea', models.DecimalField(decimal_places=6, default=0, editable=False, max_digits=12, help_text='Cantidad de tarea a producir en el intervalo.', verbose_name='Cantidad Tarea Planificada')),
+                ('cantidad_tarea_real', models.DecimalField(default=0, help_text='Cantidad de tarea producida (real).', verbose_name='Cantidad Tarea Real', max_digits=8, decimal_places=2)),
+                ('tiempo_intervalo', models.DecimalField(verbose_name='Tiempo del intervalo (min)', max_digits=12, decimal_places=6)),
+                ('fecha_desde', models.DateTimeField(verbose_name='Fecha desde')),
+                ('fecha_hasta', models.DateTimeField(null=True, verbose_name='Fecha hasta')),
+                ('estado', models.IntegerField(default=0, verbose_name='Estado', editable=False, choices=[(0, 'Planificado'), (1, 'Activo'), (2, 'Finalizado'), (3, 'Cancelado')])),
+                ('cronograma', models.ForeignKey(verbose_name='Cronograma', to='planificacion.Cronograma')),
+            ],
+            options={
+                'ordering': ['-cronograma__id', 'fecha_desde'],
+                'verbose_name': 'Intervalo cronograma',
+                'verbose_name_plural': 'Intervalos cronograma',
+            },
+        ),
+        migrations.CreateModel(
+            name='MaquinaCronograma',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('cronograma', models.ForeignKey(verbose_name='Cronograma', to='planificacion.Cronograma')),
+            ],
+            options={
+                'ordering': ['maquina__descripcion'],
+                'verbose_name': 'Maquina cronograma',
+                'verbose_name_plural': 'Maquina cronograma',
+            },
+        ),
+        migrations.CreateModel(
+            name='PedidoCronograma',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('cronograma', models.ForeignKey(verbose_name='Cronograma', to='planificacion.Cronograma')),
+            ],
+            options={
+                'ordering': ['pedido__descripcion'],
+                'verbose_name': 'Pedido cronograma',
+                'verbose_name_plural': 'Pedidos cronograma',
+            },
+        ),
+        migrations.CreateModel(
+            name='TareaItem',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('cantidad_realizada', models.DecimalField(default=0, help_text='Cantidad de tarea realizada (real).', verbose_name='Cantidad Realizada', max_digits=8, decimal_places=2)),
+            ],
+            options={
+                'abstract': False,
+            },
+        ),
+        migrations.CreateModel(
+            name='ItemPlanificable',
+            fields=[
+            ],
+            options={
+                'proxy': True,
+            },
+            bases=('produccion.itempedido',),
+        ),
+        migrations.CreateModel(
+            name='MaquinaPlanificacion',
+            fields=[
+            ],
+            options={
+                'proxy': True,
+            },
+            bases=('produccion.maquina',),
+        ),
+        migrations.CreateModel(
+            name='PedidoPlanificable',
+            fields=[
+            ],
+            options={
+                'proxy': True,
+            },
+            bases=('produccion.pedido',),
+        ),
+        migrations.AddField(
+            model_name='tareaitem',
+            name='item',
+            field=models.ForeignKey(verbose_name='Item', to='planificacion.ItemPlanificable'),
+        ),
+        migrations.AddField(
+            model_name='tareaitem',
+            name='tarea',
+            field=models.ForeignKey(verbose_name='Tarea', to='produccion.Tarea'),
+        ),
+        migrations.AddField(
+            model_name='pedidocronograma',
+            name='pedido',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, verbose_name='Pedido', to='planificacion.PedidoPlanificable'),
+        ),
+        migrations.AddField(
+            model_name='maquinacronograma',
+            name='maquina',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, verbose_name='M\xe1quina', to='planificacion.MaquinaPlanificacion'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='item',
+            field=models.ForeignKey(editable=False, to='planificacion.ItemPlanificable', null=True),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='maquina',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, verbose_name='M\xe1quina', to='planificacion.MaquinaPlanificacion'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='maquinacronograma',
+            field=models.ForeignKey(editable=False, to='planificacion.MaquinaCronograma'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='pedido',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, editable=False, to='planificacion.PedidoPlanificable', verbose_name='Pedido'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='pedidocronograma',
+            field=models.ForeignKey(editable=False, to='planificacion.PedidoCronograma'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='producto',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, editable=False, to='produccion.Producto', verbose_name='Producto'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='tarea',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, verbose_name='Tarea', to='produccion.Tarea'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='tareamaquina',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, editable=False, to='produccion.TareaMaquina'),
+        ),
+        migrations.AddField(
+            model_name='intervalocronograma',
+            name='tareaproducto',
+            field=models.ForeignKey(editable=False, to='produccion.TareaProducto'),
+        ),
+        migrations.AlterUniqueTogether(
+            name='pedidocronograma',
+            unique_together=set([('cronograma', 'pedido')]),
+        ),
+        migrations.AlterUniqueTogether(
+            name='maquinacronograma',
+            unique_together=set([('cronograma', 'maquina')]),
+        ),
+        migrations.AlterUniqueTogether(
+            name='intervalocronograma',
+            unique_together=set([('cronograma', 'maquina', 'fecha_desde')]),
+        ),
+    ]

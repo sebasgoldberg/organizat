@@ -19,13 +19,14 @@ from decimal import Decimal as D
 from django.db.models import Min, Max
 import math
 from cleansignal.models import CleanSignal
-
+from django.utils.timezone import now as tz_now
 import django.dispatch
 cronograma_planificado = django.dispatch.Signal(providing_args=["instance", ])
 
-class PlanificacionBaseModel(CleanSignal, models.Model):
+class PlanificacionBaseModel(CleanSignal):
   class Meta:
     abstract = True
+    app_label = 'planificacion'
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +107,10 @@ ESTADO_INTERVALO_FINALIZADO=2
 ESTADO_INTERVALO_CANCELADO=3
 
 ESTADOS_INTERVALOS=(
-  (ESTADO_INTERVALO_PLANIFICADO,ugettext(u'Planificado')),
-  (ESTADO_INTERVALO_ACTIVO,ugettext(u'Activo')),
-  (ESTADO_INTERVALO_FINALIZADO,ugettext(u'Finalizado')),
-  (ESTADO_INTERVALO_CANCELADO,ugettext(u'Cancelado')),
+  (ESTADO_INTERVALO_PLANIFICADO,_(u'Planificado')),
+  (ESTADO_INTERVALO_ACTIVO,_(u'Activo')),
+  (ESTADO_INTERVALO_FINALIZADO,_(u'Finalizado')),
+  (ESTADO_INTERVALO_CANCELADO,_(u'Cancelado')),
 )
 
 DICT_ESTADO_INTERVALO = dict(ESTADOS_INTERVALOS)
@@ -133,6 +134,7 @@ class MaquinaPlanificacion(Maquina):
 
   class Meta:
     proxy = True
+    app_label = 'planificacion'
 
   def get_calendario(self):
     return CalendarioProduccion.get_instance()
@@ -160,9 +162,7 @@ class Cronograma(PlanificacionBaseModel):
   de IntervaloCronograma.
   """
   descripcion = models.CharField(max_length=100, verbose_name=_(u'Descripción'))
-  fecha_inicio = models.DateTimeField(
-    verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=TZ.make_aware(
-        datetime.datetime.now(), TZ.get_default_timezone()))
+  fecha_inicio = models.DateTimeField( verbose_name=_(u'Fecha de inicio'), null=True, blank=True, default=tz_now)
   estrategia = models.IntegerField(verbose_name=_(u'Estrategia de planificación'), choices=ESTRATEGIAS, default=2)
   tiempo_minimo_intervalo = models.DecimalField(default=60,
     max_digits=8, decimal_places=2, verbose_name=_(u'Tiempo mínimo de cada intervalo (min)'), 
@@ -199,6 +199,7 @@ class Cronograma(PlanificacionBaseModel):
     ordering = ['-id']
     verbose_name = _(u"Cronograma")
     verbose_name_plural = _(u"Cronogramas")
+    app_label = 'planificacion'
 
   def estimar_tiempo_fabricacion_producto(self, producto):
     """
@@ -211,8 +212,7 @@ class Cronograma(PlanificacionBaseModel):
     pedido.add_item(producto,1)
 
     # Se utiliza una fecha de inicio sin sentido 1/1/1
-    cronograma = pedido.crear_cronograma(fecha_inicio=TZ.make_aware(
-        datetime.datetime(9990,1,1), TZ.get_default_timezone()),
+    cronograma = pedido.crear_cronograma(fecha_inicio=tz_now(),
         _particionar_pedidos=False, tiempo_minimo_intervalo=30)
 
     # Eliminamos las máquinas del nuevo cronograma 
@@ -567,6 +567,7 @@ class ItemPlanificable(ItemPedido):
 
     class Meta:
         proxy=True
+        app_label = 'planificacion'
 
     def indice_planificacion(self):
         cantidades_planificadas_tareas = [
@@ -631,6 +632,7 @@ class PedidoPlanificable(Pedido):
   
   class Meta:
     proxy=True
+    app_label = 'planificacion'
 
   def porcentaje_planificado(self):
       return self.indice_planificacion()*100
@@ -665,8 +667,7 @@ class PedidoPlanificable(Pedido):
 
   def crear_cronograma(self, fecha_inicio=None, **kwargs):
     if fecha_inicio is None:
-        now = TZ.make_aware(datetime.datetime.now(),
-                TZ.get_default_timezone())
+        now = tz_now()
         fecha_inicio = now - TD(microseconds=now.microsecond) + TD(seconds=1)
     cronograma = Cronograma.objects.create(descripcion=
         _(u'Planificación del pedido #%s') % self.id, fecha_inicio=fecha_inicio,
@@ -787,6 +788,7 @@ class PedidoCronograma(PlanificacionBaseModel):
     verbose_name = _(u"Pedido cronograma")
     verbose_name_plural = _(u"Pedidos cronograma")
     unique_together = (('cronograma', 'pedido'),)
+    app_label = 'planificacion'
 
   def __unicode__(self):
     return self.pedido
@@ -800,6 +802,7 @@ class MaquinaCronograma(PlanificacionBaseModel):
     verbose_name = _(u"Maquina cronograma")
     verbose_name_plural = _(u"Maquina cronograma")
     unique_together = (('cronograma', 'maquina'),)
+    app_label = 'planificacion'
 
   def __unicode__(self):
     return self.maquina
@@ -862,6 +865,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
     verbose_name = _(u"Intervalo cronograma")
     verbose_name_plural = _(u"Intervalos cronograma")
     unique_together = (('cronograma', 'maquina', 'fecha_desde'),)
+    app_label = 'planificacion'
 
   def __unicode__(self):
     return '[#%s] [%s] [%s] [%s] [cant: %s] [%s]-[%s]' % (self.id,

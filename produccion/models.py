@@ -8,7 +8,7 @@ from cleansignal.models import CleanSignal
 class TareaAnteriorNoExiste(Exception):
   pass
 
-class ProduccionBaseModel(CleanSignal, models.Model):
+class ProduccionBaseModel(CleanSignal):
   class Meta:
     abstract = True
 
@@ -19,6 +19,7 @@ class Maquina(ProduccionBaseModel):
     ordering = ['descripcion']
     verbose_name = _(u"Maquina")
     verbose_name_plural = _(u"Maquinas")
+    app_label = 'produccion'
 
   def __unicode__(self):
     return self.descripcion
@@ -49,6 +50,7 @@ class Tarea(ProduccionBaseModel):
     ordering = ['descripcion']
     verbose_name = _(u"Tarea")
     verbose_name_plural = _(u"Tareas")
+    app_label = 'produccion'
 
   def __unicode__(self):
     return self.descripcion
@@ -112,6 +114,7 @@ class TareaMaquina(ProduccionBaseModel):
     verbose_name = _(u"Tarea de una máquina")
     verbose_name_plural = _(u"Tareas por máquinas")
     unique_together = (('maquina', 'tarea'),)
+    app_label = 'produccion'
 
   def __unicode__(self):
     return _(u'%(tarea)s en máquina %(maquina)s') % {
@@ -126,6 +129,7 @@ class Producto(ProduccionBaseModel):
     ordering = ['descripcion']
     verbose_name = _(u"Producto")
     verbose_name_plural = _(u"Productos")
+    app_label = 'produccion'
 
   def __unicode__(self):
     if self.descripcion:
@@ -216,6 +220,7 @@ class ProductoProxyDependenciasTareas(Producto):
     ordering = ['descripcion']
     verbose_name = _(u"Dependencia de tarea en producto")
     verbose_name_plural = _(u"Dependencias de tareas en productos")
+    app_label = 'produccion'
 
 class TareaProducto(ProduccionBaseModel):
   """
@@ -229,6 +234,7 @@ class TareaProducto(ProduccionBaseModel):
     verbose_name = _(u"Tarea a realizar en producto")
     verbose_name_plural = _(u"Tareas por productos")
     unique_together = (('producto', 'tarea'),)
+    app_label = 'produccion'
 
 class TiempoRealizacionTarea(ProduccionBaseModel):
   """
@@ -256,6 +262,7 @@ class TiempoRealizacionTarea(ProduccionBaseModel):
     verbose_name = _(u"Tiempo de producción")
     verbose_name_plural = _(u"Tiempos de producción")
     unique_together = (('maquina', 'producto', 'tarea'),)
+    app_label = 'produccion'
 
 class DependenciaTareaProducto(ProduccionBaseModel):
   """
@@ -282,6 +289,7 @@ class DependenciaTareaProducto(ProduccionBaseModel):
     verbose_name = _(u"Dependencia de tareas en producto")
     verbose_name_plural = _(u"Dependencias de tareas en productos")
     unique_together = (('producto', 'tarea', 'tarea_anterior'),)
+    app_label = 'produccion'
 
   def get_tarea_producto(self, tarea):
     try:
@@ -340,6 +348,7 @@ class Pedido(ProduccionBaseModel):
     ordering = ['-id']
     verbose_name = _(u"Pedido")
     verbose_name_plural = _(u"Pedidos")
+    app_label = 'produccion'
 
   def get_maquinas_posibles_produccion(self):
     maquinas = set()
@@ -387,6 +396,7 @@ class ItemPedido(ProduccionBaseModel):
     ordering = ['-pedido__id','producto__descripcion']
     verbose_name = _(u"Item pedido")
     verbose_name_plural = _(u"Items pedidos")
+    app_label = 'produccion'
 
   def __unicode__(self):
     return _(u'P#%(pedido)s-I#%(item)s-%(producto)s') % {

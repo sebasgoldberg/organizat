@@ -47,15 +47,12 @@ class CostosTestCase(TestCase):
 
     total = 0
     for intervalo in cronograma.get_intervalos():
-      self.assertTrue(intervalo.costointervalo_set.exists())
-      costointervalo = intervalo.costointervalo_set.first()
+      costointervalo = intervalo.costointervalo
       self.assertEqual(
           costointervalo.costo,
           (intervalo.get_duracion().total_seconds()/3600)*costomaq.costo_por_hora)
       total += costointervalo.costo
 
-    self.assertTrue(cronograma.costocronograma_set.exists())
-
     self.assertEqual(total,
-        cronograma.costocronograma_set.first().costo)
+        cronograma.costocronograma.costo)
 
