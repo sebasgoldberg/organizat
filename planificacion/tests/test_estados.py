@@ -446,29 +446,6 @@ class EstadoCronogramaIntervalosTestCase(PlanificadorTestCase):
         self.assertEqual(cantidad, 0)
         
 
-class DeberiaDejarCancelarIntervalo60(PlanificadorTestCase):
-  
-  fixtures = [ getFixture('deberia_dejar_cancelar_intervalo_60.json') ]
-  
-  def _fixture_setup(self):
-    post_save.disconnect(add_maquinas_posibles_to_cronograma, 
-      sender=PedidoCronograma)
-    result = super(DeberiaDejarCancelarIntervalo60, self)._fixture_setup()
-    return result
-
-  def _fixture_teardown(self):
-    post_save.connect(add_maquinas_posibles_to_cronograma, 
-      sender=PedidoCronograma)
-    result = super(DeberiaDejarCancelarIntervalo60, self)._fixture_teardown()
-    return result
-
-  def test_cancelar_intervalo_60(self):
-
-    intervalo = IntervaloCronograma.objects.get(pk=60)
-
-    intervalo.cancelar()
-
-
 class CleanLuegoDeFinalizacionIncompletaTestCase(PlanificadorTestCase):
 
     def test_clean_luego_de_finalizacion_incompleta(self):
