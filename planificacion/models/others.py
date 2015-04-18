@@ -18,17 +18,13 @@ import calendario.models
 from decimal import Decimal as D
 from django.db.models import Min, Max
 import math
-from cleansignal.models import CleanSignal
 from django.utils.timezone import now as tz_now
 import django.dispatch
 cronograma_planificado = django.dispatch.Signal(providing_args=["instance", ])
 
-class PlanificacionBaseModel(CleanSignal):
-  class Meta:
-    abstract = True
-    app_label = 'planificacion'
-
 logger = logging.getLogger(__name__)
+
+from planificacion_base_model import PlanificacionBaseModel
 
 class PedidoYaParticionado(ValidationError):
     pass
