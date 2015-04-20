@@ -25,6 +25,8 @@ cronograma_planificado = django.dispatch.Signal(providing_args=["instance", ])
 logger = logging.getLogger(__name__)
 
 from planificacion_base_model import PlanificacionBaseModel
+from exceptions import *
+from calendario_produccion import CalendarioProduccion
 
 class PedidoYaParticionado(ValidationError):
     pass
@@ -114,17 +116,6 @@ DICT_ESTADO_INTERVALO = dict(ESTADOS_INTERVALOS)
 class PedidoYaDistribuido(ValidationError):
   pass
 
-class CalendarioProduccion:
-
-  @staticmethod
-  def get_instance():
-    try:
-      return calendario.models.Calendario.objects.get()
-    except calendario.models.Calendario.DoesNotExist:
-      instance = calendario.models.Calendario()
-      instance.clean()
-      instance.save()
-      return instance
 
 class MaquinaPlanificacion(Maquina):
 
