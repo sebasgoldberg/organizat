@@ -1121,7 +1121,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
           _(u'Ha ocurrido solapamiento entre el intervalo que está siendo validado %s y el intervalo %s:') %
           (self, intervalo))
 
-  #@profile
+  ##@profile
   def validar_dependencias_guardado(self):
     gerenciador_dependencias = GerenciadorDependencias.crear_desde_instante(self)
     if self.id:
@@ -1232,7 +1232,7 @@ class IntervaloCronograma(PlanificacionBaseModel):
   def getItem(self):
     return self.item
 
-  #@profile
+  ##@profile
   def clean(self, validar_dependencias=True, *args, **kwargs):
     self.tareamaquina = TareaMaquina.objects.get(tarea=self.tarea,maquina=self.maquina)
     self.tareaproducto = TareaProducto.objects.get(tarea=self.tarea,producto=self.item.producto)

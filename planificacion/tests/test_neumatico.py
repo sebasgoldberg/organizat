@@ -3,6 +3,7 @@ from .base import *
 
 class NeumaticosTestCase(PlanificadorTestCase):
 
+    #@profile
     def test_planificacion(self):
 
         """

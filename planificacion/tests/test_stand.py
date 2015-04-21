@@ -3,6 +3,7 @@ from .base import *
 
 class StandsTestCase(PlanificadorTestCase):
 
+    #@profile
     def test_planificacion(self):
 
         """

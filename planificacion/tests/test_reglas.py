@@ -9,6 +9,7 @@ from planificacion.reglas import (ItemYaPlanificado,
 
 class ReglasItemPedidoTestCase(TestCase):
 
+    #@profile
     def test_item_ya_planificado(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
@@ -43,6 +44,7 @@ class ReglasItemPedidoTestCase(TestCase):
         item.cantidad = 15
         self.assertRaises(ItemYaPlanificado, item.clean)
 
+    #@profile
     def test_item_no_planificado(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
@@ -74,6 +76,7 @@ class ReglasItemPedidoTestCase(TestCase):
 
         item.delete()
 
+    #@profile
     def test_borrar_item_ya_planificado(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
@@ -97,6 +100,7 @@ class ReglasItemPedidoTestCase(TestCase):
 
 class ReglasExcepcionLaborableTestCase(TestCase):
 
+    #@profile
     def test_agregar_excepcion_laborable(self):
 
         calendario = CalendarioProduccion.get_instance()
@@ -140,6 +144,7 @@ class ReglasExcepcionLaborableTestCase(TestCase):
             calendario.add_excepcion_no_laborable,
             DT(2014,9,9),T(9),T(10))
 
+    #@profile
     def test_modificar_excepcion_laborable(self):
 
         calendario = CalendarioProduccion.get_instance()
@@ -193,6 +198,7 @@ class ReglasExcepcionLaborableTestCase(TestCase):
             IntervaloCalendarioConPlanificacionExistente,
             excepcion.delete)
 
+    #@profile
     def test_modificar_excepcion_no_laborable(self):
 
         calendario = CalendarioProduccion.get_instance()
@@ -234,6 +240,7 @@ class ReglasExcepcionLaborableTestCase(TestCase):
  
 class ReglasMaquinaCronogramaTestCase(TestCase):
 
+    #@profile
     def test_maquina_ya_utilizada(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
@@ -266,6 +273,7 @@ class ReglasMaquinaCronogramaTestCase(TestCase):
 
 class ReglasPedidoCronogramaTestCase(TestCase):
 
+    #@profile
     def test_pedido_ya_utilizado(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
@@ -298,6 +306,7 @@ class ReglasPedidoCronogramaTestCase(TestCase):
 
 class ReglasTareaProductoTestCase(TestCase):
 
+    #@profile
     def test_pedido_ya_utilizado(self):
 
         producto1 = Producto.objects.create(descripcion='P1')

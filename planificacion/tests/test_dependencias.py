@@ -3,6 +3,7 @@ from .base import *
 
 class CantidadExtraTareaAnteriorTestCase(TestCase):
 
+    #@profile
     def test_cantidad_extra_tarea_anterior(self):
 
         producto = Producto.objects.create(descripcion='P1')
@@ -41,6 +42,7 @@ class CantidadExtraTareaAnteriorTestCase(TestCase):
                 cronograma.get_tolerancia(3600))
 
 
+    #@profile
     def test_sin_cantidad_extra_tarea_anterior(self):
 
         producto = Producto.objects.create(descripcion='P1')

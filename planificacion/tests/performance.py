@@ -16,6 +16,7 @@ import os
 
 class PerformanceTestCase(TestCase):
 
+    #@profile
     def test_performance_loreal(self):
         """
         Esta prueba surje de demostrar la mejora inmediata que se 

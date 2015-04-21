@@ -73,6 +73,7 @@ class TiempoRealizacionTareaTestCase(TestCase):
     cronograma.add_pedido(D2)
     cronograma.add_pedido(D3)
 
+  #@profile
   def test_planificar(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')
@@ -153,6 +154,7 @@ class IntervaloCronogramaTestCase(TestCase):
     cronograma.add_pedido(D2)
     cronograma.add_pedido(D3)
 
+  #@profile
   def test_calcular_fecha_desde(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')
@@ -220,6 +222,7 @@ class TareaDependienteTestCase(TestCase):
 
     P1.add_dependencia_tareas(tarea_anterior=T1,tarea=T2)
 
+  #@profile
   def test_calcular_fecha_desde(self):
     
     cronograma = Cronograma.objects.get(descripcion='CRON1')
@@ -418,6 +421,7 @@ class PlanificadorLinealContinuoTestCase(PlanificadorTestCase):
 
     P1.add_dependencia_tareas(tarea_anterior=T2,tarea=T1)
 
+  #@profile
   def test_completar_cronograma(self):
  
     cronograma = Cronograma.objects.get(descripcion='CRON1')
@@ -452,6 +456,7 @@ class HuecoInexplicableTestCase(PlanificadorTestCase):
   
   fixtures = [ getFixture('hueco_inexplicable.json') ]
 
+  #@profile
   def test_no_existe_hueco_inexplicable(self):
 
     # Se recupera el primero, porque hay un solo cronograma definido.
@@ -493,6 +498,7 @@ class TiempoMinimoDeBloqueTestCase(PlanificadorTestCase):
 
     cronograma.planificar()
 
+  #@profile
   def test_tiempo_minimo_bloque(self):
 
     cronograma = Cronograma.objects.get(pk=1)
@@ -522,6 +528,7 @@ class TiempoMenorAlTiempoMinimoTestCase(PlanificadorTestCase):
     cronograma.clean()
     cronograma.save()
 
+  #@profile
   def test_tiempo_menor_al_tiempo_minimo(self):
 
     cronograma = Cronograma.objects.get(pk=1)
@@ -549,6 +556,7 @@ class PlanificarSinHuecosEvitables(PlanificadorTestCase):
     cronograma.save()
     cronograma.planificar()
 
+  #@profile
   def test_planificar_sin_huecos_evitables(self):
 
     cronograma = Cronograma.objects.get(pk=1)
@@ -584,6 +592,7 @@ class MasDeUnaDependenciaError(PlanificadorTestCase):
     cronograma.save()
     cronograma.planificar()
 
+  #@profile
   def test_cantidad_planificada(self):
     
     cronograma = Cronograma.objects.get(pk=1)
@@ -604,6 +613,7 @@ class MasDeUnaDependencia120ErrorOperacion(PlanificadorTestCase):
     cronograma.save()
     cronograma.planificar()
 
+  #@profile
   def test_cantidad_planificada(self):
     
     cronograma = Cronograma.objects.get(pk=1)
@@ -614,6 +624,7 @@ class DosCronogramasTestCase(PlanificadorTestCase):
 
   fixtures = [ getFixture('dos_cronogramas.json') ]
 
+  #@profile
   def test_cantidad_planificada(self):
     
     cronograma = Cronograma.objects.get(descripcion='Otro crono')
@@ -628,6 +639,7 @@ class PlanificarSinTodasLasMaquinas(PlanificadorTestCase):
 
   fixtures = [ getFixture('planificar_sin_todas_las_maquinas.json') ]
 
+  #@profile
   def test_planificar_sin_todas_las_maquinas(self):
 
     cronograma = Cronograma.objects.get(descripcion='Solo neumáticos de auto')
@@ -641,6 +653,7 @@ class PlanificarConMaquinasInactivas(PlanificadorTestCase):
 
   fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
+  #@profile
   def test_planificar_con_maquinas_inactivas(self):
 
     self.assertEqual(0, TiempoRealizacionTarea.objects.filter(
@@ -693,6 +706,7 @@ class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
     for pedido in PedidoPlanificable.objects.all():
       self.cronograma.add_pedido(pedido)
 
+  #@profile
   def test_planificar_sin_todas_las_maquinas(self):
 
     maquinas_cronograma = self.cronograma.get_maquinas()
@@ -704,6 +718,7 @@ class CargaAutomaticaDeMaquinasEnCronograma(PlanificadorTestCase):
 
 class StandsTestCase(TestCase):
 
+    #@profile
     def test_stand_loreal(self):
         """
         Esta prueba surje de demostrar la mejora inmediata que se 

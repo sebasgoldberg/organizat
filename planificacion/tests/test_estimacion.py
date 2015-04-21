@@ -16,6 +16,7 @@ import os
 
 class EstimarDuracionProduccionProductoTestCase(TestCase):
 
+    #@profile
     def test_estimar_producto_una_maquina(self):
 
         producto = Producto.objects.create()
@@ -41,6 +42,7 @@ class EstimarDuracionProduccionProductoTestCase(TestCase):
         self.assertEqual(Pedido.objects.count(),1)
         self.assertEqual(ItemPedido.objects.count(),1)
 
+    #@profile
     def test_estimar_producto_dos_maquinas(self):
 
         producto = Producto.objects.create()
@@ -61,6 +63,7 @@ class EstimarDuracionProduccionProductoTestCase(TestCase):
                 cronograma.estimar_tiempo_fabricacion_producto(producto),
                 30*60)
 
+    #@profile
     def test_estimar_producto_dos_tareas(self):
 
         producto = Producto.objects.create(descripcion='P1')
@@ -84,6 +87,7 @@ class EstimarDuracionProduccionProductoTestCase(TestCase):
                 cronograma.get_tolerancia(90*60))
 
 
+    #@profile
     def test_estimar_producto_tareas_dependientes(self):
 
         producto = Producto.objects.create(descripcion='P1')
@@ -114,6 +118,7 @@ class EstimarDuracionProduccionProductoTestCase(TestCase):
 
 
 
+    #@profile
     def test_estimar_producto_3_tareas_dependientes(self):
 
         producto = Producto.objects.create(descripcion='P1')
@@ -147,6 +152,7 @@ class EstimarDuracionProduccionProductoTestCase(TestCase):
                 cronograma.get_tolerancia(tiempo_esperado))
 
 
+    #@profile
     def test_estimar_producto_con_calendario(self):
 
         calendario = CalendarioProduccion.get_instance()

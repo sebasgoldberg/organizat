@@ -25,7 +25,7 @@ class GerenciadorDependencias:
       cantidad = self.item.cantidad
     return self.cronograma.get_tolerancia(cantidad)
 
-  #@profile
+  ##@profile
   def verificar_agregar_instante(self, instante):
     if instante.id is not None:
       raise Exception(_(u'El instante %s ya se encuentra persistido.') % instante.id )
@@ -98,7 +98,7 @@ class GerenciadorDependencias:
         result.append(intervalo)
     return result
 
-  #@profile
+  ##@profile
   def get_cantidad_tarea_hasta(self, intervalos, tarea, fecha):
     logger.debug('-> get_cantidad_tarea_hasta: %s' % tarea)
     cantidad_tarea = 0
@@ -118,7 +118,7 @@ class GerenciadorDependencias:
     logger.debug('Cantidad tarea %s: activa(%s) + realizada(%s):' % (tarea, cantidad_tarea, cantidad_realizada))
     return D(cantidad_tarea) + D(cantidad_realizada)
 
-  #@profile
+  ##@profile
   def validar_dependencias(self, tarea_anterior, tarea_posterior, instante_agregado=None, instante_borrado=None, instante_modificado=None):
     operaciones = 0
     if instante_agregado: operaciones+=1
@@ -192,7 +192,7 @@ class GerenciadorDependencias:
             logger.debug(e)
             raise e
 
-  #@profile
+  ##@profile
   def crear_intervalo(self, maquina, tarea, fecha_desde, tiempo_intervalo, save=True):
     intervalo = self.cronograma.crear_intervalo(
       maquina=maquina, tarea=tarea, item=self.item,
@@ -236,7 +236,7 @@ class GerenciadorDependencias:
 
     return intervalo
 
-  #@profile
+  ##@profile
   def add_intervalos_to_cronograma(self, maquina, tarea, tiempo):
 
     tiempo_tarea_maquina = tarea.get_tiempo(maquina,self.item.producto)

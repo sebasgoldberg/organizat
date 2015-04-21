@@ -17,6 +17,7 @@ import os
  
 class BalanceRecursosTestCase(TestCase):
 
+    #@profile
     def test_balance_recursos(self):
 
         producto1 = Producto.objects.create(descripcion='P1')

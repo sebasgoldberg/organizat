@@ -17,6 +17,7 @@ import os
 
 class ReplanificacionStandsTestCase(TestCase):
 
+    #@profile
     def test_replanificacion_stands_loreal(self):
         """
         Esta prueba surje de demostrar la mejora inmediata que se 

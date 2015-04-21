@@ -5,6 +5,7 @@ class PlanificacionSoloLunesDe8A12TestCase(PlanificadorTestCase):
 
   fixtures = [ getFixture('planificar_con_maquinas_inactivas.json') ]
 
+  #@profile
   def test_planificacion_solo_lunes_8_a_12(self):
 
     calendario = CalendarioProduccion.get_instance()
@@ -30,6 +31,7 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
 
   fixtures = [ getFixture('planificar_con_calendario.json') ]
 
+  #@profile
   def test_planificacion_solo_lunes_8_a_12(self):
 
     calendario = CalendarioProduccion.get_instance()
@@ -48,6 +50,7 @@ class PlanificacionSoloLunesDe8A12DoblePedidoTestCase(PlanificadorTestCase):
       self.assertEqual(intervalo.fecha_desde, hueco.fecha_desde)
       self.assertEqual(intervalo.get_fecha_hasta(), hueco.get_fecha_hasta())
 
+  #@profile
   def test_optimizado(self):
     
     calendario = CalendarioProduccion.get_instance()

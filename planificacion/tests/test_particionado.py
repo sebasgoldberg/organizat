@@ -60,6 +60,7 @@ def validar_particion_producto(testcase, pedido, producto, cant_producto,
  
 class ParticionarItemsPedidoTestCase(TestCase):
 
+    #@profile
     def test_particionar_un_item(self):
 
         prodx = Producto.objects.create()
@@ -72,6 +73,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
         validar_particion_producto(self ,pedido, prodx, 100, 15)
 
 
+    #@profile
     def test_particionar_un_item_exacto(self):
 
         prodx = Producto.objects.create()
@@ -84,6 +86,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
         validar_particion_producto(self ,pedido, prodx, 100, 10)
 
 
+    #@profile
     def test_particionar_dos_items_mismo_producto(self):
 
         prodx = Producto.objects.create()
@@ -96,6 +99,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
 
         validar_particion_producto(self ,pedido, prodx, 200, 15)
 
+    #@profile
     def test_particionar_dos_items_dos_producto(self):
 
         prodx = Producto.objects.create()
@@ -111,6 +115,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
         validar_particion_producto(self ,pedido, prodx, 100, 15)
         validar_particion_producto(self ,pedido, prody, 100, 9)
 
+    #@profile
     def test_particionar_multiples_items_dos_producto(self):
 
         prodx = Producto.objects.create()
@@ -129,6 +134,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
         validar_particion_producto(self ,pedido, prodx, 200, 15)
         validar_particion_producto(self ,pedido, prody, 300, 9)
 
+    #@profile
     def test_no_particionar_si_ya_particionado(self):
 
         prodx = Producto.objects.create()
@@ -147,6 +153,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
         self.assertRaises(PedidoYaParticionado, pedido.particionar,producto=prodx, cantidad_por_item=15)
         self.assertRaises(PedidoYaParticionado, pedido.particionar,producto=prody, cantidad_por_item=9)
 
+    #@profile
     def test_reparticionar(self):
 
         prodx = Producto.objects.create()
@@ -171,6 +178,7 @@ class ParticionarItemsPedidoTestCase(TestCase):
 
 class ParticionadoDependiendoDeEstadoTestCase(TestCase):
 
+    #@profile
     def test_particionar_productos_no_planificados(self):
 
         producto = Producto.objects.create()
@@ -193,6 +201,7 @@ class ParticionadoDependiendoDeEstadoTestCase(TestCase):
 
 class ParticionadoOptimizadoTestCase(TestCase):
 
+    #@profile
     def test_particionado_optimizado_unica_tarea(self):
 
         producto = Producto.objects.create()
@@ -212,6 +221,7 @@ class ParticionadoOptimizadoTestCase(TestCase):
 
         validar_particion_producto(self ,pedido, producto, 100, 40)
 
+    #@profile
     def test_particionado_pedidos_cronograma(self):
 
         producto1 = Producto.objects.create(descripcion='P1')
