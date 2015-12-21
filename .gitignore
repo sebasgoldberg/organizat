@@ -18,3 +18,9 @@ db.sqlite3
 *.prof
 salida
 diff
+bin/*
+include/*
+lib/*
+lib64*
+pip-selfcheck.json
+

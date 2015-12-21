@@ -9,7 +9,9 @@ import planificacion.models
 from django.core.exceptions import ValidationError
 import datetime
 import logging
-from decimal import Decimal as D
+
+#from decimal import Decimal as D
+D = float
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ class PlanificadorLinealContinuo(PlanificadorStrategy):
   def get_cantidad_no_planificada(self, item, tarea):
     cantidad = D(item.get_cantidad_no_planificada(tarea))
     if cantidad < self.cronograma.get_tolerancia(item.cantidad):
-      return 0
+      return D(0)
     return cantidad
 
   def def_cumplir_cantidad_producir(self):
