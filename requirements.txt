@@ -1,5 +1,4 @@
-Django==1.6.2
-django-grappelli==2.5.1
+Django==1.9
 PuLP==1.6.0
 pyparsing==1.5.7
 pytz==2015.7
