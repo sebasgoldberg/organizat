@@ -22,7 +22,7 @@ class Maquina(ProduccionBaseModel):
     app_label = 'produccion'
 
   def __unicode__(self):
-    return self.descripcion
+    return unicode(self.descripcion)
 
   def get_tareas_pedidos(self, pedidos):
     tareas = set()
@@ -342,7 +342,7 @@ class Pedido(ProduccionBaseModel):
       null=True, blank=False)
 
   def __unicode__(self):
-    return u'#%s - %s' % (self.id, self.descripcion)
+    return unicode('#%s - %s' % (self.id, self.descripcion))
 
   class Meta:
     ordering = ['-id']

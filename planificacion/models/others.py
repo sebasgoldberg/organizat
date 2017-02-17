@@ -621,6 +621,9 @@ class PedidoPlanificable(Pedido):
     proxy=True
     app_label = 'planificacion'
 
+  def __unicode__(self):
+    return unicode('#%s - %s' % (self.id, self.descripcion))
+
   def porcentaje_planificado(self):
       return self.indice_planificacion()*100
 
